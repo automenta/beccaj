@@ -4,7 +4,9 @@
  * and open the template in the editor.
  */
 
-package becca;
+package becca.core;
+
+import org.encog.mathutil.matrices.Matrix;
 
 /**
     An incremental unsupervised learning algorithm
@@ -19,43 +21,84 @@ package becca;
     each new set of signals is received.     
  */
 public class ZipTie {
-/*
-    def __init__(self, max_num_cables, max_num_bundles, 
-                 max_cables_per_bundle=None,
-                 mean_exponent=-4, joining_threshold=0.05, 
-                 speedup = 1., name='ziptie_'):
-        """ Initialize each map, pre-allocating max_num_bundles """
-        self.name = name
-        self.max_num_cables = max_num_cables
-        self.max_num_bundles = max_num_bundles
-        if max_cables_per_bundle is None:
-            self.max_cables_per_bundle = int(self.max_num_cables / 
-                                             self.max_num_bundles)
-        else:
-            self.max_cables_per_bundle = max_cables_per_bundle
-        self.num_bundles = 0
-        # User-defined constants
-        self.AGGLOMERATION_ENERGY_RATE = 10 ** -2 * speedup
-        self.NUCLEATION_ENERGY_RATE = 10 ** -4 * speedup
-        self.ENERGY_DECAY_RATE = 10 ** -2
+    private final int maxCables;
+    private final int maxBundles;
+    private final int maxCablesPerBundle;
+    private final int numBundles;
+    private final double AGGLOMERATION_ENERGY_RATE;
+    private final double NUCLEATION_ENERGY_RATE;
+    private final double ENERGY_DECAY_RATE;
+    private final double JOINING_THRESHOLD;
+    private final double NUCLEATION_THRESHOLD;
+    private final double MEAN_EXPONENT;
+    private final double ACTIVATION_WEIGHTING_EXPONENT;
+    private final boolean bundlesFull;
+    
+    private final Matrix bundleActivities;
+    private final int[] mapSize;
+    private final Matrix bundleMap;
+    private final Matrix agglomerationEnergy;
+    private final Matrix nucleationEnergy;
+
+    public ZipTie(int maxCables, int maxBundles, int maxCablesPerBundle) {
+        this(maxCables, maxBundles, maxCablesPerBundle, -4);
+    }
+
+    public ZipTie(int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent) {
+        this(maxCables, maxBundles, maxCablesPerBundle, meanExponent, 0.05, 1.0);
+    }
+    
+    public ZipTie(int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent, double joiningThreshold, double speedup) {
+        
+        this.maxCables = maxCables;
+        this.maxBundles = maxBundles;
+        
+        if (maxCablesPerBundle == 0)
+            maxCablesPerBundle = (int)( ((double)maxCables) / ((double)maxBundles) );
+        
+        this.maxCablesPerBundle = maxCablesPerBundle;
+        
+        this.numBundles = 0;
+                
+        //User-defined constants        
+        this.AGGLOMERATION_ENERGY_RATE = Math.pow(10,-2) * speedup;
+        this.NUCLEATION_ENERGY_RATE = Math.pow(10,-4) * speedup;
+        this.ENERGY_DECAY_RATE = Math.pow(10, -2);
+
+                
+        /*
         # Coactivity value which, if it's every exceeded, causes a 
         # cable to be added to a bundle
         # real, 0 < x < 1, small
-        self.JOINING_THRESHOLD = joining_threshold
-        self.NUCLEATION_THRESHOLD = joining_threshold
+        */
+        this.JOINING_THRESHOLD = joiningThreshold;
+        this.NUCLEATION_THRESHOLD = joiningThreshold;
+                
+        /*
         # Exponent for calculating the generalized mean of signals in 
         # order to find bundle activities
         # real, x != 0
-        self.MEAN_EXPONENT = mean_exponent
-        # Exponent controlling the strength of inhibition between bundles
-        self.ACTIVATION_WEIGHTING_EXPONENT = 6.
+        */
+        this.MEAN_EXPONENT = meanExponent;
+                
+        //# Exponent controlling the strength of inhibition between bundles
+        this.ACTIVATION_WEIGHTING_EXPONENT = 6.0;
 
-        self.bundles_full = False        
-        self.bundle_activities = np.zeros((self.max_num_bundles, 1))
-        map_size = (self.max_num_bundles, self.max_num_cables)
-        self.bundle_map = np.zeros(map_size)
-        self.agglomeration_energy = np.zeros(map_size)
-        self.nucleation_energy = np.zeros((self.max_num_cables, 1))
+        this.bundlesFull = false;
+                
+        this.bundleActivities = new Matrix(this.maxBundles, 1);
+        
+        this.mapSize = new int[]{ maxBundles, maxCables };
+               
+        this.bundleMap = new Matrix(mapSize[0], mapSize[1]);
+        this.agglomerationEnergy = new Matrix(mapSize[0], mapSize[1]);
+        this.nucleationEnergy = new Matrix(this.maxCables, 1);                
+        
+    }
+    
+/*
+
+        
 
     def step_up(self, cable_activities):
         """ Update co-activity estimates and calculate bundle activity """
@@ -206,4 +249,11 @@ public class ZipTie {
         print self.max_num_bundles, 'bundles maximum'
         return    
     */   
+
+    public String toString() {
+        StringBuffer b = new StringBuffer();
+        b.append(super.toString() + "{" + this.bundleMap + "}");
+        return b.toString();
+    }
+    
 }

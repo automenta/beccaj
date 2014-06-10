@@ -4,7 +4,9 @@
  * and open the template in the editor.
  */
 
-package becca;
+package becca.core;
+
+import org.encog.mathutil.matrices.Matrix;
 
 /**
     An incremental model-based reinforcement learning algorithm
@@ -26,27 +28,48 @@ package becca;
     times the chain has been active.
  */
 public class DaisyChain {
+    private final double AGING_TIME_CONSTANT;
+    private final double CHAIN_UPDATE_RATE;
+    private final int maxCables;
+    private final int time;
+    private final Matrix count;
+    private final Matrix expectedCableActivities;
+    private final Matrix postUncertainty;
+    private final Matrix pre;
+    private final Matrix preCount;
+    private final Matrix post;
+    private final int numCables;
+    private final Matrix surprise;
+
+    public DaisyChain(int maxCables) {
+        
+        this.maxCables = maxCables;
+
+        this.AGING_TIME_CONSTANT = Math.pow(10, 6); //# real, large
+        this.CHAIN_UPDATE_RATE = Math.pow(10,-1); // # real, 0 < x < 1
+                
+        this.time = 0;
+        
+        //this.shape = (max_num_cables, max_num_cables)        
+        this.count = new Matrix(maxCables, maxCables);        
+        this.expectedCableActivities = new Matrix(maxCables, maxCables);        
+        this.postUncertainty = new Matrix(maxCables, maxCables);
+        
+        //state_shape = (max_num_cables,1)
+        this.pre = new Matrix(maxCables, 1);
+        this.preCount = new Matrix(maxCables, 1);
+        this.post = new Matrix(maxCables, 1);
+                
+        this.numCables = 0;
+        
+        //#this.deliberation_vote = np.zeros((max_num_cables, 1))
+        
+        this.surprise = new Matrix(maxCables, 1); //np.ones((max_num_cables, 1))
+        surprise.set(1.0);
+        
+    }
+    
 /*
-        def __init__(self, max_num_cables, name):
-        """ Initialize the daisychain, preallocating all data structures """
-        self.max_num_cables = max_num_cables
-        self.name = name
-        # User-defined constants
-        self.AGING_TIME_CONSTANT = 10 ** 6 # real, large
-        self.CHAIN_UPDATE_RATE = 10 ** -1 # real, 0 < x < 1
-        # Initialize variables
-        self.time_steps = 0
-        daisychain_shape = (max_num_cables, max_num_cables)        
-        self.count = np.zeros(daisychain_shape)
-        self.expected_cable_activities = np.zeros(daisychain_shape)
-        self.post_uncertainty = np.zeros(daisychain_shape)
-        state_shape = (max_num_cables,1)
-        self.pre = np.zeros(state_shape)
-        self.pre_count = np.zeros(state_shape)
-        self.post = np.zeros(state_shape)
-        self.num_cables = 0
-        #self.deliberation_vote = np.zeros((max_num_cables, 1))
-        self.surprise = np.ones((max_num_cables, 1))
 
     def step_up(self, cable_activities):        
         """ Train the daisychain using the current cable_activities """
@@ -120,4 +143,9 @@ public class DaisyChain {
         #                          self.num_actions, 10)
         return
     */    
+    public String toString() {
+        StringBuffer sb = new StringBuffer(super.toString());
+        sb.append("{ count=" + this.count + "}");
+        return sb.toString();
+    }
 }

@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package becca;
+package becca.core;
 
 /**
     The basic units of which blocks are composed
@@ -28,21 +28,33 @@ package becca;
     the next level higher to create goals for the cables. 
 */
 public class Cog {
+    private final int maxCables;
+    private final int maxBundles;
+    private final int maxChainsPerBundle;
+    private final DaisyChain daisychain;
+    private ZipTie ziptie;
+
+
+    public Cog(int maxCables, int maxBundles, int maxChainsPerBundle, int level) {
+        
+        this.maxCables = maxCables;
+        this.maxBundles = maxBundles;
+        
+        if (maxChainsPerBundle == 0) 
+            maxChainsPerBundle = (int)(Math.pow(maxCables,2) / ((double)maxBundles) );
+        
+        this.maxChainsPerBundle = maxChainsPerBundle;
+        
+        this.daisychain = new DaisyChain(maxCables);        
+        
+        if (maxBundles > 0)
+            this.ziptie = new ZipTie((int)Math.pow(maxCables, 2), maxBundles, maxChainsPerBundle);
+        else
+            this.ziptie = null;
+        
+    }
     
-    /*
-    def __init__(self, max_cables, max_bundles, max_chains_per_bundle=None,
-                 name='anonymous', level=0):
-        """ Initialize the cogs with a pre-determined maximum size """
-        self.name = name
-        self.max_cables = max_cables
-        self.max_bundles = max_bundles
-        if max_chains_per_bundle is None:
-            max_chains_per_bundle = int(max_cables ** 2 / max_bundles)
-        self.daisychain = DaisyChain(max_cables, name=name)        
-        if max_bundles > 0:
-            self.ziptie = ZipTie(max_cables **2, max_bundles, 
-                                 max_cables_per_bundle=max_chains_per_bundle, 
-                                 name=name)
+/*
 
     def step_up(self, cable_activities, enough_cables):
         """ cable_activities percolate upward through daisychain and ziptie """
@@ -90,4 +102,10 @@ public class Cog {
         return    
     */    
     
+    public String toString() {
+        String x = this.daisychain.toString();
+        if (this.maxBundles > 0)
+            x += " -> " + this.ziptie;
+        return x;
+    }
 }

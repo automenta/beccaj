@@ -1,4 +1,4 @@
-package becca;
+package becca.core;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -212,6 +212,15 @@ public class Agent implements Serializable {
         return null;
     }
 
+    public String toString() {
+        StringBuffer x = new StringBuffer();
+        x.append("Agent " + this.name + " (sensors=" + this.numSensors + ", actions=" + this.numActions + ") @ time=" + this.time + ":\n");
+        x.append("  " + this.blocks);
+        //x.append("Reward history: " +this.rewardHistory + "\n");
+        
+        return x.toString();
+    }
+    
     /*
      def visualize(self):
      """ Show the current state and some history of the agent """

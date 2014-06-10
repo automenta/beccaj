@@ -4,7 +4,9 @@
  * and open the template in the editor.
  */
 
-package becca;
+package becca.core;
+
+import java.util.ArrayList;
 
 /**
     Blocks are the building block of which the agent is composed
@@ -27,42 +29,60 @@ package becca;
     
     */
 public class Block {
-    public final long maxCables;
+    public final int maxCables;
+    private final int maxBundlesPerCog;
+    private final int maxCablesPerCog;
+    private final int maxCogs;
+    private final int maxBundles;
+    public final int level;
+    public final ZipTie ziptie;
+    private final ArrayList<Cog> cogs;
+    private final double[] cableActivities;
+    private final double[] hubCableGoals;
+    private final double fillFractionThreshold;
+    private final double activityDecayRate;
+    private final double rangeDecayRate;
+    private final double[] maxVals;
+    private final double[] minVals;
 
+    Block(int minCables) {    
+        this(minCables, 0);
+    }
     
-    Block(int minCables) {
-        //""" Initialize the level, defining the dimensions of its cogs """
-        this.maxCables = Math.round( Math.pow(2, Math.ceil(Util.log(minCables, 2))));
-
-        /*
-        self.max_cables_per_cog = 8
-        self.max_bundles_per_cog = 4
-        self.max_cogs = self.max_cables / self.max_bundles_per_cog
-        self.max_bundles = self.max_cogs * self.max_bundles_per_cog
-        self.name = name
-        self.level = level
-        ziptie_name = ''.join(('ziptie_', self.name))
-        self.ziptie = ZipTie(self.max_cables, self.max_cogs, 
-                             max_cables_per_bundle=self.max_cables_per_cog,
-                             mean_exponent=-2, name=ziptie_name)
-        self.cogs = []
-        # TODO: only create cogs as needed
-        for cog_index in range(self.max_cogs):
-            self.cogs.append(Cog(self.max_cables_per_cog, 
-                                 self.max_bundles_per_cog,
-                                 max_chains_per_bundle=self.max_cables_per_cog,
-                                 name='cog'+str(cog_index), 
-                                 level=self.level))
-        self.cable_activities = np.zeros((self.max_cables, 1))
-        self.hub_cable_goals = np.zeros((self.max_cables, 1))
-        self.fill_fraction_threshold = .7
-        self.ACTIVITY_DECAY_RATE = 1.# real, 0 < x < 1
-        # Constants for adaptively rescaling the cable activities
-        self.max_vals = np.zeros((self.max_cables, 1)) 
-        self.min_vals = np.zeros((self.max_cables, 1))
-        self.RANGE_DECAY_RATE = 10 ** -5
+    //""" Initialize the level, defining the dimensions of its cogs """
+    Block(int minCables, int level) {
+        this.maxCables = (int)Math.round( Math.pow(2, Math.ceil(Util.log(minCables, 2))));
+        this.level = level;
         
-        */
+        this.maxCablesPerCog = 8;
+        this.maxBundlesPerCog = 4;
+        this.maxCogs = maxCablesPerCog / maxBundlesPerCog;
+        this.maxBundles = this.maxCogs * this.maxBundlesPerCog;
+        
+        this.ziptie = new ZipTie(this.maxCables, this.maxCogs, this.maxCablesPerCog, -2);
+            //ziptie_name = ''.join(('ziptie_', self.name))
+        
+        this.cogs = new ArrayList<Cog>();
+        for (int i = 0; i < this.maxCogs; i++) {
+            final Cog c = new Cog(this.maxCablesPerCog,
+                                 this.maxBundlesPerCog,
+                                  this.maxCablesPerCog,
+                                   this.level);
+            cogs.add(c);
+        }
+        
+        this.cableActivities = new double[this.maxCables]; //2D? np.zeros((self.max_cables, 1))
+        this.hubCableGoals = new double[this.maxCables]; //2D? np.zeros((self.max_cables, 1))
+        
+        this.fillFractionThreshold = 0.7;
+        
+        this.activityDecayRate = 1.0;       //real, 0 < x < 1
+        
+        //# Constants for adaptively rescaling the cable activities
+        this.rangeDecayRate = Math.pow(10, -5);        
+        this.maxVals = new double[this.maxCables];
+        this.minVals = new double[this.maxCables];
+        
     }
     
 /*
@@ -169,6 +189,13 @@ public class Block {
         #    cog.visualize()
         return
     */    
-    
+    public String toString() {
+        String x = super.toString() + "{" + ziptie + ",\n";
+        for (Cog c : cogs) {
+            x += ("    " + c + "\n");
+        }
+        x += "}";
+        return x;
+    }
     
 }
