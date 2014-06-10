@@ -7,6 +7,7 @@
 package becca.core;
 
 import java.util.ArrayList;
+import org.encog.mathutil.matrices.Matrix;
 
 /**
     Blocks are the building block of which the agent is composed
@@ -33,17 +34,19 @@ public class Block {
     private final int maxBundlesPerCog;
     private final int maxCablesPerCog;
     private final int maxCogs;
-    private final int maxBundles;
+    public final int maxBundles;
     public final int level;
     public final ZipTie ziptie;
     private final ArrayList<Cog> cogs;
-    private final double[] cableActivities;
-    private final double[] hubCableGoals;
+    private final Matrix cableActivities;
+    private Matrix hubCableGoals;
     private final double fillFractionThreshold;
     private final double activityDecayRate;
     private final double rangeDecayRate;
-    private final double[] maxVals;
-    private final double[] minVals;
+    private final Matrix maxVals;
+    private final Matrix minVals;
+    private Matrix surprise;
+    private Matrix bundleActivities;
 
     Block(int minCables) {    
         this(minCables, 0);
@@ -71,8 +74,8 @@ public class Block {
             cogs.add(c);
         }
         
-        this.cableActivities = new double[this.maxCables]; //2D? np.zeros((self.max_cables, 1))
-        this.hubCableGoals = new double[this.maxCables]; //2D? np.zeros((self.max_cables, 1))
+        this.cableActivities = new Matrix(this.maxCables,1); //np.zeros((self.max_cables, 1))
+        this.hubCableGoals = new Matrix(this.maxCables, 1); //np.zeros((self.max_cables, 1))
         
         this.fillFractionThreshold = 0.7;
         
@@ -80,14 +83,14 @@ public class Block {
         
         //# Constants for adaptively rescaling the cable activities
         this.rangeDecayRate = Math.pow(10, -5);        
-        this.maxVals = new double[this.maxCables];
-        this.minVals = new double[this.maxCables];
-        
+        this.maxVals = new Matrix(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
+        this.minVals = new Matrix(this.maxCables, 1); // np.zeros((self.max_cables, 1))
+
     }
+
     
-/*
-        
-    def step_up(self, new_cable_activities):
+    public Matrix stepUp(Matrix newCableActivities) {
+        /*        
         """ Find bundle_activities that result from new_cable_activities """
         # Condition the cable activities to fall between 0 and 1
         if new_cable_activities.size < self.max_cables:
@@ -107,8 +110,12 @@ public class Block {
 
         # Update the map from self.cable_activities to cogs
         self.ziptie.step_up(self.cable_activities)
-        # Process the upward pass of each of the cogs in the block
-        self.bundle_activities = np.zeros((0, 1))
+        */
+        
+        //# Process the upward pass of each of the cogs in the block        
+        this.bundleActivities = new Matrix(0, 1);   //self.bundle_activities = np.zeros((0, 1))
+        
+        /*
         for cog_index in range(len(self.cogs)):
             # Pick out the cog's cable_activities, process them, 
             # and assign the results to block's bundle_activities
@@ -128,11 +135,19 @@ public class Block {
         self.hub_cable_goals *= self.ACTIVITY_DECAY_RATE
         self.hub_cable_goals = np.maximum(self.hub_cable_goals, 0.)
         return self.bundle_activities
+    */
+        return bundleActivities;
+    }
 
-    def step_down(self, bundle_goals):
+    public Matrix stepDown(Matrix bundleGoals) {
+        /*
         """ Find cable_activity_goals, given a set of bundle_goals """
         bundle_goals = tools.pad(bundle_goals, (self.max_bundles, 1))
-        cable_goals = np.zeros((self.max_cables, 1))
+        */
+        
+        Matrix cableGoals = new Matrix(maxCables, 1);
+        
+        /*
         self.surprise = np.zeros((self.max_cables, 1))
         # Process the downward pass of each of the cogs in the level
         cog_index = 0
@@ -153,10 +168,13 @@ public class Block {
             self.surprise[cog_cable_indices] = np.maximum(
                     cog.surprise, self.surprise[cog_cable_indices]) 
             cog_index += 1
-        #self.hub_cable_goals = tools.bounded_sum([self.hub_cable_goals, 
-        #                                          cable_goals])
-        return self.hub_cable_goals 
-
+        */
+        hubCableGoals = Util.boundedSum(0, hubCableGoals, cableGoals);
+        
+        return hubCableGoals;
+    }
+        
+/*
     def get_index_projection(self, bundle_index):
         """ Represent one of the bundles in terms of its cables """
         # Find which cog it belongs to and which output it corresponds to
@@ -173,15 +191,27 @@ public class Block {
         projection[cog_cable_indices,:] = cog_projection[:num_cables_in_cog,:]
         return projection
 
-    def bundles_created(self):
-        total = 0.
-        for cog in self.cogs:
-            # Check whether all cogs have created all their bundles
-                total += cog.num_bundles()
-        if np.random.random_sample() < 0.01:
-            print total, 'bundles in', self.name, ', max of', self.max_bundles
-        return total
-
+    */
+    
+    public Matrix getSurprise() {
+        return surprise;
+    }
+    
+    public int getBundlesCreated() {
+        int total = 0;
+        for (Cog c: cogs) {
+            //# Check whether all cogs have created all their bundles
+            total += c.getNumBundles();
+        }
+                        
+        /*if np.random.random_sample() < 0.01:
+            print total, 'bundles in', self.name, ', max of', self.max_bundles*/
+        
+        return total;
+        
+    }
+    
+    /*
     def visualize(self):
         """ Show what's going on inside the level """
         self.ziptie.visualize()
@@ -190,12 +220,13 @@ public class Block {
         return
     */    
     public String toString() {
-        String x = super.toString() + "{" + ziptie + ",\n";
+        String x = super.toString() + " {" + ziptie + ",\n";
         for (Cog c : cogs) {
             x += ("    " + c + "\n");
         }
-        x += "}";
+        x += "  }";
         return x;
     }
+
     
 }

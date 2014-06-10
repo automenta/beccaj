@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package becca.core;
 
 import org.encog.mathutil.matrices.Matrix;
@@ -38,7 +32,7 @@ public class DaisyChain {
     private final Matrix pre;
     private final Matrix preCount;
     private final Matrix post;
-    private final int numCables;
+    private int numCables;
     private final Matrix surprise;
 
     public DaisyChain(int maxCables) {
@@ -68,6 +62,18 @@ public class DaisyChain {
         surprise.set(1.0);
         
     }
+
+    public Matrix getSurprise() { 
+        /*
+        def get_surprise(self):
+            return self.surprise[:self.num_cables]
+        */
+        return surprise.getMatrix(0,numCables, 0,1);
+    }
+    
+    public int getNumCables() {
+        return numCables;
+    }        
     
 /*
 
@@ -119,8 +125,6 @@ public class DaisyChain {
         cable_goals = tools.bounded_sum([upstream_goals, self.reaction])
         return cable_goals[:self.num_cables]
 
-    def get_surprise(self):
-        return self.surprise[:self.num_cables]
 
     def get_index_projection(self, map_projection):
         """ Find the projection from chain activities to cable signals """
@@ -147,5 +151,13 @@ public class DaisyChain {
         StringBuffer sb = new StringBuffer(super.toString());
         sb.append("{ count=" + this.count + "}");
         return sb.toString();
+    }
+
+    Matrix stepDown(Matrix goals) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    Matrix stepUp(Matrix activities) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

@@ -96,11 +96,11 @@ public class ZipTie {
         
     }
     
-/*
 
-        
 
-    def step_up(self, cable_activities):
+    public Matrix stepUp(Matrix activities) {
+        /*
+   def step_up(self, cable_activities):
         """ Update co-activity estimates and calculate bundle activity """
         self.cable_activities = cable_activities
         # Find bundle activities by taking the generalized mean of
@@ -143,7 +143,32 @@ public class ZipTie {
             self._create_new_bundles()
         self._grow_bundles()
         return self.bundle_activities[:self.num_bundles,:]
+        */
+        return activities.getMatrix(0,numBundles, 0,1);
+    }
 
+    public Matrix stepDown(Matrix goals) {
+        /*
+    def step_down(self, bundle_goals):
+        """ 
+        Project the bundle goal values to the appropriate cables
+
+        Multiply the bundle goals across the cables that contribute 
+        to them, and perform a bounded sum over all bundles to get 
+        the estimated activity associated with each cable.
+        """
+        if bundle_goals.size > 0:
+            bundle_goals = tools.pad(bundle_goals, (self.max_num_bundles, 0))
+            cable_activity_goals = tools.bounded_sum(self.bundle_map * 
+                                                     bundle_goals, axis=0)
+        else:
+            cable_activity_goals = np.zeros((self.max_num_cables, 1))
+        return cable_activity_goals
+                */
+        return goals;
+    }
+    
+/*
     def _create_new_bundles(self):
         """ If the right conditions have been reached, create a new bundle """
         # Bundle space is a scarce resource
@@ -213,21 +238,6 @@ public class ZipTie {
                     candidate_bundle
         return
         
-    def step_down(self, bundle_goals):
-        """ 
-        Project the bundle goal values to the appropriate cables
-
-        Multiply the bundle goals across the cables that contribute 
-        to them, and perform a bounded sum over all bundles to get 
-        the estimated activity associated with each cable.
-        """
-        if bundle_goals.size > 0:
-            bundle_goals = tools.pad(bundle_goals, (self.max_num_bundles, 0))
-            cable_activity_goals = tools.bounded_sum(self.bundle_map * 
-                                                     bundle_goals, axis=0)
-        else:
-            cable_activity_goals = np.zeros((self.max_num_cables, 1))
-        return cable_activity_goals
         
     def get_index_projection(self, bundle_index):
         """ Project bundle indices down to their cable indices """
@@ -255,5 +265,10 @@ public class ZipTie {
         b.append(super.toString() + "{" + this.bundleMap + "}");
         return b.toString();
     }
+
+    public int getNumBundles() {
+        return numBundles;
+    }
+
     
 }

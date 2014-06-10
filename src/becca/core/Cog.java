@@ -6,6 +6,8 @@
 
 package becca.core;
 
+import org.encog.mathutil.matrices.Matrix;
+
 /**
     The basic units of which blocks are composed
 
@@ -28,12 +30,12 @@ package becca.core;
     the next level higher to create goals for the cables. 
 */
 public class Cog {
-    private final int maxCables;
-    private final int maxBundles;
-    private final int maxChainsPerBundle;
-    private final DaisyChain daisychain;
-    private ZipTie ziptie;
-
+    public final int maxCables;
+    public final int maxBundles;
+    public final int maxChainsPerBundle;
+    public final DaisyChain daisychain;
+    public final ZipTie ziptie;
+    private Matrix surprise;
 
     public Cog(int maxCables, int maxBundles, int maxChainsPerBundle, int level) {
         
@@ -53,32 +55,56 @@ public class Cog {
             this.ziptie = null;
         
     }
-    
-/*
 
-    def step_up(self, cable_activities, enough_cables):
-        """ cable_activities percolate upward through daisychain and ziptie """
+    //""" cable_activities percolate upward through daisychain and ziptie """
+    public Matrix stepUp(Matrix activities, boolean enoughCables) {
+
+        /*
         # TODO: fix this so that cogs can gracefully handle more cables 
         # or else never be assigned them in the first place
         if cable_activities.size > self.max_cables:
             cable_activities = cable_activities[:self.max_cables, :]
             print '-----  Number of max cables exceeded in', self.name, \
                     '  -----'
-        chain_activities = self.daisychain.step_up(cable_activities)
-        self.surprise = self.daisychain.get_surprise()
-        if enough_cables is True:
-            bundle_activities = self.ziptie.step_up(chain_activities)
-        else:
-            bundle_activities = np.zeros((0,1))
-        bundle_activities = tools.pad(bundle_activities, (self.max_bundles, 0))
-        return bundle_activities
-
-    def step_down(self, bundle_goals):
-        """ bundle_goals percolate downward """
-        chain_goals = self.ziptie.step_down(bundle_goals) 
-        cable_goals = self.daisychain.step_down(chain_goals)     
-        return cable_goals
-
+        */
+        if (activities.size() > maxCables) {
+            activities = activities.getMatrix(0,maxCables, 0,1);                    
+            System.err.println("Cog: Number of max cables exceeded in " + this);
+        }
+        
+        activities = daisychain.stepUp(activities);
+        surprise = daisychain.getSurprise();
+        
+        if (enoughCables) {
+            activities = ziptie.stepUp(activities);
+        }
+        else {
+            activities = new Matrix(0, 1);
+        }
+        
+        activities = Util.pad(activities, maxBundles, 1, 0.0);
+        
+        return activities;
+    }
+    
+    //""" bundle_goals percolate downward """
+    public Matrix stepDown(Matrix goals) {
+        goals = ziptie.stepDown(goals);
+        goals = daisychain.stepDown(goals);
+        return goals;
+    }
+    
+    //""" How many bundles have been created in this cog? """
+    public int getNumBundles() {            
+        return ziptie.getNumBundles();
+    }
+    
+    //""" How full is the set of cables for this cog? """
+    public double getFractionFilled() {    
+        return ((double)daisychain.getNumCables()) / ((double)maxCables);
+    }
+    
+    /*           
     def get_index_projection(self, bundle_index):
         """ Project a bundle down through the ziptie and daisychain """
         chain_projection = self.ziptie.get_index_projection(bundle_index)
@@ -86,26 +112,14 @@ public class Cog {
                 chain_projection)
         return cable_projection
          
-    def fraction_filled(self):
-        """ How full is the set of cables for this cog? """
-        return float(self.daisychain.num_cables) / float(self.max_cables)
-
-    def num_bundles(self):
-        """ How many bundles have been created in this cog? """
-        return self.ziptie.num_bundles
-            
-    def visualize(self):
-        """ Show the internal state of the daisychain and ziptie """
-        self.daisychain.visualize()
-        if self.max_bundles > 0:
-            self.ziptie.visualize()
-        return    
-    */    
+    */
     
+    //""" Show the internal state of the daisychain and ziptie """
     public String toString() {
         String x = this.daisychain.toString();
         if (this.maxBundles > 0)
             x += " -> " + this.ziptie;
         return x;
     }
+
 }

@@ -2,6 +2,11 @@ package becca.core;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import org.apache.commons.math3.stat.descriptive.rank.Median;
+import org.encog.mathutil.matrices.Matrix;
+
+import static org.encog.util.logging.DumpMatrix.dumpMatrix;
 
 /**
  * A general reinforcement learning agent
@@ -15,28 +20,31 @@ public class Agent implements Serializable {
     public final ArrayList<Block> blocks = new ArrayList();
     private int time; //current time step
 
-    private double[] recentSurpriseHistory;
+    private LinkedList<Double> recentSurpriseHistory;
     private final int RECENT_SURPRISE_HISTORY_SIZE = 100;
 
     private final int numSensors;
     private final int numActions;
-    private final double[] action;
-    private final int timeSinceRewardLog;
-    private final int cumulativeReward;
+    private int timeSinceRewardLog;
+    private double cumulativeReward;
     private final ArrayList<Double> rewardHistory;
-    private final ArrayList<Object> surprisehistory;
+    private final LinkedList<Double> surpriseHistory;
     private final ArrayList<Object> rewardSteps;
     public final Hub hub;
+    public final double[] sensor;
+    public final double[] action;
+    private double reward;
+    private double typicalSurprise;
 
-    public Agent(String name, int numSensors, int numActions) {
-        /*
+    /*
          Configure the Agent
 
          num_sensors and num_actions are the only absolutely necessary
          arguments. They define the number of elements in the 
-         sensors and actions arrays that the agent and the world use to
+         sensor and action arrays that the agent and the world use to
          communicate with each other. 
-        */
+    */
+    public Agent(String name, int numSensors, int numActions) {
         
         //self.BACKUP_PERIOD = 10 ** 4
 
@@ -44,85 +52,125 @@ public class Agent implements Serializable {
 
         this.time = 0;
 
-        //TODO: Automatically adapt to the number of sensors pass in
+        //TODO: Automatically adapt to the number of sensor pass in
         this.numSensors = numSensors;
+        this.sensor = new double[numSensors];
         this.numActions = numActions;
+        this.action = new double[numActions];
 
         //first_block_name = ''.join(('block_', str(self.num_blocks - 1)))
         blocks.add(new Block(numActions + numSensors));
         this.hub = new Hub(blocks.get(0).maxCables);
 
-        this.action = new double[numActions]; //2D? self.action = np.zeros((self.num_actions,1))
         this.cumulativeReward = 0;
         this.timeSinceRewardLog = 0;
-        this.rewardHistory = new ArrayList<Double>();
-        this.rewardSteps = new ArrayList<Object>();
-        this.surprisehistory = new ArrayList<Object>();
-        this.recentSurpriseHistory = new double[RECENT_SURPRISE_HISTORY_SIZE];
+        this.rewardHistory = new ArrayList();
+        this.rewardSteps = new ArrayList();
+        this.surpriseHistory = new LinkedList();
+        this.recentSurpriseHistory = new LinkedList();
 
+        this.reward = 0;
     }
 
-    public int step(double[] sensors, double reward) {
-      //""" Step through one time interval of the agent's operation """
-
-        this.time++;
-
-        /*
-         if sensors.ndim == 1:
-         sensors = sensors[:,np.newaxis]
-         self.reward = reward
-         # Propogate the new sensor inputs up through the blocks
-         cable_activities = np.vstack((self.action, sensors))
-         for block in self.blocks:
-         cable_activities = block.step_up(cable_activities) 
-         # Create a new block if the top block has had enough bundles assigned
-         block_bundles_full = (float(block.bundles_created()) / 
-         float(block.max_bundles))
-         block_initialization_threshold = .5
-         if block_bundles_full > block_initialization_threshold:
-         self.num_blocks +=  1
-         next_block_name = ''.join(('block_', str(self.num_blocks - 1)))
-         self.blocks.append(Block(self.num_actions + self.num_sensors,
-         name=next_block_name, 
-         level=self.num_blocks))
-         cable_activities = self.blocks[-1].step_up(cable_activities) 
-         self.hub.add_cables(self.blocks[-1].max_cables)
-         print "Added block", self.num_blocks - 1
-
-         self.hub.step(self.blocks, self.reward) 
+    
+    public int step(double reward) {
+        //""" Step through one time interval of the agent's operation """
+        //reads current 'sensor' value and sets action in 'action'
         
-         # Propogate the deliberation_goal_votes down through the blocks
-         # debug
-         agent_surprise = 0.0
-         cable_goals = np.zeros((cable_activities.size,1))
-       
-         for block in reversed(self.blocks):
-         cable_goals = block.step_down(cable_goals)
-         if np.nonzero(block.surprise)[0].size > 0:
-         agent_surprise = np.sum(block.surprise)
-         self.recent_surprise_history.pop(0)
-         self.recent_surprise_history.append(agent_surprise)
-         self.typical_surprise = np.median(np.array(
-         self.recent_surprise_history))
-         mod_surprise = agent_surprise - self.typical_surprise
-         self.surprise_history.append(mod_surprise)
+        this.time++;
+        this.reward = reward;
 
-         # Strip the actions off the deliberation_goal_votes to make 
-         # the current set of actions.
-         # For actions, each goal is a probability threshold. If a roll of
-         # dice comes up lower than the goal value, the action is taken
-         # with a magnitude of 1.
-         self.action = cable_goals[:self.num_actions,:] 
-         if (self.timestep % self.BACKUP_PERIOD) == 0:
-         self._save()    
-         # Log reward
-         self.cumulative_reward += reward
-         self.time_since_reward_log += 1
-         # debug
-         if np.random.random_sample() < 0.001:
-         self.visualize()
-         return self.action   
-         */
+        //cable_activities = np.vstack((self.action, sensor))
+
+        Matrix cableActivities = new Matrix(Math.max(numActions, numSensors), 2);
+        double[][] cableActivitiesData = cableActivities.getData();
+        for (int i = 0; i < numActions; i++)
+            cableActivitiesData[i][0] = action[i];
+        for (int i = 0; i < numSensors; i++)
+            cableActivitiesData[i][1] = sensor[i];
+        
+        System.out.println("cableActivities:" + dumpMatrix(cableActivities));
+        
+        //# Propogate the new sensor inputs up through the blocks
+        for (final Block b : blocks) {
+            b.stepUp(cableActivities);
+        }
+        
+        //# Create a new block if the top block has had enough bundles assigned
+        Block topBlock = blocks.get(blocks.size()-1); //top block        
+        double blockBundlesFull = ((double)(topBlock.getBundlesCreated())) / ((double)(topBlock.maxBundles));
+        
+        double blockInitializationThreshold = 0.5;
+        
+        if (blockBundlesFull > blockInitializationThreshold) {
+            Block b = new Block(numActions + numSensors, blocks.size());
+            blocks.add(b);
+            cableActivities = b.stepUp(cableActivities);
+            hub.addCables(b.maxCables);
+            //print "Added block", self.num_blocks - 1
+        }
+        
+        hub.step(blocks, reward);
+
+        //# Propogate the deliberation_goal_votes down through the blocks
+        double agentSurprise = 0.0;
+        Matrix cableGoals = new Matrix(cableActivities.size(), 1);
+
+        System.out.println("cableGoals:" + dumpMatrix(cableGoals));
+
+        //blocks in reverse
+        for (int i = blocks.size()-1; i >=0; i--) {
+            Block b = blocks.get(i);
+            cableGoals = b.stepDown(cableGoals);
+            
+            /*
+            if np.nonzero(block.surprise)[0].size > 0:
+                agent_surprise = np.sum(block.surprise)            
+            */
+            Matrix s = b.getSurprise();
+            int nonzeros = 0;
+            for (int g = 0; g < s.size(); g++) {
+                nonzeros += s.get(g,0) > 0 ? 1 : 0;
+            }
+            if (nonzeros > 0)
+                agentSurprise = s.sum();
+        }
+        
+        
+        recentSurpriseHistory.pop();    //remove first element
+        recentSurpriseHistory.add(agentSurprise);
+
+        //self.typical_surprise = np.median(np.array(self.recent_surprise_history))
+
+        Median m = new Median(); 
+        double[] rsh = new double[recentSurpriseHistory.size()]; int i = 0; for (Double d : recentSurpriseHistory) rsh[i++] = d;
+        this.typicalSurprise = m.evaluate(rsh);
+        
+        double modSurprise = agentSurprise - typicalSurprise;
+        surpriseHistory.add(modSurprise);
+        
+        /*
+        # Strip the actions off the deliberation_goal_votes to make 
+        # the current set of actions.
+        # For actions, each goal is a probability threshold. If a roll of
+        # dice comes up lower than the goal value, the action is taken
+        # with a magnitude of 1.
+        */
+        //self.action = cable_goals[:self.num_actions,:]
+        for (int a = 0; a < numActions; a++)
+            action[a] = cableGoals.get(a, 0);            
+        
+        //backup?
+        /*
+        if (self.timestep % self.BACKUP_PERIOD) == 0:
+                self._save()    
+        */
+        
+        
+        //# Log reward
+        this.cumulativeReward += reward;
+        this.timeSinceRewardLog += 1;
+        
         return 0;
 
     }
@@ -133,7 +181,7 @@ public class Agent implements Serializable {
         
          Every feature is projected down through its own block and
          the blocks below it until its cable_contributions on sensor inputs 
-         and actions is obtained. This is a way to represent the
+         and action is obtained. This is a way to represent the
          receptive field of each feature.
 
          Returns a list containing the cable_contributions for each feature 
@@ -186,7 +234,7 @@ public class Agent implements Serializable {
          increases by one. 
         
          Return the cable_contributions in terms of basic sensor 
-         inputs and actions. 
+         inputs and action. 
          """
          */
         if (blockIndex == -1) {
@@ -215,7 +263,9 @@ public class Agent implements Serializable {
     public String toString() {
         StringBuffer x = new StringBuffer();
         x.append("Agent " + this.name + " (sensors=" + this.numSensors + ", actions=" + this.numActions + ") @ time=" + this.time + ":\n");
-        x.append("  " + this.blocks);
+        x.append("  " + this.blocks + "\n");
+        x.append("  " + this.hub);
+        
         //x.append("Reward history: " +this.rewardHistory + "\n");
         
         return x.toString();
