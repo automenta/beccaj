@@ -6,8 +6,6 @@
 
 package becca.core;
 
-import org.encog.mathutil.matrices.Matrix;
-
 
 
 /**

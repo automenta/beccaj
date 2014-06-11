@@ -1,6 +1,9 @@
 package becca.core;
 
-import org.encog.mathutil.matrices.Matrix;
+import org.ejml.data.BlockMatrix64F;
+import org.ejml.data.DenseMatrix64F;
+import org.ejml.data.Matrix64F;
+import org.ejml.ops.CommonOps;
 
 /**
     An incremental model-based reinforcement learning algorithm
@@ -26,14 +29,14 @@ public class DaisyChain {
     private final double CHAIN_UPDATE_RATE;
     private final int maxCables;
     private final int time;
-    private final Matrix count;
-    private final Matrix expectedCableActivities;
-    private final Matrix postUncertainty;
-    private final Matrix pre;
-    private final Matrix preCount;
-    private final Matrix post;
+    private final Matrix64F count;
+    private final Matrix64F expectedCableActivities;
+    private final Matrix64F postUncertainty;
+    private final Matrix64F pre;
+    private final Matrix64F preCount;
+    private final Matrix64F post;
     private int numCables;
-    private final Matrix surprise;
+    private final DenseMatrix64F surprise;
 
     public DaisyChain(int maxCables) {
         
@@ -45,35 +48,37 @@ public class DaisyChain {
         this.time = 0;
         
         //this.shape = (max_num_cables, max_num_cables)        
-        this.count = new Matrix(maxCables, maxCables);        
-        this.expectedCableActivities = new Matrix(maxCables, maxCables);        
-        this.postUncertainty = new Matrix(maxCables, maxCables);
+        this.count = new BlockMatrix64F(maxCables, maxCables);        
+        this.expectedCableActivities = new BlockMatrix64F(maxCables, maxCables);        
+        this.postUncertainty = new BlockMatrix64F(maxCables, maxCables);
         
         //state_shape = (max_num_cables,1)
-        this.pre = new Matrix(maxCables, 1);
-        this.preCount = new Matrix(maxCables, 1);
-        this.post = new Matrix(maxCables, 1);
+        this.pre = new BlockMatrix64F(maxCables, 1);
+        this.preCount = new BlockMatrix64F(maxCables, 1);
+        this.post = new BlockMatrix64F(maxCables, 1);
                 
         this.numCables = 0;
         
         //#this.deliberation_vote = np.zeros((max_num_cables, 1))
         
-        this.surprise = new Matrix(maxCables, 1); //np.ones((max_num_cables, 1))
-        surprise.set(1.0);
+        this.surprise = new DenseMatrix64F(maxCables, 1); //np.ones((max_num_cables, 1))
+        CommonOps.fill(surprise, 1.0);
         
     }
 
-    public Matrix getSurprise() { 
+    public DenseMatrix64F getSurprise() { 
         /*
         def get_surprise(self):
             return self.surprise[:self.num_cables]
         */
-        return surprise.getMatrix(0,numCables, 0,1);
+        if (surprise.getNumRows() > numCables)
+            return CommonOps.extract(surprise, 0, 1, 0, numCables);
+        return surprise;
     }
     
     public int getNumCables() {
         return numCables;
-    }        
+    }
     
 /*
 
@@ -153,11 +158,11 @@ public class DaisyChain {
         return sb.toString();
     }
 
-    Matrix stepDown(Matrix goals) {
+    public BlockMatrix64F stepDown(BlockMatrix64F goals) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    Matrix stepUp(Matrix activities) {
+    public DenseMatrix64F stepUp(DenseMatrix64F activities) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

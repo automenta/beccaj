@@ -6,7 +6,8 @@
 
 package becca.core;
 
-import org.encog.mathutil.matrices.Matrix;
+import org.ejml.data.BlockMatrix64F;
+import org.ejml.data.DenseMatrix64F;
 
 /**
     The basic units of which blocks are composed
@@ -35,7 +36,7 @@ public class Cog {
     public final int maxChainsPerBundle;
     public final DaisyChain daisychain;
     public final ZipTie ziptie;
-    private Matrix surprise;
+    private DenseMatrix64F surprise;
 
     public Cog(int maxCables, int maxBundles, int maxChainsPerBundle, int level) {
         
@@ -57,7 +58,7 @@ public class Cog {
     }
 
     //""" cable_activities percolate upward through daisychain and ziptie """
-    public Matrix stepUp(Matrix activities, boolean enoughCables) {
+    public DenseMatrix64F stepUp(DenseMatrix64F activities, boolean enoughCables) {
 
         /*
         # TODO: fix this so that cogs can gracefully handle more cables 
@@ -67,8 +68,8 @@ public class Cog {
             print '-----  Number of max cables exceeded in', self.name, \
                     '  -----'
         */
-        if (activities.size() > maxCables) {
-            activities = activities.getMatrix(0,maxCables, 0,1);                    
+        if (activities.getNumRows() > maxCables) {
+            activities.reshape(maxCables,1);
             System.err.println("Cog: Number of max cables exceeded in " + this);
         }
         
@@ -79,7 +80,7 @@ public class Cog {
             activities = ziptie.stepUp(activities);
         }
         else {
-            activities = new Matrix(0, 1);
+            activities = new DenseMatrix64F(0, 1);
         }
         
         activities = Util.pad(activities, maxBundles, 1, 0.0);
@@ -88,7 +89,7 @@ public class Cog {
     }
     
     //""" bundle_goals percolate downward """
-    public Matrix stepDown(Matrix goals) {
+    public BlockMatrix64F stepDown(BlockMatrix64F goals) {
         goals = ziptie.stepDown(goals);
         goals = daisychain.stepDown(goals);
         return goals;

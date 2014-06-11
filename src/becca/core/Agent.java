@@ -4,9 +4,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
-import org.encog.mathutil.matrices.Matrix;
-
-import static org.encog.util.logging.DumpMatrix.dumpMatrix;
+import org.ejml.data.BlockMatrix64F;
+import org.ejml.data.DenseMatrix64F;
 
 /**
  * A general reinforcement learning agent
@@ -81,15 +80,18 @@ public class Agent implements Serializable {
         this.reward = reward;
 
         //cable_activities = np.vstack((self.action, sensor))
-
-        Matrix cableActivities = new Matrix(Math.max(numActions, numSensors), 2);
-        double[][] cableActivitiesData = cableActivities.getData();
-        for (int i = 0; i < numActions; i++)
+        DenseMatrix64F cableActivities = new DenseMatrix64F(numActions + numSensors, 1);
+        System.arraycopy(action, 0, cableActivities.getData(), 0, numActions);
+        System.arraycopy(sensor, 0, cableActivities.getData(), numActions, numSensors);
+        
+        
+        /*for (int i = 0; i < numActions; i++)
             cableActivitiesData[i][0] = action[i];
         for (int i = 0; i < numSensors; i++)
-            cableActivitiesData[i][1] = sensor[i];
+            cableActivitiesData[i][1] = sensor[i];*/
         
-        System.out.println("cableActivities:" + dumpMatrix(cableActivities));
+        
+        System.out.println("cableActivities:" + cableActivities);
         
         //# Propogate the new sensor inputs up through the blocks
         for (final Block b : blocks) {
@@ -114,9 +116,9 @@ public class Agent implements Serializable {
 
         //# Propogate the deliberation_goal_votes down through the blocks
         double agentSurprise = 0.0;
-        Matrix cableGoals = new Matrix(cableActivities.size(), 1);
+        BlockMatrix64F cableGoals = new BlockMatrix64F(cableActivities.getNumCols() * cableActivities.getNumRows(), 1);
 
-        System.out.println("cableGoals:" + dumpMatrix(cableGoals));
+        System.out.println("cableGoals:" + cableGoals);
 
         //blocks in reverse
         for (int i = blocks.size()-1; i >=0; i--) {
@@ -127,13 +129,13 @@ public class Agent implements Serializable {
             if np.nonzero(block.surprise)[0].size > 0:
                 agent_surprise = np.sum(block.surprise)            
             */
-            Matrix s = b.getSurprise();
+            BlockMatrix64F s = b.getSurprise();
+            double[] sd = s.getData();
             int nonzeros = 0;
-            for (int g = 0; g < s.size(); g++) {
-                nonzeros += s.get(g,0) > 0 ? 1 : 0;
-            }
+            for (int g = 0; g < sd.length; g++)
+                nonzeros += sd[g] > 0 ? 1 : 0;            
             if (nonzeros > 0)
-                agentSurprise = s.sum();
+                agentSurprise = Util.sum(s);
         }
         
         
@@ -156,16 +158,14 @@ public class Agent implements Serializable {
         # dice comes up lower than the goal value, the action is taken
         # with a magnitude of 1.
         */
-        //self.action = cable_goals[:self.num_actions,:]
-        for (int a = 0; a < numActions; a++)
-            action[a] = cableGoals.get(a, 0);            
+        System.arraycopy(cableGoals.getData(), 0, action, 0, numActions);
+        
         
         //backup?
         /*
         if (self.timestep % self.BACKUP_PERIOD) == 0:
                 self._save()    
-        */
-        
+        */        
         
         //# Log reward
         this.cumulativeReward += reward;

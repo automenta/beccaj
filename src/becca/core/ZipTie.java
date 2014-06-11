@@ -6,7 +6,10 @@
 
 package becca.core;
 
-import org.encog.mathutil.matrices.Matrix;
+import org.ejml.data.BlockMatrix64F;
+import org.ejml.data.DenseMatrix64F;
+import org.ejml.data.Matrix64F;
+import org.ejml.ops.CommonOps;
 
 /**
     An incremental unsupervised learning algorithm
@@ -34,11 +37,11 @@ public class ZipTie {
     private final double ACTIVATION_WEIGHTING_EXPONENT;
     private final boolean bundlesFull;
     
-    private final Matrix bundleActivities;
+    private final Matrix64F bundleActivities;
     private final int[] mapSize;
-    private final Matrix bundleMap;
-    private final Matrix agglomerationEnergy;
-    private final Matrix nucleationEnergy;
+    private final Matrix64F bundleMap;
+    private final Matrix64F agglomerationEnergy;
+    private final Matrix64F nucleationEnergy;
 
     public ZipTie(int maxCables, int maxBundles, int maxCablesPerBundle) {
         this(maxCables, maxBundles, maxCablesPerBundle, -4);
@@ -86,19 +89,19 @@ public class ZipTie {
 
         this.bundlesFull = false;
                 
-        this.bundleActivities = new Matrix(this.maxBundles, 1);
+        this.bundleActivities = new BlockMatrix64F(this.maxBundles, 1);
         
         this.mapSize = new int[]{ maxBundles, maxCables };
                
-        this.bundleMap = new Matrix(mapSize[0], mapSize[1]);
-        this.agglomerationEnergy = new Matrix(mapSize[0], mapSize[1]);
-        this.nucleationEnergy = new Matrix(this.maxCables, 1);                
+        this.bundleMap = new BlockMatrix64F(mapSize[0], mapSize[1]);
+        this.agglomerationEnergy = new BlockMatrix64F(mapSize[0], mapSize[1]);
+        this.nucleationEnergy = new BlockMatrix64F(this.maxCables, 1);                
         
     }
     
 
 
-    public Matrix stepUp(Matrix activities) {
+    public DenseMatrix64F stepUp(DenseMatrix64F activities) {
         /*
    def step_up(self, cable_activities):
         """ Update co-activity estimates and calculate bundle activity """
@@ -144,10 +147,13 @@ public class ZipTie {
         self._grow_bundles()
         return self.bundle_activities[:self.num_bundles,:]
         */
-        return activities.getMatrix(0,numBundles, 0,1);
+        //return activities.getMatrix(0,numBundles, 0,1);
+        if (activities.getNumRows() > numBundles)
+            return CommonOps.extract(activities, 0, 1, 0, numBundles);
+        return activities;        
     }
 
-    public Matrix stepDown(Matrix goals) {
+    public BlockMatrix64F stepDown(BlockMatrix64F goals) {
         /*
     def step_down(self, bundle_goals):
         """ 

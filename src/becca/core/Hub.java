@@ -15,7 +15,10 @@ The hub is the central action selection mechanism
     4) declares that goal in the appropriate block.
 */
 import java.util.ArrayList;
-import org.encog.mathutil.matrices.Matrix;
+import org.ejml.data.BlockMatrix64F;
+import org.ejml.data.DenseMatrix64F;
+import org.ejml.data.Matrix64F;
+import org.ejml.ops.CommonOps;
 
 public class Hub {
     
@@ -29,12 +32,12 @@ public class Hub {
     private double rewardMin;
     private double rewardMax;
     private final double oldReward;
-    private final Matrix count;
+    private final Matrix64F count;
     private final double[] rewardTrace;
-    private final Matrix expectedReward;
-    private final Matrix cableActivities;
-    private final Matrix[] pre;
-    private final Matrix[] post;
+    private final DenseMatrix64F expectedReward;
+    private final Matrix64F cableActivities;
+    private final Matrix64F[] pre;
+    private final Matrix64F[] post;
 
     public Hub(int initialNumCables) {
         this.numCables = initialNumCables;
@@ -53,24 +56,24 @@ public class Hub {
         this.rewardMax = -Util.BIG;
         this.oldReward = 0.0;
                 
-        this.count = new Matrix(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
+        this.count = new BlockMatrix64F(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
         this.rewardTrace = new double[this.TRACE_LENGTH];
         
-        this.expectedReward = new Matrix(this.numCables, this.numCables);
-        expectedReward.set(this.INITIAL_REWARD); //(np.ones((this.num_cables, this.num_cables)) * this.INITIAL_REWARD)
+        this.expectedReward = new DenseMatrix64F(this.numCables, this.numCables);
+        CommonOps.fill(expectedReward, INITIAL_REWARD);
         
-        this.cableActivities = new Matrix(this.numCables, 1);
+        this.cableActivities = new BlockMatrix64F(this.numCables, 1);
         
         /*# pre represents the feature and sensor activities at a given
           # time step.
           # post represents the goal or action that was taken following. */
-        this.pre = new Matrix[this.TRACE_LENGTH];
-        this.post = new Matrix[this.TRACE_LENGTH];
+        this.pre = new BlockMatrix64F[this.TRACE_LENGTH];
+        this.post = new BlockMatrix64F[this.TRACE_LENGTH];
         for (int i = 0; i < this.TRACE_LENGTH; i++) {
             /*this.pre = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH) 
             this.post = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH)*/
-            pre[i] = new Matrix(this.numCables, 1);
-            post[i] = new Matrix(this.numCables, 1);
+            pre[i] = new BlockMatrix64F(this.numCables, 1);
+            post[i] = new BlockMatrix64F(this.numCables, 1);
         }
                 
     }
