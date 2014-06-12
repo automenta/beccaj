@@ -3,6 +3,7 @@ package becca.core;
 import org.apache.commons.math3.util.Precision;
 import org.ejml.alg.dense.mult.SubmatrixOps;
 import org.ejml.data.BlockMatrix64F;
+import org.ejml.data.D1Matrix64F;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.data.ReshapeMatrix64F;
 import org.ejml.ops.CommonOps;
@@ -47,6 +48,37 @@ public class Util extends CommonOps {
         return weightedSumValues;        
     }
 
+    
+    public static void printMatrixDimensions(ReshapeMatrix64F... m) {
+        String s = "";
+        for (ReshapeMatrix64F r : m) 
+            s += m(r) + " ";
+        System.out.println("matrixDim: " + s);
+    }
+    
+    public static DenseMatrix64F matrixVector(DenseMatrix64F matrix, DenseMatrix64F vector) {
+        //ex: (8, 32) * (1, 32) -> (8, 32)
+        assert(matrix.getNumCols() == vector.getNumCols());
+        
+        DenseMatrix64F result = new DenseMatrix64F(matrix.getNumRows(), matrix.getNumCols());
+        double[] vdata = vector.getData();
+        for (int i = 0; i < matrix.getNumRows(); i++) {
+           for (int j = 0; j < matrix.getNumCols(); j++) {
+               result.set(i, j, matrix.get(i, j) * vector.get(0, j));
+           }
+        }
+        return result;        
+    }
+    
+    public static double dot(DenseMatrix64F a, DenseMatrix64F b) {
+        double[] ad = a.getData();
+        double[] bd = b.getData();
+        assert(ad.length == bd.length);
+        double sum = 0;
+        for (int i = 0; i < ad.length; i++)
+            sum += ad[i] * bd[i];        
+        return sum;        
+    }
     
     public static DenseMatrix64F getGeneralizedMean(DenseMatrix64F values, DenseMatrix64F weights, double exponent) {
         DenseMatrix64F shiftedValues = values.copy();
@@ -187,7 +219,7 @@ public class Util extends CommonOps {
         */
     }
 
-    static double sum(BlockMatrix64F s) {
+    static double sum(D1Matrix64F s) {
         return elementSum(s);
     }
 
@@ -276,7 +308,7 @@ public class Util extends CommonOps {
                     projection.set(0, j, x.get(0, j));
                 }
                 else {
-                    double cg = x.get(j,i);
+                    double cg = x.get(i, j);
                     if (cg > projection.get(0, j))
                         projection.set(0, j, cg);
                 }

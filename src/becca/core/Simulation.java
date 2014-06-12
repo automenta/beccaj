@@ -60,8 +60,9 @@ public class Simulation {
             */
 
             double reward = world.step(agent.action, agent.sensor);
-            
+
             agent.step(reward);
+
         }
                           
     }

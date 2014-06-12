@@ -8,10 +8,10 @@ package becca.core;
 
 import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
-import org.ejml.data.Matrix64F;
-import org.ejml.ops.CommonOps;
 
 import static becca.core.Util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -30,7 +30,7 @@ public class ZipTie {
     private final int maxCables;
     private final int maxBundles;
     private final int maxCablesPerBundle;
-    private final int numBundles;
+    private int numBundles;
     private final double AGGLOMERATION_ENERGY_RATE;
     private final double NUCLEATION_ENERGY_RATE;
     private final double ENERGY_DECAY_RATE;
@@ -38,12 +38,12 @@ public class ZipTie {
     private final double NUCLEATION_THRESHOLD;
     private final double MEAN_EXPONENT;
     private final double ACTIVATION_WEIGHTING_EXPONENT;
-    private final boolean bundlesFull;
+    private boolean bundlesFull;
     
     private DenseMatrix64F bundleActivities;
     private final DenseMatrix64F bundleMap;
-    private final Matrix64F agglomerationEnergy;
-    private final Matrix64F nucleationEnergy;
+    private DenseMatrix64F agglomerationEnergy;
+    private final DenseMatrix64F nucleationEnergy;
     private DenseMatrix64F cableActivities;
     private DenseMatrix64F nonBundleActivities;
 
@@ -99,8 +99,8 @@ public class ZipTie {
         this.bundleMap = new DenseMatrix64F(maxBundles, maxCables);
         
         
-        this.agglomerationEnergy = new BlockMatrix64F(maxBundles, maxCables);
-        this.nucleationEnergy = new BlockMatrix64F(this.maxCables, 1);                
+        this.agglomerationEnergy = new DenseMatrix64F(maxBundles, maxCables);
+        this.nucleationEnergy = new DenseMatrix64F(this.maxCables, 1);                
         
     }
     
@@ -108,7 +108,7 @@ public class ZipTie {
 
     public DenseMatrix64F stepUp(DenseMatrix64F cableActivities) {
         // Update co-activity estimates and calculate bundle activity """
-                
+
         this.cableActivities = cableActivities;
 
         DenseMatrix64F cableActivitiesTranspose = cableActivities.copy();
@@ -195,10 +195,8 @@ public class ZipTie {
         }
         growBundles();
                         
-        //return self.bundle_activities[:self.num_bundles,:]                
-        if (cableActivities.getNumRows() > numBundles)
-            return extract(cableActivities, 0, 1, 0, numBundles);
-        return cableActivities;        
+        DenseMatrix64F r = DenseMatrix64F.wrap(numBundles, 1, cableActivities.getData());
+        return r;
     }
 
     public BlockMatrix64F stepDown(BlockMatrix64F goals) {
@@ -226,10 +224,9 @@ public class ZipTie {
         //""" Project bundle indices down to their cable indices """
         DenseMatrix64F bundle = new DenseMatrix64F(maxBundles, 1);
         bundle.set(bundleIndex, 0, 1.0);
-        
-        //projection = np.sign(np.max(self.bundle_map * bundle,axis=0))[np.newaxis, :]
-        DenseMatrix64F bmb = new DenseMatrix64F(bundleMap.getNumRows(), bundle.getNumCols());
-        mult(bundleMap, bundle, bmb);
+
+        //projection = np.sign(np.max(self.bundle_map * bundle,axis=0))[np.newaxis, :]        
+        DenseMatrix64F bmb = transpose(matrixVector(transpose(bundleMap,null), transpose(bundle,null)),null);
         
         //TODO this may need to be iterated by rows, depending on which axis is meant        
         
@@ -245,83 +242,228 @@ public class ZipTie {
         /*
         # Bundle space is a scarce resource
         # Decay the energy        
-        self.nucleation_energy -= (self.cable_activities *
+        */
+        
+        /*self.nucleation_energy -= (self.cable_activities *
                                    self.nucleation_energy * 
                                    self.NUCLEATION_ENERGY_RATE * 
-                                   self.ENERGY_DECAY_RATE)
+                                   self.ENERGY_DECAY_RATE)       */ 
+        
+
+        DenseMatrix64F nucleationEnergyDelta = new DenseMatrix64F(cableActivities.getNumRows(), nucleationEnergy.getNumCols());
+        elementMult(cableActivities, nucleationEnergy, nucleationEnergyDelta);
+        scale(NUCLEATION_ENERGY_RATE * ENERGY_DECAY_RATE, nucleationEnergyDelta);
+        
+        sub(nucleationEnergy, nucleationEnergyDelta, nucleationEnergy);
+        
+        //--
+        /*
         self.nucleation_energy += (self.nonbundle_activities * 
                                    (1. - self.nucleation_energy) *
                                    self.NUCLEATION_ENERGY_RATE)
-        cable_indices = np.where(self.nucleation_energy > 
-                                 self.NUCLEATION_THRESHOLD)
-        # Add a new bundle if appropriate
-        if cable_indices[0].size > 0:
-            # Randomly pick a new cable from the candidates, 
-            # if there is more than one
-            cable_index = cable_indices[0][int(np.random.random_sample() * 
-                                                  cable_indices[0].size)]
-            self.bundle_map[self.num_bundles, cable_index] = 1.
-            self.num_bundles += 1
-            if self.num_bundles == self.max_num_bundles:
-                self.bundles_full = True
-            print self.name, 'ci', cable_index, 'added as a bundle nucleus'
-            self.nucleation_energy[cable_index, 0] = 0.
-            self.agglomeration_energy[:, cable_index] = 0.
-        return 
         */
-    }
-    protected void growBundles() {
+        
+        DenseMatrix64F nucleationEnergyDelta2 = new DenseMatrix64F(nonBundleActivities.getNumRows(), nucleationEnergy.getNumCols());
+        
+        DenseMatrix64F nucleationEnergyOnes = new DenseMatrix64F(nucleationEnergy.getNumRows(), nucleationEnergy.getNumCols());
+        fill(nucleationEnergyOnes, 1.0);
+        sub(nucleationEnergyOnes, nucleationEnergy, nucleationEnergyOnes);
+        
+        
+        elementMult(nonBundleActivities, nucleationEnergyOnes, nucleationEnergyDelta2);
+        scale(NUCLEATION_ENERGY_RATE, nucleationEnergyDelta2);
+        
+        add(nucleationEnergy, nucleationEnergyDelta2, nucleationEnergy);
+        
+        /* cable_indices = np.where(self.nucleation_energy > 
+                                 self.NUCLEATION_THRESHOLD)  */
+        List<Integer> cableIndices = new ArrayList();
+        double[] ned = nucleationEnergy.getData();
+        for (int i = 0; i < ned.length; i++)
+            if (ned[i] > NUCLEATION_THRESHOLD)
+                cableIndices.add(i);
+                
+        //# Add a new bundle if appropriate
+        if (cableIndices.size() > 0) {
+        
+            //# Randomly pick a new cable from the candidates, if there is more than one
             
-        /*          
-        """ Update an estimate of co-activity between all cables """
-        coactivities = np.dot(self.bundle_activities, 
-                              self.nonbundle_activities.T)
-        # Each cable's nonbundle activity is distributed to agglomeration energy
-        # with each bundle proportionally to their coactivities.
+            /*cable_index = cable_indices[0][int(np.random.random_sample() * 
+                                                  cable_indices[0].size)]*/
+            int cableIndex = (int)(Math.random() * cableIndices.size());
+
+            //self.bundle_map[self.num_bundles, cable_index] = 1.
+            bundleMap.set(numBundles, cableIndex, 1.0);
+            
+            numBundles++;
+            
+            if (numBundles == maxBundles)
+                bundlesFull = true;
+                                
+            //print self.name, 'ci', cable_index, 'added as a bundle nucleus'
+            
+            //self.nucleation_energy[cable_index, 0] = 0.
+            nucleationEnergy.set(cableIndex, 0, 0.0);
+            
+            //self.agglomeration_energy[:, cable_index] = 0.
+            for (int i = 0; i < agglomerationEnergy.getNumRows(); i++)
+                agglomerationEnergy.set(i, cableIndex, 0.0);
+            
+            
+        }
+                
+    }
+    
+    protected void growBundles() {
+        //""" Update an estimate of co-activity between all cables """
+       
+        DenseMatrix64F nonBundleActivitiesT = transpose(nonBundleActivities, null);
+        DenseMatrix64F bundleActivitiesT = transpose(bundleActivities, null);
+        
+        //coactivities = np.dot(self.bundle_activities, self.nonbundle_activities.T)       
+        
+        DenseMatrix64F coactivities = new DenseMatrix64F(bundleActivitiesT.getNumRows(), nonBundleActivitiesT.getNumCols());
+        mult(bundleActivitiesT, nonBundleActivitiesT, coactivities);                
+        
+        /* Each cable's nonbundle activity is distributed to agglomeration energy
+           with each bundle proportionally to their coactivities.
+
         proportions_by_bundle = (self.bundle_activities / 
-                                 np.sum(self.bundle_activities + tools.EPSILON))
+                                 np.sum(self.bundle_activities + tools.EPSILON))   */
+        DenseMatrix64F proportionsByBundle = bundleActivities.copy();
+        add(proportionsByBundle, EPSILON);
+        double sum = sum(proportionsByBundle);
+        proportionsByBundle.set(bundleActivities);
+        scale(1.0 / sum, proportionsByBundle);
+                                
+        /*
         proportions_by_cable = np.dot(proportions_by_bundle, 
-                                      self.nonbundle_activities.T)
+                                      self.nonbundle_activities.T)        */
+
+        DenseMatrix64F proportionsByBundleT = transpose(proportionsByBundle, null);
+        DenseMatrix64F proportionsByCable = new DenseMatrix64F(proportionsByBundleT.getNumRows(), nonBundleActivitiesT.getNumCols());
+        mult(proportionsByBundleT, nonBundleActivitiesT, proportionsByCable);
+
+        
+        /*
         # Decay the energy        
         self.agglomeration_energy -= (proportions_by_cable * 
                                       self.cable_activities.T *
                                       self.agglomeration_energy * 
                                       self.AGGLOMERATION_ENERGY_RATE * 
                                       self.ENERGY_DECAY_RATE)
+        */
+        //(8, 32) * (1, 32) -> (8, 32)
+        //(8, 32) * (8, 32) => (8, 32)
+
+        
+        DenseMatrix64F cableActivitiesT = transpose(cableActivities, null);
+        DenseMatrix64F proportionsByCableT = transpose(proportionsByCable, null);
+        
+        DenseMatrix64F aggDelta0 = matrixVector(proportionsByCable, cableActivitiesT);
+     
+        DenseMatrix64F aggDelta = new DenseMatrix64F(aggDelta0.getNumRows(), agglomerationEnergy.getNumCols());        
+        elementMult(aggDelta0, agglomerationEnergy, aggDelta);
+        
+        
+        scale(AGGLOMERATION_ENERGY_RATE * ENERGY_DECAY_RATE, aggDelta);
+        
+
+        sub(agglomerationEnergy, aggDelta, agglomerationEnergy);
+        
+        /*
         self.agglomeration_energy += (proportions_by_cable * 
                                       coactivities * 
                                       (1. - self.agglomeration_energy) *
                                       self.AGGLOMERATION_ENERGY_RATE)
-        # For any bundles that are already full, don't change their coactivity
+        */
+        DenseMatrix64F oneMinusAgglom = new DenseMatrix64F(agglomerationEnergy.getNumRows(), agglomerationEnergy.getNumCols());
+        fill(oneMinusAgglom,1.0);
+        
+        sub(oneMinusAgglom, agglomerationEnergy, oneMinusAgglom);
+                
+        DenseMatrix64F aggDelta3 = matrixVector(proportionsByCable, coactivities);
+
+        DenseMatrix64F aggDelta4 = new DenseMatrix64F(aggDelta3.getNumRows(), oneMinusAgglom.getNumCols());
+        elementMult(aggDelta3, oneMinusAgglom, aggDelta4);
+        
+        scale(AGGLOMERATION_ENERGY_RATE, aggDelta4);
+        
+        add(agglomerationEnergy, aggDelta4, agglomerationEnergy);
+        
+        
+        
+        /*
+        # For any bundles that are already full, don't change their coactivity                
         # TODO: make this more elegant than enforcing a hard maximum count
         full_bundles = np.zeros((self.max_num_bundles, 1))
+        */
+        DenseMatrix64F fullBundles = new DenseMatrix64F(1, maxBundles);
+        
+        /*
         cables_per_bundle = np.sum(self.bundle_map, axis=1)[:,np.newaxis]
+        */
+        DenseMatrix64F cablesPerBundle = sumRows(bundleMap, null);
+        
+        /*
         full_bundles[np.where(cables_per_bundle >= 
                               self.max_cables_per_bundle)] = 1.
-        self.agglomeration_energy *= 1 - full_bundles
-        new_candidates = np.where(self.agglomeration_energy >= 
-                                  self.JOINING_THRESHOLD)
-        num_candidates =  new_candidates[0].size 
-        if num_candidates > 0:
-            candidate_index = np.random.randint(num_candidates) 
-            candidate_cable = new_candidates[1][candidate_index]
-            candidate_bundle = new_candidates[0][candidate_index]
-            self.bundle_map[candidate_bundle, candidate_cable] = 1.
-            self.nucleation_energy[candidate_cable, 0] = 0.
-            self.agglomeration_energy[:, candidate_cable] = 0.
-            print self.name, 'cable', candidate_cable, 'added to bundle', \
-                    candidate_bundle
-        return
         */
+        double[] cpbD = cablesPerBundle.getData();
+        double[] fbD = fullBundles.getData();
+        for (int i = 0; i < maxBundles; i++)
+            if (cpbD[i] >= maxCablesPerBundle)
+                fbD[i] = 1.0;
+        
+        //self.agglomeration_energy *= 1 - full_bundles
+        scale(-1, fullBundles);
+        add(fullBundles, 1.0);
+                
+        //TODO use alternate version of matrixVector that computes in-place without allocating
+        //and eliminate need for transpose
+        agglomerationEnergy = transpose(matrixVector(transpose(agglomerationEnergy,null), fullBundles), null);       
+                
+        /*
+        new_candidates = np.where(self.agglomeration_energy >= self.JOINING_THRESHOLD)                
+        num_candidates =  new_candidates[0].size 
+        */
+        List<int[]> newCandidates = new ArrayList();
+        for (int i = 0; i < agglomerationEnergy.getNumRows(); i++)
+            for (int j = 0; j < agglomerationEnergy.getNumCols(); j++)
+                if (agglomerationEnergy.get(i, j) >= JOINING_THRESHOLD)
+                    newCandidates.add(new int[]{i,j});
+        
+        int numCandidates = newCandidates.size();
+        
+        if (numCandidates > 0) {
+            //candidate_index = np.random.randint(num_candidates) 
+            int candidateIndex = (int)(Math.random() * numCandidates);
+            
+            //candidate_cable = new_candidates[1][candidate_index]
+            //candidate_bundle = new_candidates[0][candidate_index]
+            int candidateCable = newCandidates.get(candidateIndex)[0];
+            int candidateBundle = newCandidates.get(candidateIndex)[1];
+            
+            //self.bundle_map[candidate_bundle, candidate_cable] = 1.
+            bundleMap.set(candidateBundle, candidateCable, 1.0);
+            
+            //self.nucleation_energy[candidate_cable, 0] = 0.
+            nucleationEnergy.set(candidateCable, 0, 0.0);           
+            
+            //self.agglomeration_energy[:, candidate_cable] = 0.
+            for (int i = 0; i < agglomerationEnergy.getNumRows(); i++) {
+                agglomerationEnergy.set(i, candidateCable, 0.0);
+            }
+            
+            //print self.name, 'cable', candidate_cable, 'added to bundle', candidate_bundle
+            
+        }
+                    
     }
     
         
         
     /*    
-    def cable_fraction_in_bundle(self, bundle_index):
-        cable_count = np.nonzero(self.bundle_map[bundle_index,:])[0].size
-        cable_fraction = float(cable_count) / float(self.max_cables_per_bundle)
-        return cable_fraction
 
     def visualize(self, save_eps=False):
         """ Show the internal state of the map in a pictorial format """
@@ -343,6 +485,11 @@ public class ZipTie {
 
     double getCableFractionInBundle(int cogIndex) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    /*def cable_fraction_in_bundle(self, bundle_index):
+        cable_count = np.nonzero(self.bundle_map[bundle_index,:])[0].size
+        cable_fraction = float(cable_count) / float(self.max_cables_per_bundle)
+        return cable_fraction*/
+
     }
 
     
