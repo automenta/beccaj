@@ -40,8 +40,8 @@ public class ZipTie {
     private final double ACTIVATION_WEIGHTING_EXPONENT;
     private boolean bundlesFull;
     
-    private DenseMatrix64F bundleActivities;
     private final DenseMatrix64F bundleMap;
+    private DenseMatrix64F bundleActivities;
     private DenseMatrix64F agglomerationEnergy;
     private final DenseMatrix64F nucleationEnergy;
     private DenseMatrix64F cableActivities;
@@ -332,7 +332,7 @@ public class ZipTie {
                                  np.sum(self.bundle_activities + tools.EPSILON))   */
         DenseMatrix64F proportionsByBundle = bundleActivities.copy();
         add(proportionsByBundle, EPSILON);
-        double sum = sum(proportionsByBundle);
+        double sum = elementSum(proportionsByBundle);
         proportionsByBundle.set(bundleActivities);
         scale(1.0 / sum, proportionsByBundle);
                                 
@@ -441,10 +441,12 @@ public class ZipTie {
             
             //candidate_cable = new_candidates[1][candidate_index]
             //candidate_bundle = new_candidates[0][candidate_index]
-            int candidateCable = newCandidates.get(candidateIndex)[0];
-            int candidateBundle = newCandidates.get(candidateIndex)[1];
+            int candidateCable = newCandidates.get(candidateIndex)[1];
+            int candidateBundle = newCandidates.get(candidateIndex)[0];
             
             //self.bundle_map[candidate_bundle, candidate_cable] = 1.
+            assert(candidateBundle < bundleMap.getNumRows());
+            assert(candidateCable < bundleMap.getNumCols());
             bundleMap.set(candidateBundle, candidateCable, 1.0);
             
             //self.nucleation_energy[candidate_cable, 0] = 0.
@@ -483,14 +485,42 @@ public class ZipTie {
         return numBundles;
     }
 
-    double getCableFractionInBundle(int cogIndex) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    /*def cable_fraction_in_bundle(self, bundle_index):
-        cable_count = np.nonzero(self.bundle_map[bundle_index,:])[0].size
-        cable_fraction = float(cable_count) / float(self.max_cables_per_bundle)
-        return cable_fraction*/
+    double getCableFractionInBundle(int bundleIndex) {
 
+        int cableCount = 0;
+        for (int i = 0; i < bundleMap.getNumCols(); i++) {
+            if (bundleMap.get(bundleIndex, i) == 0)
+                cableCount++;
+        }
+        return ((double)cableCount) / ((double)maxCablesPerBundle);
+        
     }
 
+    public DenseMatrix64F getBundleActivities() {
+        return bundleActivities;
+    }
+
+    public DenseMatrix64F getCableActivities() {
+        return cableActivities;
+    }
+
+    public DenseMatrix64F getBundleMap() {
+        return bundleMap;
+    }
+
+    public DenseMatrix64F getAgglomerationEnergy() {
+        return agglomerationEnergy;
+    }
+
+    public DenseMatrix64F getNucleationEnergy() {
+        return nucleationEnergy;
+    }
+
+    public DenseMatrix64F getNonBundleActivities() {
+        return nonBundleActivities;
+    }
+    
+    
+    
     
 }

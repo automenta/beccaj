@@ -3,7 +3,6 @@ package becca.core;
 import org.apache.commons.math3.util.Precision;
 import org.ejml.alg.dense.mult.SubmatrixOps;
 import org.ejml.data.BlockMatrix64F;
-import org.ejml.data.D1Matrix64F;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.data.ReshapeMatrix64F;
 import org.ejml.ops.CommonOps;
@@ -56,16 +55,30 @@ public class Util extends CommonOps {
         System.out.println("matrixDim: " + s);
     }
     
-    public static DenseMatrix64F matrixVector(DenseMatrix64F matrix, DenseMatrix64F vector) {
+    public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector) {
         //ex: (8, 32) * (1, 32) -> (8, 32)
-        assert(matrix.getNumCols() == vector.getNumCols());
         
-        DenseMatrix64F result = new DenseMatrix64F(matrix.getNumRows(), matrix.getNumCols());
-        double[] vdata = vector.getData();
-        for (int i = 0; i < matrix.getNumRows(); i++) {
-           for (int j = 0; j < matrix.getNumCols(); j++) {
-               result.set(i, j, matrix.get(i, j) * vector.get(0, j));
-           }
+        final DenseMatrix64F result = new DenseMatrix64F(matrix.getNumRows(), matrix.getNumCols());
+        final double[] vdata = vector.getData();
+        
+        if (vector.getNumRows() == 1) {
+            assert(matrix.getNumCols() == vector.getNumCols());
+            
+            for (int i = 0; i < matrix.getNumRows(); i++) {
+               for (int j = 0; j < matrix.getNumCols(); j++) {
+                   result.set(i, j, matrix.get(i, j) * vector.get(0, j));
+               }
+            }
+        }
+        else {
+            assert(matrix.getNumRows() == vector.getNumRows());
+
+            for (int i = 0; i < matrix.getNumRows(); i++) {
+               for (int j = 0; j < matrix.getNumCols(); j++) {
+                   result.set(i, j, matrix.get(i, j) * vector.get(i, 0));
+               }
+            }
+
         }
         return result;        
     }
@@ -219,9 +232,6 @@ public class Util extends CommonOps {
         */
     }
 
-    static double sum(D1Matrix64F s) {
-        return elementSum(s);
-    }
 
     static DenseMatrix64F extractBooleanized(DenseMatrix64F cableActivities, DenseMatrix64F indexProjection) {
         //exracts the elements where indexProjection!=0
@@ -259,33 +269,53 @@ public class Util extends CommonOps {
     }
     */
 
-    public static DenseMatrix64F getNonZeroMask(DenseMatrix64F x) {
-        DenseMatrix64F y = x.copy();
-        double[] yd = y.getData();
+    public static DenseMatrix64F getNonZeroMask(final DenseMatrix64F x) {
+        final DenseMatrix64F y = x.copy();
+        final double[] yd = y.getData();
         for (int i = 0; i < yd.length; i++)
             if (yd[i]!=0) yd[i] = 1;
         return y;
     }
 
-    public static void matrixSign(DenseMatrix64F x) {
-        double[] d = x.getData();
+    public static void matrixSign(final DenseMatrix64F x) {
+        final double[] d = x.getData();
         for (int j = 0; j < d.length; j++)
             d[j] = Math.signum(d[j]); 
     }
-    public static void matrixMaximum(DenseMatrix64F x, double v) {
-        double[] d = x.getData();
+    public static void matrixMaximum(final DenseMatrix64F x, final double v) {
+        final double[] d = x.getData();
         for (int j = 0; j < d.length; j++)
             d[j] = Math.max(d[j], v); 
     }    
-
-    public static void matrixPower(DenseMatrix64F m, double exponent) {        
-        double[] d = m.getData();
-        for (int i = 0; i < d.length; i++)
-            d[i] = Math.pow(d[i], exponent);        
+    public static void matrixMinimum(final DenseMatrix64F x, final double v) {
+        final double[] d = x.getData();
+        for (int j = 0; j < d.length; j++)
+            d[j] = Math.min(d[j], v); 
+    }    
+    public static void matrixAbs(final DenseMatrix64F x) {
+        final double[] d = x.getData();
+        for (int j = 0; j < d.length; j++)
+            d[j] = Math.abs(d[j]); 
+    }    
+    public static void matrixDivBy(final DenseMatrix64F x, final DenseMatrix64F numerator) {
+        final double[] d = x.getData();
+        final double[] n = numerator.getData();
+        for (int j = 0; j < d.length; j++)
+            d[j] = n[j] / d[j];
+    }    
+    
+    public static void matrixPower(final DenseMatrix64F m, final double exponent) {        
+        final double[] d = m.getData();
+        for (int i = 0; i < d.length; i++) {
+            if (exponent == -1)
+                d[i] = 1.0 / d[i]; //should be faster than Math.pow
+            else
+                d[i] = Math.pow(d[i], exponent);
+        }
     }
 
     static DenseMatrix64F maxCol(DenseMatrix64F x) {
-        DenseMatrix64F projection = new DenseMatrix64F(x.getNumRows(), 1);
+        final DenseMatrix64F projection = new DenseMatrix64F(x.getNumRows(), 1);
         for (int i = 0; i < x.getNumCols(); i++) {
             for (int j = 0; j < x.getNumRows(); j++) {
                 if (i == 0) {
@@ -301,7 +331,7 @@ public class Util extends CommonOps {
         return projection;
     }
     static DenseMatrix64F maxRow(DenseMatrix64F x) {
-        DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
+        final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
         for (int i = 0; i < x.getNumRows(); i++) {
             for (int j = 0; j < x.getNumCols(); j++) {
                 if (i == 0) {
@@ -318,16 +348,40 @@ public class Util extends CommonOps {
     }
 
     
-    static DenseMatrix64F matrixDivide(DenseMatrix64F a, DenseMatrix64F b) {
-        double[] ad = a.getData();
-        double[] bd = b.getData();
+    //DEPRECATED use elemDiv or something
+    static DenseMatrix64F matrixDivide(final DenseMatrix64F a, final DenseMatrix64F b) {
+        final double[] ad = a.getData();
+        final double[] bd = b.getData();
         assert(ad.length == bd.length);
-        double[] d = new double[ad.length];
+        final double[] d = new double[ad.length];
         for (int i = 0; i < d.length; i++)
             d[i] = ad[i] / bd[i];
         return DenseMatrix64F.wrap(ad.length, 1, d);
     }
 
+    static DenseMatrix64F broadcastRows(final DenseMatrix64F row, final int numCols) {
+        //TODO see if can be created by arraycopy repeatedly, depends on row ordering        
+        assert(row.getNumCols() == numCols);
+        final DenseMatrix64F r = new DenseMatrix64F(numCols, numCols);
+        for (int i = 0; i < numCols; i++) {
+            for (int j = 0; j < numCols; j++) {
+                r.set(i, j, row.get(0, j));
+            }
+        }
+        return r;
+    }
+
+    static DenseMatrix64F broadcastCols(final DenseMatrix64F col, final int numRows) {
+        //TODO see if can be created by arraycopy repeatedly, depends on row ordering        
+        assert(col.getNumRows() == numRows);
+        final DenseMatrix64F r = new DenseMatrix64F(numRows, numRows);
+        for (int i = 0; i < numRows; i++) {
+            for (int j = 0; j < numRows; j++) {
+                r.set(i, j, col.get(i, 0));
+            }
+        }
+        return r;
+    }
     
     
 }

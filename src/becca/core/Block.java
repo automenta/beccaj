@@ -11,6 +11,8 @@ import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
 
+import static becca.core.Util.*;
+
 /**
     Blocks are the building block of which the agent is composed
 
@@ -39,16 +41,18 @@ public class Block {
     public final int maxBundles;
     public final int level;
     public final ZipTie ziptie;
-    private final ArrayList<Cog> cogs;
+    
+    public final ArrayList<Cog> cogs;
+    
     private DenseMatrix64F cableActivities;
     private final double fillFractionThreshold;
     private final double activityDecayRate;
     private final double rangeDecayRate;
     private BlockMatrix64F maxVals;
     private BlockMatrix64F minVals;
-    private BlockMatrix64F surprise;
+    private DenseMatrix64F surprise;
     private DenseMatrix64F bundleActivities;
-    private BlockMatrix64F hubCableGoals;
+    private DenseMatrix64F hubCableGoals;
 
     public Block(int minCables) {    
         this(minCables, 0);
@@ -77,7 +81,7 @@ public class Block {
         }
         
         this.cableActivities = new DenseMatrix64F(this.maxCables,1); //np.zeros((self.max_cables, 1))
-        this.hubCableGoals = new BlockMatrix64F(this.maxCables, 1); //np.zeros((self.max_cables, 1))
+        this.hubCableGoals = new DenseMatrix64F(this.maxCables, 1); //np.zeros((self.max_cables, 1))
         
         this.fillFractionThreshold = 0.7;
         
@@ -194,16 +198,19 @@ public class Block {
         return bundleActivities;
     }
 
-    public BlockMatrix64F stepDown(BlockMatrix64F bundleGoals) {
-        /*
-        """ Find cable_activity_goals, given a set of bundle_goals """
-        bundle_goals = tools.pad(bundle_goals, (self.max_bundles, 1))
-        */
+    public DenseMatrix64F stepDown(DenseMatrix64F bundleGoals) {
+        
+        //""" Find cable_activity_goals, given a set of bundle_goals """
+        
+        //bundle_goals = tools.pad(bundle_goals, (self.max_bundles, 1))        
+        bundleGoals = pad(bundleGoals, maxBundles, 1, 0.0);
         
         DenseMatrix64F cableGoals = new DenseMatrix64F(maxCables, 1);
         
+        //self.surprise = np.zeros((self.max_cables, 1))
+        surprise = new DenseMatrix64F(maxCables, 1);
+        
         /*
-        self.surprise = np.zeros((self.max_cables, 1))
         # Process the downward pass of each of the cogs in the level
         cog_index = 0
         for cog in self.cogs:
@@ -249,7 +256,7 @@ public class Block {
 
     */
     
-    public BlockMatrix64F getSurprise() {
+    public DenseMatrix64F getSurprise() {
         return surprise;
     }
     
@@ -284,5 +291,10 @@ public class Block {
         return x;
     }
 
+    public DenseMatrix64F getCableActivities() {
+        return cableActivities;
+    }
+
+ 
     
 }

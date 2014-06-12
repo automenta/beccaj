@@ -6,6 +6,10 @@
 
 package becca.core;
 
+import becca.gui.AgentPanel;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+
 
 
 /**
@@ -28,6 +32,28 @@ public class Simulation {
     profile_flag in the top level script environment to True.
 
     */
+    public static void displayAgent(Agent a) {
+        JFrame jf = new JFrame();
+        final AgentPanel ap = new AgentPanel(a);
+        jf.setContentPane(new JScrollPane(ap, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
+        jf.setSize(700,1000);
+        jf.setVisible(true);
+        jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    ap.update();
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                    }
+                }
+            }            
+        }).start();
+    }
+    
     public Simulation(World world) {
         
         /*
@@ -36,6 +62,8 @@ public class Simulation {
         */
         this.agent = new Agent(world.getName() + " Agent", 
                             world.getNumSensors(), world.getNumActions());
+        
+        displayAgent(agent);
         
         /*if restore:
             agent = agent.restore()*/

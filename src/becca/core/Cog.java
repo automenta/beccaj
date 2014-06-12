@@ -9,6 +9,8 @@ package becca.core;
 import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
 
+import static becca.core.Util.*;
+
 /**
     The basic units of which blocks are composed
 
@@ -123,4 +125,9 @@ public class Cog {
         return x;
     }
 
+    public DenseMatrix64F getSurprise() {
+        return surprise;
+    }
+
+    
 }

@@ -115,9 +115,8 @@ public class Agent implements Serializable {
 
         //# Propogate the deliberation_goal_votes down through the blocks
         double agentSurprise = 0.0;
-        BlockMatrix64F cableGoals = new BlockMatrix64F(cableActivities.getNumCols() * cableActivities.getNumRows(), 1);
+        DenseMatrix64F cableGoals = new DenseMatrix64F(cableActivities.getNumCols() * cableActivities.getNumRows(), 1);
 
-        System.out.println("cableGoals:" + cableGoals);
 
         //blocks in reverse
         for (int i = blocks.size()-1; i >=0; i--) {
@@ -128,17 +127,17 @@ public class Agent implements Serializable {
             if np.nonzero(block.surprise)[0].size > 0:
                 agent_surprise = np.sum(block.surprise)            
             */
-            BlockMatrix64F s = b.getSurprise();
+            DenseMatrix64F s = b.getSurprise();
             double[] sd = s.getData();
             int nonzeros = 0;
             for (int g = 0; g < sd.length; g++)
                 nonzeros += sd[g] > 0 ? 1 : 0;            
             if (nonzeros > 0)
-                agentSurprise = sum(s);
+                agentSurprise = elementSum(s);
         }
         
-        
-        recentSurpriseHistory.pop();    //remove first element
+        if (recentSurpriseHistory.size() > 0)
+            recentSurpriseHistory.pop();    //remove first element
         recentSurpriseHistory.add(agentSurprise);
 
         //self.typical_surprise = np.median(np.array(self.recent_surprise_history))

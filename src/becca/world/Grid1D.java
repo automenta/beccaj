@@ -30,14 +30,16 @@ public class Grid1D implements World {
     private final int totalTime;
     
     private int time;
+    private final double noise;
 
-    public Grid1D(int size, int totalTime) {
+    public Grid1D(int size, int totalTime, double noise) {
         this.time = 0;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
         this.REWARD_MAGNITUDE = 100.0;
         this.ENERGY_COST =  this.REWARD_MAGNITUDE / 100.0;
         this.JUMP_FRACTION = 0.1;        
+        this.noise = noise;
         
         //this.name_long = 'one dimensional grid world'
         
@@ -99,8 +101,11 @@ public class Grid1D implements World {
         # Assign basic_feature_input elements as binary. 
         # Represent the presence or absence of the current position in the bin.
         */
-        Arrays.fill(sensor, 0);
-        sensor[simpleState] = 1;
+        //Arrays.fill(sensor, 0);
+        for (int i = 0; i < sensor.length; i++) {
+            sensor[i] = (Math.random()*noise);
+        }            
+        sensor[simpleState] = 1 - (Math.random()*noise);
         
         System.out.println(toString());
         
@@ -173,6 +178,6 @@ public class Grid1D implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1D(9, 4));
+        new Simulation(new Grid1D(9, 5000, 0.1));
     }
 }
