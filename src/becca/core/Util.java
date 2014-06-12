@@ -273,6 +273,10 @@ public class Util extends CommonOps {
         //exracts the elements where indexProjection!=0
         // emulates: cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).ravel().astype(bool)]
         
+        indexProjection = transpose(indexProjection, null); //both row=oriented
+        
+        
+        
         double[] activities = new double[indexProjection.getNumRows()];
         int activityNum = 0;
         for (int i = 0; i < indexProjection.getNumRows(); i++) {
@@ -281,7 +285,19 @@ public class Util extends CommonOps {
                 activities[activityNum++] = cableActivities.get(i, 0);
             }
         }
-        return DenseMatrix64F.wrap(activityNum, 1, activities);
+        
+        DenseMatrix64F result = DenseMatrix64F.wrap(activityNum, 1, activities);
+        
+        /*if (activityNum > 0) {
+            System.out.println("cable projection");
+            System.out.println(transpose(cableActivities, null));
+            System.out.println(transpose(indexProjection, null));            
+            System.out.println(transpose(result, null));        
+            System.out.println();
+            System.out.println();
+        }*/
+
+        return result;
     }
 
     /*
@@ -390,7 +406,25 @@ public class Util extends CommonOps {
         }
         return projection;
     }
-
+    //TODO unify these two funcs ^v
+    static DenseMatrix64F minRow(DenseMatrix64F x) {
+        final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
+        for (int i = 0; i < x.getNumRows(); i++) {
+            for (int j = 0; j < x.getNumCols(); j++) {
+                if (i == 0) {
+                    projection.set(0, j, x.get(0, j));
+                }
+                else {
+                    double cg = x.get(i, j);
+                    if (cg < projection.get(0, j))
+                        projection.set(0, j, cg);
+                }
+            }
+        }
+        return projection;
+    }
+    
+    
     
     //DEPRECATED use elemDiv or something
     static DenseMatrix64F matrixDivide(final DenseMatrix64F a, final DenseMatrix64F b) {
@@ -424,6 +458,15 @@ public class Util extends CommonOps {
                 r.set(i, j, row.get(0, j));
             }
         }
+        return r;
+    }
+
+    public static DenseMatrix64F randMatrix(int numRows, int numCols, double range) {
+        //TODO use normal distribution
+        final DenseMatrix64F r = new DenseMatrix64F(numRows, numCols);
+        final double[] d = r.getData();
+        for (int i = 0; i < d.length; i++)
+            d[i] = Math.random() * range;
         return r;
     }
     

@@ -71,10 +71,17 @@ public class DaisyChain {
         def get_surprise(self):
             return self.surprise[:self.num_cables]
         */
+        
         if (surprise.getNumRows() > numCables) {
             if (numCables == 0)
                 return new DenseMatrix64F(0, 1);
-            return extract(surprise, 0, 1, 0, numCables);
+            //try {
+                return extract(surprise, 0, numCables, 0, 1);
+            /*}
+            catch (Exception e) {
+                System.err.println("DaisyChain getSurprise() trying to extract " + numCables + " columns from " + m(surprise));
+                System.exit(1);
+            }*/
         }
         return surprise;
     }
@@ -234,7 +241,16 @@ public class DaisyChain {
         //return cable_goals[:self.num_cables]        
         if (numCables == 0) 
             return new DenseMatrix64F(cableGoals.getNumRows(), 0);
-        return extract(cableGoals, 0, cableGoals.getNumRows(), 0, numCables);
+        
+        //try {
+            return extract(cableGoals, 0, numCables, 0, 1);
+        /*}
+        catch (Exception e) {
+            System.err.println("DaisyChain stepDown() trying to extract " + numCables + " columns from " + m(cableGoals));
+            System.exit(1);
+            return null;
+        }*/
+        
     }
     
     /*    

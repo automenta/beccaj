@@ -2,7 +2,6 @@ package becca.world;
 
 import becca.core.Simulation;
 import becca.core.World;
-import java.util.Arrays;
 
 /*
     One-dimensional grid task
@@ -26,20 +25,21 @@ public class Grid1D implements World {
     private int simpleState;
     private double energy;
     private double[] action;
-    private double[] sensor;
     private final int totalTime;
     
     private int time;
     private final double noise;
+    private final double cycleSkew;
 
-    public Grid1D(int size, int totalTime, double noise) {
+    public Grid1D(int size, int totalTime, double noise, double cycleSkew) {
         this.time = 0;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
         this.REWARD_MAGNITUDE = 100.0;
         this.ENERGY_COST =  this.REWARD_MAGNITUDE / 100.0;
-        this.JUMP_FRACTION = 0.1;        
+        this.JUMP_FRACTION = 0.0;        
         this.noise = noise;
+        this.cycleSkew = cycleSkew;
         
         //this.name_long = 'one dimensional grid world'
         
@@ -63,7 +63,6 @@ public class Grid1D implements World {
         time++;
         
         this.action = action;
-        this.sensor = sensor;
         
         //# Find the step size as combinations of the action commands
         double stepSize = (    action[0] + 
@@ -90,6 +89,9 @@ public class Grid1D implements World {
         //# At random intervals, jump to a random position in the world
         if (Math.random() < JUMP_FRACTION) {
             worldState = size * Math.random();
+        }
+        else {
+            worldState += cycleSkew;
         }
         
         //# Ensure that the world state falls between 0 and 9
@@ -178,6 +180,6 @@ public class Grid1D implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1D(9, 50000, 0.05));
+        new Simulation(new Grid1D(9, 50000, 0.1, 0.001));
     }
 }

@@ -199,7 +199,8 @@ public class Block {
     }
 
     public DenseMatrix64F stepDown(DenseMatrix64F bundleGoals) {
-        
+
+                
         //""" Find cable_activity_goals, given a set of bundle_goals """
         
         //bundle_goals = tools.pad(bundle_goals, (self.max_bundles, 1))        
@@ -209,7 +210,8 @@ public class Block {
         
         //self.surprise = np.zeros((self.max_cables, 1))
         surprise = new DenseMatrix64F(maxCables, 1);
-                
+
+
         //# Process the downward pass of each of the cogs in the level
         for (int cogIndex = 0; cogIndex < cogs.size(); cogIndex++) {
             Cog c = cogs.get(cogIndex);
@@ -235,28 +237,34 @@ public class Block {
             final DenseMatrix64F cs = c.getSurprise();
             
             final double[] ccid = cogCableIndices.getData();
+            
             for (int i = 0; i < ccid.length; i++) {
                 if (ccid[i]>0) {
                     
-                    for (int j = 0; j < cableGoals.getNumRows(); j++) {
+                    for (int j = 0; j < cableGoals.getNumCols(); j++) {
                         
-                        //System.out.println(j + " " + i + " " + m(cableGoals) + " " + m(cableGoalsByCog));
+                        //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
                         
                         //TODO:
                         //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
-                        /*cableGoals.set(j, i, 
-                                Math.max(cableGoals.get(j, i), cableGoalsByCog.get(j, 0)));*/
-
+                        if (cableGoalsByCog.getNumRows() > i)
+                            cableGoals.set(i, j, 
+                                    Math.max(cableGoals.get(i, j), cableGoalsByCog.get(i, 0)));
+                    }
+                    
                         //#self.reaction[cog_cable_indices] = np.maximum(
                         //#        tools.pad(cog.reaction, (cog_cable_indices[0].size, 0)),
                         //#        self.reaction[cog_cable_indices]) 
 
 
                         //TODO:
-                        //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])                        
+                        //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])
                         //System.out.println(j + " " + i + " " + m(cs) + " " + m(surprise));                                               
-                        /*surprise.set(j, i, 
-                                Math.max(cs.get(j, 0), surprise.get(j, i)) );*/
+                    for (int j = 0; j < surprise.getNumCols(); j++) {
+                    
+                        if (cs.getNumRows() > i)                        
+                            surprise.set(i, j, 
+                                    Math.max(surprise.get(i, j), cs.get(i, 0)));
 
                     }
                 
@@ -266,6 +274,10 @@ public class Block {
             }
             
         }
+        
+        //TEMPORARY - randomly stimulate surprise
+        /*for (int i = 0; i < surprise.getData().length; i++)
+            surprise.getData()[i] = Math.random() * 0.2;*/
         
         
         hubCableGoals.setData( Util.boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
@@ -329,6 +341,10 @@ public class Block {
 
     public DenseMatrix64F getCableActivities() {
         return cableActivities;
+    }
+
+    public DenseMatrix64F getHubCableGoals() {
+        return hubCableGoals;
     }
 
  

@@ -7,6 +7,7 @@ import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
+import java.util.ArrayDeque;
        
 /**
  * A general reinforcement learning agent
@@ -20,16 +21,16 @@ public class Agent implements Serializable {
     public final ArrayList<Block> blocks = new ArrayList();
     private int time; //current time step
 
-    private LinkedList<Double> recentSurpriseHistory;
+    private ArrayDeque<Double> recentSurpriseHistory;
     private final int RECENT_SURPRISE_HISTORY_SIZE = 100;
 
     private final int numSensors;
     private final int numActions;
     private int timeSinceRewardLog;
     private double cumulativeReward;
-    private final ArrayList<Double> rewardHistory;
+    private final LinkedList<Double> rewardHistory;
     private final LinkedList<Double> surpriseHistory;
-    private final ArrayList<Object> rewardSteps;
+    private final LinkedList<Object> rewardSteps;
     public final Hub hub;
     public final double[] sensor;
     public final double[] action;
@@ -64,10 +65,13 @@ public class Agent implements Serializable {
 
         this.cumulativeReward = 0;
         this.timeSinceRewardLog = 0;
-        this.rewardHistory = new ArrayList();
-        this.rewardSteps = new ArrayList();
+        this.rewardHistory = new LinkedList();
+        this.rewardSteps = new LinkedList();
         this.surpriseHistory = new LinkedList();
-        this.recentSurpriseHistory = new LinkedList();
+        
+        this.recentSurpriseHistory = new ArrayDeque(RECENT_SURPRISE_HISTORY_SIZE);
+        for (int i = 0; i < RECENT_SURPRISE_HISTORY_SIZE; i++)
+            recentSurpriseHistory.add(0.0);
 
         this.reward = 0;
     }
@@ -81,16 +85,14 @@ public class Agent implements Serializable {
         this.reward = reward;
 
         //cable_activities = np.vstack((self.action, sensor))
+        /*for (int i = 0; i < numActions; i++)
+            cableActivitiesData[i][0] = action[i];
+        for (int i = 0; i < numSensors; i++)
+            cableActivitiesData[i][1] = sensor[i];*/        
         DenseMatrix64F cableActivities = new DenseMatrix64F(numActions + numSensors, 1);
         System.arraycopy(action, 0, cableActivities.getData(), 0, numActions);
         System.arraycopy(sensor, 0, cableActivities.getData(), numActions, numSensors);
         
-        
-        /*for (int i = 0; i < numActions; i++)
-            cableActivitiesData[i][0] = action[i];
-        for (int i = 0; i < numSensors; i++)
-            cableActivitiesData[i][1] = sensor[i];*/
-                        
         //# Propogate the new sensor inputs up through the blocks
         for (final Block b : blocks) {
             b.stepUp(cableActivities);
@@ -116,7 +118,6 @@ public class Agent implements Serializable {
         double agentSurprise = 0.0;
         DenseMatrix64F cableGoals = new DenseMatrix64F(cableActivities.getNumCols() * cableActivities.getNumRows(), 1);
 
-
         //blocks in reverse
         for (int i = blocks.size()-1; i >=0; i--) {
             Block b = blocks.get(i);
@@ -136,8 +137,8 @@ public class Agent implements Serializable {
         }
         
         if (recentSurpriseHistory.size() > 0)
-            recentSurpriseHistory.pop();    //remove first element
-        recentSurpriseHistory.add(agentSurprise);
+            recentSurpriseHistory.removeFirst();    //remove first element
+        recentSurpriseHistory.addLast(agentSurprise);
 
         //self.typical_surprise = np.median(np.array(self.recent_surprise_history))
 

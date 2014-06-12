@@ -15,12 +15,12 @@ The hub is the central action selection mechanism
     4) declares that goal in the appropriate block.
 */
 import java.util.ArrayList;
-import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
-import org.ejml.data.Matrix64F;
 import org.ejml.ops.CommonOps;
 
 import static becca.core.Util.*;
+import java.util.ArrayDeque;
+import java.util.List;
 
 public class Hub {
     
@@ -34,14 +34,17 @@ public class Hub {
     private double rewardMin;
     private double rewardMax;
     
-    private final double oldReward;
-    private final double[] rewardTrace;
+    private double oldReward;
+    private ArrayDeque<Double> rewardTrace;
     
     private DenseMatrix64F count;
     private DenseMatrix64F expectedReward;
     private DenseMatrix64F cableActivities;
-    private DenseMatrix64F[] pre;
-    private DenseMatrix64F[] post;
+    private ArrayDeque<DenseMatrix64F> pre;
+    private ArrayDeque<DenseMatrix64F> post;
+    private DenseMatrix64F chainActivities;
+    private DenseMatrix64F estimatedRewardValue;
+
 
     public Hub(int initialNumCables) {
         this.numCables = initialNumCables;
@@ -61,23 +64,26 @@ public class Hub {
         this.oldReward = 0.0;
                 
         this.count = new DenseMatrix64F(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
-        this.rewardTrace = new double[this.TRACE_LENGTH];
+        
+        this.rewardTrace = new ArrayDeque(TRACE_LENGTH);
+        for (int i = 0; i < TRACE_LENGTH; i++)
+            rewardTrace.add(0.0);
         
         this.expectedReward = new DenseMatrix64F(this.numCables, this.numCables);
-        CommonOps.fill(expectedReward, INITIAL_REWARD);
+        fill(expectedReward, INITIAL_REWARD);
         
         this.cableActivities = new DenseMatrix64F(this.numCables, 1);
         
         /*# pre represents the feature and sensor activities at a given
           # time step.
           # post represents the goal or action that was taken following. */
-        this.pre = new DenseMatrix64F[this.TRACE_LENGTH];
-        this.post = new DenseMatrix64F[this.TRACE_LENGTH];
+        this.pre = new ArrayDeque(this.TRACE_LENGTH);
+        this.post = new ArrayDeque(this.TRACE_LENGTH);
         for (int i = 0; i < this.TRACE_LENGTH; i++) {
             /*this.pre = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH) 
             this.post = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH)*/
-            pre[i] = new DenseMatrix64F(this.numCables, 1);
-            post[i] = new DenseMatrix64F(this.numCables, 1);
+            pre.add( new DenseMatrix64F(this.numCables, 1) );
+            post.add( new DenseMatrix64F(this.numCables, 1) );
         }
                 
     }
@@ -99,11 +105,10 @@ public class Hub {
 
         
         //# All the cable activities from all the blocks, at the current time
-        for (int i = 0; i < pre.length; i++) {
-            pre[i] = pad(pre[i], numCables, 1, 0.0);
-            post[i] = pad(post[i], numCables, 1, 0.0);            
-        }
-    
+        for (DenseMatrix64F p : pre)
+            pad(p, numCables, 1, 0.0);
+        for (DenseMatrix64F p : post)
+            pad(p, numCables, 1, 0.0);
     }
         
     void step(ArrayList<Block> blocks, double unscaledReward) {
@@ -115,110 +120,258 @@ public class Hub {
         4. Modify the goal in the block
         """
         */
-        /*
-        # Adapt the reward so that it falls between -1 and 1 
-        this.reward_min = np.minimum(unscaled_reward, this.reward_min)
-        this.reward_max = np.maximum(unscaled_reward, this.reward_max)
-        spread = this.reward_max - this.reward_min
-        new_reward = ((unscaled_reward - this.reward_min) / 
-                       (spread + tools.EPSILON))
-        this.reward_min += spread * this.FORGETTING_RATE
-        this.reward_max -= spread * this.FORGETTING_RATE
-
-        # Use change in reward, rather than absolute reward
-        delta_reward = new_reward - this.old_reward
-        this.old_reward = new_reward
-        # Update the reward trace, a brief history of reward
-        this.reward_trace.append(delta_reward)
-        this.reward_trace.pop(0)
         
-        # Gather the cable activities from all the blocks
-        cable_index = 0
-        block_index = 0
-        for block in blocks:
-            block_size =  block.cable_activities.size
-            this.cable_activities[cable_index: cable_index + block_size] = \
-                    block.cable_activities.copy()
-            cable_index += block_size 
-            block_index += 1
-
+        //# Adapt the reward so that it falls between -1 and 1 
+        rewardMin = Math.min(unscaledReward, rewardMin);
+        rewardMax = Math.max(unscaledReward, rewardMax);
+        double spread = rewardMax - rewardMin;
+        double newReward = ((unscaledReward - rewardMin)/(spread+EPSILON));
+        rewardMin += spread * FORGETTING_RATE;
+        rewardMax -= spread * FORGETTING_RATE;
+        
+        //# Use change in reward, rather than absolute reward
+        double deltaReward = newReward - oldReward;
+        oldReward = newReward;
+        
+        //# Update the reward trace, a brief history of reward
+        rewardTrace.addLast(deltaReward);
+        rewardTrace.removeFirst();
+                
+        
+        //# Gather the cable activities from all the blocks
+        int cableIndex = 0;
+        
+        for (Block b : blocks) {
+            int blockSize = b.getCableActivities().getNumElements();
+            double[] cad = cableActivities.getData();
+            System.arraycopy(b.getCableActivities().getData(), 0, cableActivities.getData(), cableIndex, blockSize );
+            cableIndex+=blockSize;            
+        }
+        
+        /*
         # Update the reward model.
         # It has a structure similar to the chain transtion model 
         # in daisychain.
         # pre is composed of all the cable activities.
         # post is the selected goal that followed.
-        this.chain_activities = this.pre[0] * this.post[0].T
-        # Update the count of how often each feature has been active
-        this.count = this.count + this.chain_activities
-        # Decay the count gradually to encourage occasional re-exploration 
-        this.count *= 1. - this.FORGETTING_RATE
-        this.count = np.maximum(this.count, 0)
-        # Calculate the rate at which to update the reward estimate
-        update_rate_raw = (this.chain_activities * ((1 - this.UPDATE_RATE) / 
-                                               (this.count + tools.EPSILON) + 
-		                                       this.UPDATE_RATE)) 
-        update_rate = np.minimum(0.5, update_rate_raw)
+         */
+        //this.chain_activities = this.pre[0] * this.post[0].T
+        
+        DenseMatrix64F firstPre = pre.peekFirst();
+        DenseMatrix64F firstPost = post.peekFirst();
+        
+        if (!((chainActivities!=null) && (chainActivities.getNumRows()==firstPre.getNumRows()) && (chainActivities.getNumRows()==firstPost.getNumCols())))
+            chainActivities = new DenseMatrix64F(firstPre.getNumRows(), firstPost.getNumRows());
+            
+        mult(firstPre, transpose(firstPost, null), chainActivities);
+
+        //# Update the count of how often each feature has been active
+        addEquals(count, chainActivities);
+
+        //# Decay the count gradually to encourage occasional re-exploration 
+        //this.count *= 1. - this.FORGETTING_RATE
+        scale(1.0 - FORGETTING_RATE, count);
+        
+        //this.count = np.maximum(this.count, 0)
+        matrixMaximum(count, 0);
+        
+        
+        //# Calculate the rate at which to update the reward estimate
+        //update_rate_raw = (this.chain_activities * ((1 - this.UPDATE_RATE) / (this.count + tools.EPSILON) + this.UPDATE_RATE))
+        final DenseMatrix64F updateRateRawFactor = count.copy();
+        add(updateRateRawFactor, EPSILON);
+        matrixPower(updateRateRawFactor, -1.0);
+        scale((1.0 - UPDATE_RATE), updateRateRawFactor);
+        add(updateRateRawFactor, UPDATE_RATE);
+        final DenseMatrix64F updateRate = new DenseMatrix64F(chainActivities.getNumRows(), updateRateRawFactor.getNumCols());
+        mult(chainActivities, updateRateRawFactor, updateRate);
+        
+        //update_rate = np.minimum(0.5, update_rate_raw)
+        matrixMinimum(updateRate, 0.5);
+        
+        /*
         # Collapse the reward history into a single value for this time step
         reward_array = np.array(this.reward_trace)
+        */
+        Double[] rewardArray = new Double[rewardTrace.size()];
+        rewardTrace.toArray(rewardArray);
+        
+        /*
         # TODO: substitute np.arange in this statement
-        decay_exponents = (1. - this.REWARD_DECAY_RATE) ** (
-                np.cumsum(np.ones(this.TRACE_LENGTH)) - 1.)
-        decayed_array = reward_array.ravel() * decay_exponents
-        reward = np.sum(decayed_array.ravel())
-        reward_difference = reward - this.expected_reward 
-        this.expected_reward += reward_difference * update_rate
-        # Decay the reward value gradually to encourage re-exploration 
-        this.expected_reward *= 1. - this.FORGETTING_RATE
+        decay_exponents = (1. - this.REWARD_DECAY_RATE) ** (np.cumsum(np.ones(this.TRACE_LENGTH)) - 1.)
+        */
+        double[] decayExponents = new double[TRACE_LENGTH];
+        for (int i = 0; i < TRACE_LENGTH; i++)
+            decayExponents[i] = Math.pow((1.0 - REWARD_DECAY_RATE), i);
+        
+        
+                
+        //decayed_array = reward_array.ravel() * decay_exponents        
+        //reward = np.sum(decayed_array.ravel())
+        double reward = 0;
+        for (int i = 0; i < rewardArray.length; i++) {
+            rewardArray[i] *= decayExponents[i];
+            reward += rewardArray[i];
+        }
+        
+        //reward_difference = reward - this.expected_reward
+        DenseMatrix64F rewardDifference = expectedReward.copy();
+        scale(-1, rewardDifference);
+        add(rewardDifference, reward);
+        
+        
+        //this.expected_reward += reward_difference * update_rate
+        DenseMatrix64F erDelta = new DenseMatrix64F(rewardDifference.getNumRows(), updateRate.getNumCols());
+        mult(rewardDifference, updateRate, erDelta);
+        addEquals(expectedReward, erDelta);
+        
+        
+        //# Decay the reward value gradually to encourage re-exploration 
+        //this.expected_reward *= 1. - this.FORGETTING_RATE
+        scale(1.0 - FORGETTING_RATE, expectedReward);
+        
+        /*
         # Use the count to estimate the uncertainty in the expected 
         # value of the reward estimate.
         # Use this to scale additive random noise to the reward estimate,
         # encouraging exploration.
-        reward_uncertainty = (np.random.normal(size=this.count.shape) *
-                              this.EXPLORATION / (this.count + 1.))
-        this.estimated_reward_value = this.expected_reward + reward_uncertainty
-
+        reward_uncertainty = (np.random.normal(size=this.count.shape) * this.EXPLORATION / (this.count + 1.))
+         */
+        DenseMatrix64F uncertainNumerator = randMatrix(count.getNumRows(), count.getNumCols(), EXPLORATION);        
+        DenseMatrix64F rewardUncertainty = count.copy();        add(rewardUncertainty, 1.0);
+        matrixDivBy(rewardUncertainty, uncertainNumerator);
+        
+        //this.estimated_reward_value = this.expected_reward + reward_uncertainty
+        this.estimatedRewardValue = expectedReward.copy();
+        addEquals(estimatedRewardValue, rewardUncertainty);
+        
+        
+        /*        
         # Select a goal cable.
-        # First find the estimated reward associated with each chain.   
-        chain_votes = (this.cable_activities * this.estimated_reward_value + 
-                       tools.EPSILON)
+        # First find the estimated reward associated with each chain.
+        chain_votes = (this.cable_activities * this.estimated_reward_value + tools.EPSILON)
+        */
+        DenseMatrix64F chainVotes = matrixVector(estimatedRewardValue, cableActivities);
+        add(chainVotes, EPSILON);
+        
+        /*
         # Find the maximum estimated reward associated with each potential goal
         hi_end = np.max(chain_votes, axis=0)
         # And the minimum estimated reward associated with each potential goal
         lo_end = np.min(chain_votes, axis=0)
+        */
+        DenseMatrix64F hiEnd = maxRow(chainVotes);
+        DenseMatrix64F loEnd = minRow(chainVotes);
+        
+        /*
         # Sum the maxes and mins to find the goal with the highest mid-range  
         goal_votes = hi_end + lo_end
-        potential_winners = np.where(goal_votes == np.max(goal_votes))[0] 
-        # Break any ties by lottery
-        winner = potential_winners[np.random.randint(potential_winners.size)]
-        # Figure out which block the goal cable belongs to 
-        goal_cable = np.remainder(winner, this.cable_activities.size)
-        cable_index = goal_cable
-        for block in blocks:
-            block_size =  block.hub_cable_goals.size
-            if cable_index >= block_size:
-                cable_index -= block_size
-                continue
-            else:
-                # Activate the goal
-                block.hub_cable_goals[cable_index] = 1.
-                new_post  = np.zeros(this.post[0].shape)
-                new_post[goal_cable] = 1.
-                # Remove deliberate goals and actions from pre
-                new_pre = np.maximum(this.cable_activities.copy() - 
-                                     this.post[-1].copy(), 0.)
-                # Update pre and post
-                this.pre.append(new_pre)
-                this.pre.pop(0)
-                this.post.append(new_post)
-                this.post.pop(0)
-                this._display()
-                return
-        print 'No goal chosen'
-        return 
         */
+        DenseMatrix64F goalVotes = loEnd.copy();
+        addEquals(goalVotes, hiEnd);
+
+        //potential_winners = np.where(goal_votes == np.max(goal_votes))[0] 
+        double maxGoalVote = elementMax(goalVotes);
+        List<Integer> potentialWinners = new ArrayList(goalVotes.getNumElements());
+        double[] gvd = goalVotes.getData();
+        for (int i = 0; i < gvd.length; i++) {
+            if (gvd[i] == maxGoalVote)
+                potentialWinners.add(i);
+        }
+
+        if ((goalVotes.getNumElements() == 0) || (potentialWinners.size() == 0)) {
+            System.err.println("No goals");
+            System.err.println("Chain Votes: " + chainVotes);
+            System.err.println("Estimated Reward Value: " + estimatedRewardValue);
+            System.err.println("Reward Uncertainty: " + rewardUncertainty);
+            
+            System.err.println("Update Rate: " + updateRate);
+            System.err.println("Reward: " + reward);
+            System.err.println("Reward Trace: " + rewardTrace);
+            System.err.println("Unscaled Reward: " + unscaledReward);
+            System.err.println("Reward Difference: " + rewardDifference);
+            System.err.println("Expected Reward: " + expectedReward);
+            
+            System.err.println("ERDelta: " + erDelta);
+
+            System.exit(1);
+            return;
+        }
+                
+        
+        //# Break any ties by lottery
+        //winner = potential_winners[np.random.randint(potential_winners.size)]
+        int pwi = (int)(Math.random() * potentialWinners.size());
+        //System.out.println(goalVotes + " " + maxGoalVote + " " +  potentialWinners.size() + " " + pwi);
+        int winner = potentialWinners.get( pwi );
+        
+        //# Figure out which block the goal cable belongs to 
+        //goal_cable = np.remainder(winner, this.cable_activities.size)
+        //cable_index = goal_cable
+        int goalCable = winner % cableActivities.getNumElements();
+        cableIndex = goalCable;
+        
+        for (Block b : blocks) {
+            DenseMatrix64F h = b.getHubCableGoals();
+            int block_size =  h.getNumElements();
+            if (cableIndex >= block_size) {
+                cableIndex -= block_size;
+                continue;
+            }
+            else {
+                //# Activate the goal
+                //block.hub_cable_goals[cable_index] = 1.
+                assert(h.getNumCols() == 1);
+                h.set(cableIndex, 0, 1.0);
+                
+                //new_post  = np.zeros(self.post[0].shape)
+                DenseMatrix64F newPost = new DenseMatrix64F(post.peekFirst().getNumRows(), post.peekFirst().getNumCols());
+                assert(newPost.getNumCols() == 1);
+                newPost.set(goalCable, 0, 1);
+                
+                //# Remove deliberate goals and actions from pre
+                //new_pre = np.maximum(self.cable_activities.copy() - self.post[-1].copy(), 0.)
+                DenseMatrix64F newPre = cableActivities.copy();
+                DenseMatrix64F newPreDiff = post.peekLast().copy();
+                subEquals(newPre, newPreDiff);
+                matrixMaximum(newPre, 0);
+                
+                /*                        
+                //# Update pre and post
+                self.pre.append(new_pre)
+                self.pre.pop(0)
+                self.post.append(new_post)
+                self.post.pop(0)
+                */
+                pre.removeFirst();
+                pre.addLast(newPre);
+                post.removeFirst();
+                post.addLast(newPost);
+                
+                //System.err.println("Goal");
+                
+                //self._display()
+                return;
+            }
+        }
+        
+        System.err.println("No goal chosen");
+        
     }
         
+    public DenseMatrix64F getCount() {
+        return count;
+    }
 
+    public DenseMatrix64F getCableActivities() {
+        return cableActivities;
+    }
+
+    public DenseMatrix64F getChainActivities() {
+        return chainActivities;
+    }
+
+    
     /*
     def _display(self):
         """ Give a visual update of the internal workings of the hub """

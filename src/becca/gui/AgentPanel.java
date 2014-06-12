@@ -88,7 +88,11 @@ public class AgentPanel extends JPanel {
         
         addMatrix("sensors", DenseMatrix64F.wrap(agent.sensor.length, 1, agent.sensor));
         addMatrix("actions", DenseMatrix64F.wrap(agent.action.length, 1, agent.action));
-        
+            
+        addMatrix("hub.count", agent.hub.getCount());                
+        addMatrix("hub.cableActivities", agent.hub.getCableActivities());
+        addMatrix("hub.chainActivities", agent.hub.getChainActivities());
+
         int n = 0;
         for (Block b : agent.blocks) {
             String bPrefix = "b" + (b.level) + ".";

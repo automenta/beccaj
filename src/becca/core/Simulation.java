@@ -32,7 +32,7 @@ public class Simulation {
     profile_flag in the top level script environment to True.
 
     */
-    public static void displayAgent(Agent a) {
+    public void displayAgent(Agent a) {
         JFrame jf = new JFrame();
         final AgentPanel ap = new AgentPanel(a);
         jf.setContentPane(new JScrollPane(ap, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
@@ -45,6 +45,7 @@ public class Simulation {
             public void run() {
                 while (true) {
                     ap.update();
+                    jf.setTitle("Reward: " + reward);
                     try {                        
                         Thread.sleep(1000);
                     } catch (InterruptedException ex) {
@@ -53,6 +54,7 @@ public class Simulation {
             }            
         }).start();
     }
+    private double reward;
     
     public Simulation(World world) {
         
@@ -87,7 +89,7 @@ public class Simulation {
             return agent.report_performance()
             */
 
-            double reward = world.step(agent.action, agent.sensor);
+            reward = world.step(agent.action, agent.sensor);
 
             agent.step(reward);
 
