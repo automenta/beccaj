@@ -11,6 +11,9 @@ import org.ejml.data.DenseMatrix64F;
 import org.ejml.data.Matrix64F;
 import org.ejml.ops.CommonOps;
 
+import static becca.core.Util.*;
+
+
 /**
     An incremental unsupervised learning algorithm
 
@@ -37,11 +40,12 @@ public class ZipTie {
     private final double ACTIVATION_WEIGHTING_EXPONENT;
     private final boolean bundlesFull;
     
-    private final Matrix64F bundleActivities;
-    private final int[] mapSize;
-    private final Matrix64F bundleMap;
+    private DenseMatrix64F bundleActivities;
+    private final DenseMatrix64F bundleMap;
     private final Matrix64F agglomerationEnergy;
     private final Matrix64F nucleationEnergy;
+    private DenseMatrix64F cableActivities;
+    private DenseMatrix64F nonBundleActivities;
 
     public ZipTie(int maxCables, int maxBundles, int maxCablesPerBundle) {
         this(maxCables, maxBundles, maxCablesPerBundle, -4);
@@ -89,23 +93,28 @@ public class ZipTie {
 
         this.bundlesFull = false;
                 
-        this.bundleActivities = new BlockMatrix64F(this.maxBundles, 1);
+        this.bundleActivities = new DenseMatrix64F(this.maxBundles, 1);
         
-        this.mapSize = new int[]{ maxBundles, maxCables };
-               
-        this.bundleMap = new BlockMatrix64F(mapSize[0], mapSize[1]);
-        this.agglomerationEnergy = new BlockMatrix64F(mapSize[0], mapSize[1]);
+        
+        this.bundleMap = new DenseMatrix64F(maxBundles, maxCables);
+        
+        
+        this.agglomerationEnergy = new BlockMatrix64F(maxBundles, maxCables);
         this.nucleationEnergy = new BlockMatrix64F(this.maxCables, 1);                
         
     }
     
 
 
-    public DenseMatrix64F stepUp(DenseMatrix64F activities) {
+    public DenseMatrix64F stepUp(DenseMatrix64F cableActivities) {
+        // Update co-activity estimates and calculate bundle activity """
+                
+        this.cableActivities = cableActivities;
+
+        DenseMatrix64F cableActivitiesTranspose = cableActivities.copy();
+        transpose(cableActivitiesTranspose);
+        
         /*
-   def step_up(self, cable_activities):
-        """ Update co-activity estimates and calculate bundle activity """
-        self.cable_activities = cable_activities
         # Find bundle activities by taking the generalized mean of
         # the signals with a negative exponent.
         # The negative exponent weights the lower signals more heavily.
@@ -113,44 +122,83 @@ public class ZipTie {
         # generalized mean becomes the minimum operator.
         # Make a first pass at the bundle activation levels by 
         # multiplying across the bundle map.
-        initial_bundle_activities = tools.generalized_mean(
-                self.cable_activities, self.bundle_map.T, self.MEAN_EXPONENT)
-        bundle_contribution_map = np.zeros(self.bundle_map.shape)
-        bundle_contribution_map[np.nonzero(self.bundle_map)] = 1.
-        activated_bundle_map = (initial_bundle_activities * 
-                                bundle_contribution_map)
+         */
+        DenseMatrix64F bundleMapTranspose = bundleMap.copy();
+        transpose(bundleMapTranspose);
+        
+        /*initial_bundle_activities = tools.generalized_mean(
+                self.cable_activities, self.bundle_map.T, self.MEAN_EXPONENT)*/
+        DenseMatrix64F initialBundleActivities = getGeneralizedMean(cableActivitiesTranspose, bundleMapTranspose, MEAN_EXPONENT);
+        
+                
+        //bundle_contribution_map = np.zeros(self.bundle_map.shape)
+        //bundle_contribution_map[np.nonzero(self.bundle_map)] = 1.
+        //DenseMatrix64F bundleContributionMap = new DenseMatrix64F(bundleMap.getNumRows(), bundleMap.getNumCols());
+        //DenseMatrix64F bundleMapNonZero = Util.getNonZero(bundleMap);
+        DenseMatrix64F bundleContributionMap = getNonZeroMask(bundleMap);
+        
+        //activated_bundle_map = (initial_bundle_activities * bundle_contribution_map)        
+        DenseMatrix64F activatedBundleMap = new DenseMatrix64F(initialBundleActivities.getNumRows(), bundleContributionMap.getNumCols());
+        mult(initialBundleActivities, bundleContributionMap, activatedBundleMap);
+        
+        /*
         # Find the largest bundle activity that each input contributes to
         max_activation = np.max(activated_bundle_map, axis=0) + tools.EPSILON
+         */
+        DenseMatrix64F maxActivation = maxRow(activatedBundleMap);
+        add(maxActivation, Util.EPSILON);
+                
+        /*
         # Divide the energy that each input contributes to each bundle
         input_inhibition_map = np.power(activated_bundle_map / max_activation, 
                                         self.ACTIVATION_WEIGHTING_EXPONENT)
-        # Find the effective strength of each cable to each bundle 
-        # after inhibition.
-        inhibited_cable_activities = (input_inhibition_map * 
-                                      self.cable_activities.T)
-        final_bundle_activities = tools.generalized_mean(
-                inhibited_cable_activities.T, self.bundle_map.T, 
-                self.MEAN_EXPONENT)
-        self.bundle_activities = final_bundle_activities
-        # Calculate how much energy each input has left to contribute 
-        # to the co-activity estimate. 
-        final_activated_bundle_map = (final_bundle_activities * 
-                                      bundle_contribution_map)
-        combined_weights = np.sum(final_activated_bundle_map, 
-                                  axis=0)[:,np.newaxis]
-        self.nonbundle_activities = np.maximum(0., (cable_activities - 
-                                                    combined_weights))
-        # As appropriate update the co-activity estimate and 
-        # create new bundles
-        if not self.bundles_full:
-            self._create_new_bundles()
-        self._grow_bundles()
-        return self.bundle_activities[:self.num_bundles,:]
         */
-        //return activities.getMatrix(0,numBundles, 0,1);
-        if (activities.getNumRows() > numBundles)
-            return CommonOps.extract(activities, 0, 1, 0, numBundles);
-        return activities;        
+        DenseMatrix64F inputInhibitionMap = matrixDivide(activatedBundleMap, maxActivation);
+        matrixPower(inputInhibitionMap, ACTIVATION_WEIGHTING_EXPONENT);
+
+        //# Find the effective strength of each cable to each bundle after inhibition.
+        //inhibited_cable_activities = (input_inhibition_map * self.cable_activities.T)
+        
+        
+        
+        DenseMatrix64F inhibitedCableActivities = new DenseMatrix64F(inputInhibitionMap.getNumRows(), cableActivitiesTranspose.getNumCols());
+        mult(inputInhibitionMap, cableActivitiesTranspose, inhibitedCableActivities);
+        
+        DenseMatrix64F inhibitedCableActivitiesT = inhibitedCableActivities.copy(); 
+        transpose(inhibitedCableActivitiesT);
+        
+        /*final_bundle_activities = tools.generalized_mean(inhibited_cable_activities.T, self.bundle_map.T, self.MEAN_EXPONENT)*/        
+        //self.bundle_activities = final_bundle_activities
+        DenseMatrix64F finalBundleActivities = this.bundleActivities = 
+                Util.getGeneralizedMean(inhibitedCableActivitiesT, bundleMapTranspose, MEAN_EXPONENT);               
+                
+        
+        //# Calculate how much energy each input has left to contribute to the co-activity estimate. 
+        //final_activated_bundle_map = (final_bundle_activities * bundle_contribution_map)
+        DenseMatrix64F finalActivatedBundleMap = new DenseMatrix64F(finalBundleActivities.getNumRows(), bundleMap.getNumCols());
+        mult(finalBundleActivities, bundleMap, finalActivatedBundleMap);
+                
+        //combined_weights = np.sum(final_activated_bundle_map, axis=0)[:,np.newaxis]
+        DenseMatrix64F combinedWeights = sumCols(finalActivatedBundleMap, null);
+        transpose(combinedWeights);
+        
+        
+        //self.nonbundle_activities = np.maximum(0., (cable_activities - combined_weights))
+        this.nonBundleActivities = new DenseMatrix64F(cableActivities.getNumRows(), cableActivities.getNumCols());
+        sub(cableActivities, combinedWeights, nonBundleActivities);
+        matrixMaximum(nonBundleActivities, 0);
+        
+        //# As appropriate update the co-activity estimate and 
+        //# create new bundles
+        if (!bundlesFull) {
+            createNewBundles();
+        }
+        growBundles();
+                        
+        //return self.bundle_activities[:self.num_bundles,:]                
+        if (cableActivities.getNumRows() > numBundles)
+            return extract(cableActivities, 0, 1, 0, numBundles);
+        return cableActivities;        
     }
 
     public BlockMatrix64F stepDown(BlockMatrix64F goals) {
@@ -173,10 +221,28 @@ public class ZipTie {
                 */
         return goals;
     }
+
+    public DenseMatrix64F getIndexProjection(int bundleIndex) {
+        //""" Project bundle indices down to their cable indices """
+        DenseMatrix64F bundle = new DenseMatrix64F(maxBundles, 1);
+        bundle.set(bundleIndex, 0, 1.0);
+        
+        //projection = np.sign(np.max(self.bundle_map * bundle,axis=0))[np.newaxis, :]
+        DenseMatrix64F bmb = new DenseMatrix64F(bundleMap.getNumRows(), bundle.getNumCols());
+        mult(bundleMap, bundle, bmb);
+        
+        //TODO this may need to be iterated by rows, depending on which axis is meant        
+        
+        DenseMatrix64F projection = maxRow(bmb);
+        matrixSign(projection);
+                
+        return projection;
+    }
     
-/*
-    def _create_new_bundles(self):
-        """ If the right conditions have been reached, create a new bundle """
+    protected void createNewBundles() {
+        
+        //""" If the right conditions have been reached, create a new bundle """
+        /*
         # Bundle space is a scarce resource
         # Decay the energy        
         self.nucleation_energy -= (self.cable_activities *
@@ -202,8 +268,11 @@ public class ZipTie {
             self.nucleation_energy[cable_index, 0] = 0.
             self.agglomeration_energy[:, cable_index] = 0.
         return 
-          
-    def _grow_bundles(self):
+        */
+    }
+    protected void growBundles() {
+            
+        /*          
         """ Update an estimate of co-activity between all cables """
         coactivities = np.dot(self.bundle_activities, 
                               self.nonbundle_activities.T)
@@ -243,16 +312,12 @@ public class ZipTie {
             print self.name, 'cable', candidate_cable, 'added to bundle', \
                     candidate_bundle
         return
+        */
+    }
+    
         
         
-    def get_index_projection(self, bundle_index):
-        """ Project bundle indices down to their cable indices """
-        bundle = np.zeros((self.max_num_bundles, 1))
-        bundle[bundle_index, 0] = 1.
-        projection = np.sign(np.max(self.bundle_map * bundle, 
-                                    axis=0))[np.newaxis, :]
-        return projection
-        
+    /*    
     def cable_fraction_in_bundle(self, bundle_index):
         cable_count = np.nonzero(self.bundle_map[bundle_index,:])[0].size
         cable_fraction = float(cable_count) / float(self.max_cables_per_bundle)
@@ -274,6 +339,10 @@ public class ZipTie {
 
     public int getNumBundles() {
         return numBundles;
+    }
+
+    double getCableFractionInBundle(int cogIndex) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     

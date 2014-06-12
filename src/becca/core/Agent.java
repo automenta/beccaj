@@ -7,6 +7,8 @@ import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
 
+import static becca.core.Util.*;
+       
 /**
  * A general reinforcement learning agent
  *
@@ -89,10 +91,7 @@ public class Agent implements Serializable {
             cableActivitiesData[i][0] = action[i];
         for (int i = 0; i < numSensors; i++)
             cableActivitiesData[i][1] = sensor[i];*/
-        
-        
-        System.out.println("cableActivities:" + cableActivities);
-        
+                        
         //# Propogate the new sensor inputs up through the blocks
         for (final Block b : blocks) {
             b.stepUp(cableActivities);
@@ -135,7 +134,7 @@ public class Agent implements Serializable {
             for (int g = 0; g < sd.length; g++)
                 nonzeros += sd[g] > 0 ? 1 : 0;            
             if (nonzeros > 0)
-                agentSurprise = Util.sum(s);
+                agentSurprise = sum(s);
         }
         
         

@@ -40,7 +40,7 @@ public class Block {
     public final int level;
     public final ZipTie ziptie;
     private final ArrayList<Cog> cogs;
-    private BlockMatrix64F cableActivities;
+    private DenseMatrix64F cableActivities;
     private final double fillFractionThreshold;
     private final double activityDecayRate;
     private final double rangeDecayRate;
@@ -50,18 +50,18 @@ public class Block {
     private DenseMatrix64F bundleActivities;
     private BlockMatrix64F hubCableGoals;
 
-    Block(int minCables) {    
+    public Block(int minCables) {    
         this(minCables, 0);
     }
     
     //""" Initialize the level, defining the dimensions of its cogs """
-    Block(int minCables, int level) {
-        this.maxCables = (int)Math.round( Math.pow(2, Math.ceil(Util.log(minCables, 2))));
+    public Block(int minCables, int level) {
+        this.maxCables = (int)Math.round( Math.pow(2, 1 + Math.ceil(Util.log(minCables, 2))));
         this.level = level;
         
         this.maxCablesPerCog = 8;
         this.maxBundlesPerCog = 4;
-        this.maxCogs = maxCablesPerCog / maxBundlesPerCog;
+        this.maxCogs = maxCables / maxBundlesPerCog;
         this.maxBundles = this.maxCogs * this.maxBundlesPerCog;
         
         this.ziptie = new ZipTie(this.maxCables, this.maxCogs, this.maxCablesPerCog, -2);
@@ -76,7 +76,7 @@ public class Block {
             cogs.add(c);
         }
         
-        this.cableActivities = new BlockMatrix64F(this.maxCables,1); //np.zeros((self.max_cables, 1))
+        this.cableActivities = new DenseMatrix64F(this.maxCables,1); //np.zeros((self.max_cables, 1))
         this.hubCableGoals = new BlockMatrix64F(this.maxCables, 1); //np.zeros((self.max_cables, 1))
         
         this.fillFractionThreshold = 0.7;
@@ -95,9 +95,11 @@ public class Block {
                 
 //        """ Find bundle_activities that result from new_cable_activities """
 //        # Condition the cable activities to fall between 0 and 1
-        if (newCableActivities.getNumRows() < maxCables) {
+        
+        if (newCableActivities.getNumRows() < maxCables) {           
               newCableActivities = Util.pad(newCableActivities, maxCables, 1, 0);
         }
+        
         double[] ncaD = newCableActivities.getData();
         double[] minD = minVals.getData();
         double[] maxD = maxVals.getData();
@@ -127,13 +129,12 @@ public class Block {
         CommonOps.addEquals(minVals, spreadDecay);
         CommonOps.subEquals(maxVals, spreadDecay);
 
-        BlockMatrix64F decayedActivities = cableActivities.copy();
+        DenseMatrix64F decayedActivities = cableActivities.copy();
         CommonOps.scale(1.0 - activityDecayRate, decayedActivities);
                 
-        cableActivities = BlockMatrix64F.wrap(
-                            Util.boundedSum(0, newCableActivities.getData(), decayedActivities.getData() ),
-                            newCableActivities.getNumRows(),1,
-                            newCableActivities.getNumRows());        
+        assert(newCableActivities.getNumRows() == decayedActivities.getNumRows() );
+        cableActivities = DenseMatrix64F.wrap(newCableActivities.getNumRows(), 1,
+                            Util.boundedSum(0, newCableActivities.getData(), decayedActivities.getData() ));        
         
 //        # Update cable_activities, incorporating sensing dynamics
 //        self.cable_activities = tools.bounded_sum([
@@ -143,31 +144,53 @@ public class Block {
 //        # Update the map from self.cable_activities to cogs
 //        self.ziptie.step_up(self.cable_activities)
 //        
+        ziptie.stepUp(cableActivities);
         
         //# Process the upward pass of each of the cogs in the block        
-        this.bundleActivities = new DenseMatrix64F(1/* 0 ? */, 1);   //self.bundle_activities = np.zeros((0, 1))
+
+        ArrayList<double[]> bundleActivitiez = new ArrayList(cogs.size());
+        int numBundleActivitiez = 0;
         
-        /*
-        for cog_index in range(len(self.cogs)):
-            # Pick out the cog's cable_activities, process them, 
-            # and assign the results to block's bundle_activities
-            cog_cable_activities = self.cable_activities[
-                    self.ziptie.get_index_projection(
-                    cog_index).ravel().astype(bool)]
-            # Cogs are only allowed to start forming bundles once 
-            # the number of cables exceeds the fill_fraction_threshold
-            enough_cables = (self.ziptie.cable_fraction_in_bundle(cog_index)
-                             > self.fill_fraction_threshold)
-            cog_bundle_activities = self.cogs[cog_index].step_up(
-                    cog_cable_activities, enough_cables)
-            self.bundle_activities = np.concatenate((self.bundle_activities, 
-                                                     cog_bundle_activities))
-        # Goal fulfillment and decay
-        self.hub_cable_goals -= self.cable_activities
+        int cogIndex = 0;
+        for (Cog c : cogs) {
+            /* # Pick out the cog's cable_activities, process them, 
+               # and assign the results to block's bundle_activities*/
+            
+            //cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).ravel().astype(bool)]
+            DenseMatrix64F cogCableActivities = Util.extractBooleanized(cableActivities, ziptie.getIndexProjection(cogIndex));
+            
+            /*# Cogs are only allowed to start forming bundles once 
+              # the number of cables exceeds the fill_fraction_threshold*/
+            boolean enoughCables = ziptie.getCableFractionInBundle(cogIndex) > fillFractionThreshold;
+               
+            DenseMatrix64F cogBundleActivities = c.stepUp(cogCableActivities, enoughCables);
+                    
+            //self.bundle_activities = np.concatenate((self.bundle_activities,cog_bundle_activities))
+            double[] cbaData = cogBundleActivities.getData();
+            bundleActivitiez.add(cbaData);
+            numBundleActivitiez += cbaData.length;
+            
+            cogIndex++;
+        }
+        this.bundleActivities = new DenseMatrix64F(numBundleActivitiez, 1);
+        int p = 0;
+        for (int i = 0; i < bundleActivitiez.size(); i++) {
+            double[] c = bundleActivitiez.get(i);
+            System.arraycopy(c, 0, bundleActivities.getData(), p, c.length);
+            p+=c.length;
+        }
+        //concat finished
+        
+        //# Goal fulfillment and decay
+        /*self.hub_cable_goals -= self.cable_activities
         self.hub_cable_goals *= self.ACTIVITY_DECAY_RATE
-        self.hub_cable_goals = np.maximum(self.hub_cable_goals, 0.)
-        return self.bundle_activities
-    */
+        self.hub_cable_goals = np.maximum(self.hub_cable_goals, 0.) */
+        CommonOps.subEquals(hubCableGoals, cableActivities);
+        CommonOps.scale(activityDecayRate, hubCableGoals);
+        double[] d = hubCableGoals.getData();
+        for (int i = 0; i < d.length; i++)
+            d[i] = Math.max(d[i], 0);
+    
         return bundleActivities;
     }
 
