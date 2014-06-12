@@ -20,9 +20,11 @@ import org.ejml.data.DenseMatrix64F;
 import org.ejml.data.Matrix64F;
 import org.ejml.ops.CommonOps;
 
+import static becca.core.Util.*;
+
 public class Hub {
     
-    private final int numCables;
+    private int numCables;
     private final double INITIAL_REWARD;
     private final double UPDATE_RATE;
     private final double REWARD_DECAY_RATE;
@@ -31,13 +33,15 @@ public class Hub {
     private final double EXPLORATION;
     private double rewardMin;
     private double rewardMax;
+    
     private final double oldReward;
-    private final Matrix64F count;
     private final double[] rewardTrace;
-    private final DenseMatrix64F expectedReward;
-    private final Matrix64F cableActivities;
-    private final Matrix64F[] pre;
-    private final Matrix64F[] post;
+    
+    private DenseMatrix64F count;
+    private DenseMatrix64F expectedReward;
+    private DenseMatrix64F cableActivities;
+    private DenseMatrix64F[] pre;
+    private DenseMatrix64F[] post;
 
     public Hub(int initialNumCables) {
         this.numCables = initialNumCables;
@@ -56,24 +60,24 @@ public class Hub {
         this.rewardMax = -Util.BIG;
         this.oldReward = 0.0;
                 
-        this.count = new BlockMatrix64F(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
+        this.count = new DenseMatrix64F(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
         this.rewardTrace = new double[this.TRACE_LENGTH];
         
         this.expectedReward = new DenseMatrix64F(this.numCables, this.numCables);
         CommonOps.fill(expectedReward, INITIAL_REWARD);
         
-        this.cableActivities = new BlockMatrix64F(this.numCables, 1);
+        this.cableActivities = new DenseMatrix64F(this.numCables, 1);
         
         /*# pre represents the feature and sensor activities at a given
           # time step.
           # post represents the goal or action that was taken following. */
-        this.pre = new BlockMatrix64F[this.TRACE_LENGTH];
-        this.post = new BlockMatrix64F[this.TRACE_LENGTH];
+        this.pre = new DenseMatrix64F[this.TRACE_LENGTH];
+        this.post = new DenseMatrix64F[this.TRACE_LENGTH];
         for (int i = 0; i < this.TRACE_LENGTH; i++) {
             /*this.pre = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH) 
             this.post = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH)*/
-            pre[i] = new BlockMatrix64F(this.numCables, 1);
-            post[i] = new BlockMatrix64F(this.numCables, 1);
+            pre[i] = new DenseMatrix64F(this.numCables, 1);
+            post[i] = new DenseMatrix64F(this.numCables, 1);
         }
                 
     }
@@ -82,26 +86,36 @@ public class Hub {
     public String toString() {
         String s = super.toString();
         return s;
-//To change body of generated methods, choose Tools | Templates.
     }
 
-    void step(ArrayList<Block> blocks, double reward) {
-    }
 
-    void addCables(int maxCables) {
+    void addCables(int numNewCables) {    
+        //""" Add new cables to the hub when new blocks are created """ 
+        numCables += numNewCables;
+        
+        expectedReward = pad(expectedReward, numCables, numCables, INITIAL_REWARD);
+        cableActivities = pad(cableActivities, numCables, 1, 0.0);
+        count = pad(count, numCables, numCables, 0.0);
+
+        
+        //# All the cable activities from all the blocks, at the current time
+        for (int i = 0; i < pre.length; i++) {
+            pre[i] = pad(pre[i], numCables, 1, 0.0);
+            post[i] = pad(post[i], numCables, 1, 0.0);            
+        }
     
     }
         
-    
-    
-    /*
-    def step(self, blocks, unscaled_reward):
+    void step(ArrayList<Block> blocks, double unscaledReward) {
+        /*
         """ Advance the hub one step:
         1. Comb tower of blocks, collecting cable activities from each
         2. Update all-to-all reward model
         3. Select a goal
         4. Modify the goal in the block
         """
+        */
+        /*
         # Adapt the reward so that it falls between -1 and 1 
         this.reward_min = np.minimum(unscaled_reward, this.reward_min)
         this.reward_max = np.maximum(unscaled_reward, this.reward_max)
@@ -201,22 +215,11 @@ public class Hub {
                 return
         print 'No goal chosen'
         return 
+        */
+    }
         
-    def add_cables(self, num_new_cables):
-        """ Add new cables to the hub when new blocks are created """ 
-        this.num_cables = this.num_cables + num_new_cables
-        this.expected_reward = tools.pad(this.expected_reward, 
-                                      (this.num_cables, this.num_cables), 
-                                      val=this.INITIAL_REWARD)
-        this.cable_activities = tools.pad(this.cable_activities, 
-                                          (this.num_cables, 1))
 
-        this.count = tools.pad(this.count, (this.num_cables, this.num_cables))
-        # All the cable activities from all the blocks, at the current time
-        for index in range(len(this.pre)):
-            this.pre[index] = tools.pad(this.pre[index], (this.num_cables, 1))
-            this.post[index] = tools.pad(this.post[index], (this.num_cables, 1))
-
+    /*
     def _display(self):
         """ Give a visual update of the internal workings of the hub """
         DISPLAY_PERIOD = 1000.

@@ -45,7 +45,7 @@ public class Simulation {
             public void run() {
                 while (true) {
                     ap.update();
-                    try {
+                    try {                        
                         Thread.sleep(1000);
                     } catch (InterruptedException ex) {
                     }
@@ -92,6 +92,8 @@ public class Simulation {
             agent.step(reward);
 
         }
+        
+        System.out.println("Simulation Finished.");
                           
     }
 }

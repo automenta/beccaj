@@ -6,10 +6,10 @@
 
 package becca.core;
 
-import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
+
 
 /**
     The basic units of which blocks are composed
@@ -85,13 +85,13 @@ public class Cog {
             activities = new DenseMatrix64F(0, 1);
         }
         
-        activities = Util.pad(activities, maxBundles, 1, 0.0);
+        activities = pad(activities, maxBundles, 1, 0.0);
         
         return activities;
     }
     
     //""" bundle_goals percolate downward """
-    public BlockMatrix64F stepDown(BlockMatrix64F goals) {
+    public DenseMatrix64F stepDown(DenseMatrix64F goals) {
         goals = ziptie.stepDown(goals);
         goals = daisychain.stepDown(goals);
         return goals;

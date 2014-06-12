@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
-import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;

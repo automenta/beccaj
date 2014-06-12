@@ -107,7 +107,7 @@ public class Grid1D implements World {
         }            
         sensor[simpleState] = 1 - (Math.random()*noise);
         
-        System.out.println(toString());
+        //System.out.println(toString());
         
         return getReward(sensor);
     }
@@ -178,6 +178,6 @@ public class Grid1D implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1D(9, 5000, 0.1));
+        new Simulation(new Grid1D(9, 50000, 0.05));
     }
 }

@@ -209,28 +209,64 @@ public class Block {
         
         //self.surprise = np.zeros((self.max_cables, 1))
         surprise = new DenseMatrix64F(maxCables, 1);
+                
+        //# Process the downward pass of each of the cogs in the level
+        for (int cogIndex = 0; cogIndex < cogs.size(); cogIndex++) {
+            Cog c = cogs.get(cogIndex);
+
+            /*
+            #Gather the goal inputs for each cog
+            cog_bundle_goals = bundle_goals[cog_index * self.max_bundles_per_cog:cog_index + 1 * self.max_bundles_per_cog,:]
+            */
+            DenseMatrix64F cogBundleGoals = extract(bundleGoals, 
+                    cogIndex * maxBundlesPerCog, (cogIndex+1) * maxBundlesPerCog,
+                    0, bundleGoals.getNumCols()
+                    );
+                        
+            //# Update the downward outputs for the level 
+            //cable_goals_by_cog = cog.step_down(cog_bundle_goals)
+            DenseMatrix64F cableGoalsByCog = c.stepDown(cogBundleGoals);
+                        
+            //cog_cable_indices = self.ziptie.get_index_projection(cog_index).ravel().astype(bool)
+            DenseMatrix64F cogCableIndices = matrixBooleanize(ziptie.getIndexProjection(cogIndex));
+            assert(cogCableIndices.getNumRows() == 1);
+                       
+            //paddingReaction = pad(c.getReaction(), cogCableIndices.getNumRows(), 0, 0.0);
+            final DenseMatrix64F cs = c.getSurprise();
+            
+            final double[] ccid = cogCableIndices.getData();
+            for (int i = 0; i < ccid.length; i++) {
+                if (ccid[i]>0) {
+                    
+                    for (int j = 0; j < cableGoals.getNumRows(); j++) {
+                        
+                        //System.out.println(j + " " + i + " " + m(cableGoals) + " " + m(cableGoalsByCog));
+                        
+                        //TODO:
+                        //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
+                        /*cableGoals.set(j, i, 
+                                Math.max(cableGoals.get(j, i), cableGoalsByCog.get(j, 0)));*/
+
+                        //#self.reaction[cog_cable_indices] = np.maximum(
+                        //#        tools.pad(cog.reaction, (cog_cable_indices[0].size, 0)),
+                        //#        self.reaction[cog_cable_indices]) 
+
+
+                        //TODO:
+                        //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])                        
+                        //System.out.println(j + " " + i + " " + m(cs) + " " + m(surprise));                                               
+                        /*surprise.set(j, i, 
+                                Math.max(cs.get(j, 0), surprise.get(j, i)) );*/
+
+                    }
+                
+                
+                }
+                
+            }
+            
+        }
         
-        /*
-        # Process the downward pass of each of the cogs in the level
-        cog_index = 0
-        for cog in self.cogs:
-            # Gather the goal inputs for each cog
-            cog_bundle_goals = bundle_goals[
-                    cog_index * self.max_bundles_per_cog:
-                    cog_index + 1 * self.max_bundles_per_cog,:]
-            # Update the downward outputs for the level 
-            cable_goals_by_cog = cog.step_down(cog_bundle_goals)
-            cog_cable_indices = self.ziptie.get_index_projection(
-                    cog_index).ravel().astype(bool)
-            cable_goals[cog_cable_indices] = np.maximum(
-                    cable_goals_by_cog, cable_goals[cog_cable_indices]) 
-            #self.reaction[cog_cable_indices] = np.maximum(
-            #        tools.pad(cog.reaction, (cog_cable_indices[0].size, 0)),
-            #        self.reaction[cog_cable_indices]) 
-            self.surprise[cog_cable_indices] = np.maximum(
-                    cog.surprise, self.surprise[cog_cable_indices]) 
-            cog_index += 1
-        */
         
         hubCableGoals.setData( Util.boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
         

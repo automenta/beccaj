@@ -47,8 +47,8 @@ public class AgentPanel extends JPanel {
         x.add(new JLabel(id + " " + (m != null ? m(m) : "") ), BorderLayout.NORTH);
 
         if ((m!=null) && ((m.getNumCols() > 0) && (m.getNumRows() > 0))) {
-            int px = 4; //min pixels per cell
-            int maxPX = 8; //max pixels per cell
+            int px = 8; //min pixels per cell
+            int maxPX = 12; //max pixels per cell
             if (m.getNumCols() == 1)
                 m = transpose(m, null);
             
@@ -85,6 +85,9 @@ public class AgentPanel extends JPanel {
     
     public void update() {
         removeAll();
+        
+        addMatrix("sensors", DenseMatrix64F.wrap(agent.sensor.length, 1, agent.sensor));
+        addMatrix("actions", DenseMatrix64F.wrap(agent.action.length, 1, agent.action));
         
         int n = 0;
         for (Block b : agent.blocks) {

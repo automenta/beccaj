@@ -1,6 +1,5 @@
 package becca.core;
 
-import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
@@ -182,20 +181,24 @@ public class DaisyChain {
         addEquals(postUncertainty, puDelta);
                 
         //# Reaction is the expected post, turned into a deliberation_vote
-        //self.reaction = tools.weighted_average(self.expected_cable_activities, self.pre)
+        //self.reaction = tools.weighted_average(self.expected_cable_activities, self.pre)        
+            //daisychain stepup reaction param (8, 8) (8, 1)
         reaction = getWeightedAverage(expectedCableActivities, pre);
+        assert(reaction.getNumRows() == expectedCableActivities.getNumRows());
         
+
         //# Surprise is the difference between the expected post and the actual one
         //self.surprise = tools.weighted_average(
         //                  np.abs(self.post.T - self.expected_cable_activities),
         //                  self.pre / (self.post_uncertainty + tools.EPSILON))
-        DenseMatrix64F sa = broadcastRows(postT, expectedCableActivities.getNumCols());
+        DenseMatrix64F sa = broadcastCols(postT, expectedCableActivities.getNumCols());
         subEquals(sa, expectedCableActivities);
         matrixAbs(sa);
 
         DenseMatrix64F sb = postUncertainty.copy();
         add(sb, EPSILON);
-        matrixDivBy(sb, broadcastCols(pre, sb.getNumRows()));        
+
+        matrixDivBy(sb, broadcastRows(pre, sb.getNumRows()));        
         
         surprise = getWeightedAverage(sa, sb);
         
@@ -205,15 +208,36 @@ public class DaisyChain {
         return DenseMatrix64F.wrap(chainActivities.getNumElements(), 1, chainActivities.getData());
     }
     
+    public DenseMatrix64F stepDown(DenseMatrix64F chainGoals) {
+        //""" Propogate goals down through the transition model """
+        
+        
+        //# Reshape chain_goals back into a square array 
+        //chain_goals = np.reshape(chain_goals, (self.post.size, -1))
+        chainGoals = DenseMatrix64F.wrap(
+                post.getNumElements(), chainGoals.getNumElements() / post.getNumElements(),
+                chainGoals.getData()
+        );
+                        
+        //# Weight chain goals by the current cable activities   
+        //upstream_goals = tools.bounded_sum(self.post * chain_goals.T)
+                
+        DenseMatrix64F upstreamGoals = matrixVector(transpose(chainGoals, null), post);
+                
+        upstreamGoals = boundedRowSum(upstreamGoals);
+        
+        //cable_goals = tools.bounded_sum([upstream_goals, self.reaction])
+        DenseMatrix64F cableGoals = 
+                DenseMatrix64F.wrap(upstreamGoals.getNumRows(), 1,
+                        boundedSum(0, upstreamGoals.getData(), reaction.getData()));
+        
+        //return cable_goals[:self.num_cables]        
+        if (numCables == 0) 
+            return new DenseMatrix64F(cableGoals.getNumRows(), 0);
+        return extract(cableGoals, 0, cableGoals.getNumRows(), 0, numCables);
+    }
+    
     /*    
-    def step_down(self, chain_goals):
-        """ Propogate goals down through the transition model """
-        # Reshape chain_goals back into a square array 
-        chain_goals = np.reshape(chain_goals, (self.post.size, -1))
-        # Weight chain goals by the current cable activities   
-        upstream_goals = tools.bounded_sum(self.post * chain_goals.T)
-        cable_goals = tools.bounded_sum([upstream_goals, self.reaction])
-        return cable_goals[:self.num_cables]
 
 
     def get_index_projection(self, map_projection):
@@ -243,8 +267,6 @@ public class DaisyChain {
         return sb.toString();
     }
 
-    public BlockMatrix64F stepDown(BlockMatrix64F goals) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
+    
 
 }
