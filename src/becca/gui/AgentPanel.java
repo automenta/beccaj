@@ -98,6 +98,8 @@ public class AgentPanel extends JPanel {
         int n = 0;
         for (Block b : agent.blocks) {
             String bPrefix = "b" + (b.level) + ".";
+            addMatrix(bPrefix + "hubCableGoals", b.getHubCableGoals());
+            addMatrix(bPrefix + "bundleActivities", b.getBundleActivities());
             addMatrix(bPrefix + "cableActivities", b.getCableActivities());
             addMatrix(bPrefix + "surprise", b.getSurprise());
             
@@ -114,7 +116,7 @@ public class AgentPanel extends JPanel {
                     addZipTie(cPrefix, z);
                 
                 DaisyChain d = c.daisychain;
-                String dPrefix = "daisychain";
+                String dPrefix = "daisychain.";
                 addMatrix(bPrefix + dPrefix + "surprise", d.getSurprise());
                 addMatrix(bPrefix + dPrefix + "reaction", d.getReaction());
                 

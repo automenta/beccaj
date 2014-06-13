@@ -1,8 +1,9 @@
 package becca.core;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import org.apache.commons.math3.util.Precision;
 import org.ejml.alg.dense.mult.SubmatrixOps;
-import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.data.ReshapeMatrix64F;
 import org.ejml.ops.CommonOps;
@@ -174,13 +175,12 @@ public class Util extends CommonOps {
     }
     public static double[] mapInfToOne(final double[] b) {
         //""" Map values from [0, inf) onto [0, 1] and map values from  (-inf, 0] onto [-1, 0] """
-        final double eps = 2.2204460492503131e-16; //eps = np.finfo(np.double).eps
         final double[] a = new double[b.length];
         //a = np.sign(a_prime) * (1 - 1 / (np.abs(a_prime) + 1))
         for (int i = 0; i < a.length; i++) {
             final double B = b[i];
             final double bsign = (B > 0 ? +1 :((B < 0) ? -1 : 0));
-            a[i] = bsign * (1 - 1.0 / (Math.abs(B) + 1));
+            a[i] = bsign * (1.0 - 1.0 / (Math.abs(B) + 1));
         }
         return a;        
     }
@@ -230,25 +230,17 @@ public class Util extends CommonOps {
             To be more precise, as long as all elements in a are between -1
             and 1, their sum will also be between -1 and 1. a can be a 
             list or a numpy array. 
-        */
-        
-        //assume all 'a' have same size
-        
-        BlockMatrix64F total = new BlockMatrix64F(a[0].length,1);
-        int size = -1;
+        */                
+        double[] total = new double[a[0].length];
+        int size = a[0].length;
         for (double[] x : a) {
+            assert(size==x.length);
             
-            if (size == -1) size = x.length;
-            else assert(size==x.length);
-            
-            double[] m = mapOneToInf(x);
-            BlockMatrix64F  ix = BlockMatrix64F.wrap(m, size, 1, size);
-            //System.out.println(size + " " + total.getNumRows() +" " +ix.getNumRows() + " " + m.length + " " + x.length);
-            
-            addEquals(total, ix);
-            
+            double[] m = mapOneToInf(x);            
+            for (int i = 0; i < size; i++)
+                total[i] += m[i];            
         }
-        return mapInfToOne(total.getData());
+        return mapInfToOne(total);
         
         /*
         def bounded_sum(a, axis=0):
@@ -300,6 +292,13 @@ public class Util extends CommonOps {
         return result;
     }
 
+    static NumberFormat nf = new DecimalFormat("0.0000000");
+    public static void printArray(double[] d) {
+        for (double x : d) {
+            System.out.print(nf.format(x) + " ");
+        }
+        System.out.println();
+    }    
     /*
     //INCOMPLETE BUT POSSIBLY UNNECESSARY
     static double[][] getNonZero(DenseMatrix64F x) {

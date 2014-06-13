@@ -1,6 +1,7 @@
 package becca.world;
 
 import becca.core.Simulation;
+import becca.core.Util;
 import becca.core.World;
 
 /*
@@ -15,6 +16,7 @@ public class Grid1DSimple implements World {
     private final double VISUALIZE_PERIOD;
     private final double REWARD_MAGNITUDE;
     private final double JUMP_FRACTION;
+    private final double ENERGY_COST_FACTOR;
 
     private double focusPosition;
     private double focusVelocity;
@@ -30,8 +32,9 @@ public class Grid1DSimple implements World {
         this.time = 0;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
+        this.ENERGY_COST_FACTOR = 0.25;
         this.REWARD_MAGNITUDE = 100.0;
-        this.JUMP_FRACTION = 0.0;        
+        this.JUMP_FRACTION = 0.002;        
         this.noise = noise;
         this.focusVelocity = focusVelocity;
         
@@ -72,19 +75,25 @@ public class Grid1DSimple implements World {
         # Assign basic_feature_input elements as binary. 
         # Represent the presence or absence of the current position in the bin.
         */
-        //Arrays.fill(sensor, 0);
+
+        double match = 0;        
+        double energyCost = 0;
         for (int i = 0; i < sensor.length; i++) {
-            final double exp = 3.0; //sharpen
+            match += Math.abs(sensor[i] * action[i]);
+            energyCost += action[i];
+        }
+        
+        double reward = REWARD_MAGNITUDE * match - (energyCost * ENERGY_COST_FACTOR) - REWARD_MAGNITUDE/2.0;
+
+        
+        for (int i = 0; i < sensor.length; i++) {
+            final double exp = 2.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
-            if (sensor[i] < 0.2)
+            if (sensor[i] < 0.05)
                 sensor[i] = 0;
         }            
         
-        double distance = 0;        
-        for (int i = 0; i < sensor.length; i++)
-            distance += Math.abs(sensor[i] - action[i]);
         
-        double reward = REWARD_MAGNITUDE * (1.0 / (1.0 + distance)) - REWARD_MAGNITUDE/2.0;
         
         return reward;        
     }
@@ -142,6 +151,6 @@ public class Grid1DSimple implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1DSimple(7, 50000, 0.002, 0.001));
+        new Simulation(new Grid1DSimple(16, 50000, 0.05, 0.001));
     }
 }

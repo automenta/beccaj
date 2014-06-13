@@ -368,6 +368,7 @@ public class Hub {
         return cableActivities;
     }
 
+    
     public DenseMatrix64F getChainActivities() {
         return chainActivities;
     }

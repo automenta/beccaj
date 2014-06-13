@@ -12,6 +12,8 @@ import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
 
 import static becca.core.Util.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 
 /**
     Blocks are the building block of which the agent is composed
@@ -138,7 +140,7 @@ public class Block {
                 
         assert(newCableActivities.getNumRows() == decayedActivities.getNumRows() );
         cableActivities = DenseMatrix64F.wrap(newCableActivities.getNumRows(), 1,
-                            Util.boundedSum(0, newCableActivities.getData(), decayedActivities.getData() ));        
+                            boundedSum(0, newCableActivities.getData(), decayedActivities.getData() ));        
         
 //        # Update cable_activities, incorporating sensing dynamics
 //        self.cable_activities = tools.bounded_sum([
@@ -185,16 +187,16 @@ public class Block {
         }
         //concat finished
         
+        
         //# Goal fulfillment and decay
         /*self.hub_cable_goals -= self.cable_activities
         self.hub_cable_goals *= self.ACTIVITY_DECAY_RATE
         self.hub_cable_goals = np.maximum(self.hub_cable_goals, 0.) */
-        CommonOps.subEquals(hubCableGoals, cableActivities);
-        CommonOps.scale(activityDecayRate, hubCableGoals);
-        double[] d = hubCableGoals.getData();
-        for (int i = 0; i < d.length; i++)
-            d[i] = Math.max(d[i], 0);
-    
+        subEquals(hubCableGoals, cableActivities);
+        scale(activityDecayRate, hubCableGoals);
+        matrixMaximum(hubCableGoals, 0);
+        
+        
         return bundleActivities;
     }
 
@@ -245,7 +247,7 @@ public class Block {
                         
                         //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
                         
-                        //TODO:
+                        //TODO: DECIDE IF THIS IS CORRECT
                         //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
                         if (cableGoalsByCog.getNumRows() > i)
                             cableGoals.set(i, j, 
@@ -257,12 +259,12 @@ public class Block {
                         //#        self.reaction[cog_cable_indices]) 
 
 
-                        //TODO:
+                        //TODO: DECIDE IF THIS IS CORRECT
                         //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])
                         //System.out.println(j + " " + i + " " + m(cs) + " " + m(surprise));                                               
                     for (int j = 0; j < surprise.getNumCols(); j++) {
                     
-                        if (cs.getNumRows() > i)                        
+                        if (cs.getNumRows() > i)
                             surprise.set(i, j, 
                                     Math.max(surprise.get(i, j), cs.get(i, 0)));
 
@@ -275,15 +277,13 @@ public class Block {
             
         }
         
-        //TEMPORARY - randomly stimulate surprise
-        /*for (int i = 0; i < surprise.getData().length; i++)
-            surprise.getData()[i] = Math.random() * 0.2;*/
-        
-        
-        hubCableGoals.setData( Util.boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
-        
+        //hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
+                        
         return hubCableGoals;
     }
+
+
+    
         
 /*
     def get_index_projection(self, bundle_index):
@@ -337,6 +337,10 @@ public class Block {
         }
         x += "  }";
         return x;
+    }
+
+    public DenseMatrix64F getBundleActivities() {
+        return bundleActivities;
     }
 
     public DenseMatrix64F getCableActivities() {

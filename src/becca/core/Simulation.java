@@ -46,7 +46,7 @@ public class Simulation {
     }
     private double reward;
     
-    long displayPeriodMS = 50;
+    long displayPeriodMS = 100;
     long lastDisplay = -1;
     
     public Simulation(World world) {
