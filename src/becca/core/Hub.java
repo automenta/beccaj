@@ -51,10 +51,10 @@ public class Hub {
         // Set constants that adjust the behavior of the hub
         this.INITIAL_REWARD = 1.0;
         this.UPDATE_RATE = Math.pow(10, -2);
-        this.REWARD_DECAY_RATE = .3;
+        this.REWARD_DECAY_RATE = .5; //0.3
         this.FORGETTING_RATE = Math.pow(10, -5);
-        this.TRACE_LENGTH = 10;
-        this.EXPLORATION = .1;
+        this.TRACE_LENGTH = 10;  //10
+        this.EXPLORATION = .1; //0.1
         
         
         //# Initialize variables for later use

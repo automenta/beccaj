@@ -85,12 +85,10 @@ public class Block {
         this.cableActivities = new DenseMatrix64F(this.maxCables,1); //np.zeros((self.max_cables, 1))
         this.hubCableGoals = new DenseMatrix64F(this.maxCables, 1); //np.zeros((self.max_cables, 1))
         
-        this.fillFractionThreshold = 0.7;
+        this.fillFractionThreshold = 0.7;        
+        this.activityDecayRate = 0.95; //1.0;       //real, 0 < x < 1                
+        this.rangeDecayRate = Math.pow(10, -5); //# Constants for adaptively rescaling the cable activities        
         
-        this.activityDecayRate = 1.0;       //real, 0 < x < 1
-        
-        //# Constants for adaptively rescaling the cable activities
-        this.rangeDecayRate = Math.pow(10, -5);        
         this.maxVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
         this.minVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1))
 

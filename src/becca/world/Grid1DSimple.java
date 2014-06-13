@@ -17,6 +17,7 @@ public class Grid1DSimple implements World {
     private final double REWARD_MAGNITUDE;
     private final double JUMP_FRACTION;
     private final double ENERGY_COST_FACTOR;
+    private final double MATCH_REWARD_FACTOR;
 
     private double focusPosition;
     private double focusVelocity;
@@ -32,9 +33,10 @@ public class Grid1DSimple implements World {
         this.time = 0;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
-        this.ENERGY_COST_FACTOR = 0.25;
+        this.ENERGY_COST_FACTOR = 0.5;
+        this.MATCH_REWARD_FACTOR = 16.0;
         this.REWARD_MAGNITUDE = 100.0;
-        this.JUMP_FRACTION = 0.002;        
+        this.JUMP_FRACTION = 0.000;        
         this.noise = noise;
         this.focusVelocity = focusVelocity;
         
@@ -54,20 +56,15 @@ public class Grid1DSimple implements World {
         
         this.action = action;
         
-
-        
-        focusPosition = focusPosition + focusVelocity;  
-                
         //# At random intervals, jump to a random position in the world
         if (Math.random() < JUMP_FRACTION) {
             focusPosition = size * Math.random();
         }
-        else {
+        else {            
             focusPosition += focusVelocity;
         }
         
         //# Ensure that the world state falls between 0 and 9
-        focusPosition -= size * Math.floor( ((double)focusPosition) / ((double)size) );
         if (focusPosition > size) focusPosition = focusPosition - size;
         if (focusPosition < 0) focusPosition = size + focusPosition;
         
@@ -83,13 +80,13 @@ public class Grid1DSimple implements World {
             energyCost += action[i];
         }
         
-        double reward = REWARD_MAGNITUDE * match - (energyCost * ENERGY_COST_FACTOR) - REWARD_MAGNITUDE/2.0;
+        double reward = REWARD_MAGNITUDE * ((MATCH_REWARD_FACTOR * match) - (energyCost * ENERGY_COST_FACTOR)) - REWARD_MAGNITUDE/4.0;
 
         
         for (int i = 0; i < sensor.length; i++) {
-            final double exp = 2.0; //sharpen
+            final double exp = 3.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
-            if (sensor[i] < 0.05)
+            if (sensor[i] < 0.0)
                 sensor[i] = 0;
         }            
         
@@ -151,6 +148,6 @@ public class Grid1DSimple implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1DSimple(16, 50000, 0.05, 0.001));
+        new Simulation(new Grid1DSimple(12, 150000, 0.04, 0.001));
     }
 }

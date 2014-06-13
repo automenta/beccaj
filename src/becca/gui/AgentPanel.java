@@ -29,6 +29,7 @@ public class AgentPanel extends JPanel {
     private final Agent agent;
 
     boolean showZipTies = false;
+    int maxMatrixSize = 33;
     
     public AgentPanel(Agent a) {
         super();
@@ -42,9 +43,14 @@ public class AgentPanel extends JPanel {
     }
     
     protected void addMatrix(String id, DenseMatrix64F m) {
+        if (m!=null)
+            if ((m.getNumCols() > maxMatrixSize) || (m.getNumRows() > maxMatrixSize))
+                return;
+
         JPanel x = new JPanel(new BorderLayout());
         x.setBorder(new EmptyBorder(8,8,8,8));
         x.setAlignmentX(JPanel.LEFT_ALIGNMENT);
+        
         
         x.add(new JLabel(id + " " + (m != null ? m(m) : "") ), BorderLayout.NORTH);
 
