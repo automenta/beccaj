@@ -12,8 +12,6 @@ import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
 
 import static becca.core.Util.*;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 
 /**
     Blocks are the building block of which the agent is composed
@@ -62,7 +60,9 @@ public class Block {
     
     //""" Initialize the level, defining the dimensions of its cogs """
     public Block(int minCables, int level) {
+        
         this.maxCables = (int)Math.round( Math.pow(2, 1 + Math.ceil(Util.log(minCables, 2))));
+        
         this.level = level;
         
         this.maxCablesPerCog = 8;
@@ -86,7 +86,7 @@ public class Block {
         this.hubCableGoals = new DenseMatrix64F(this.maxCables, 1); //np.zeros((self.max_cables, 1))
         
         this.fillFractionThreshold = 0.7;        
-        this.activityDecayRate = 0.95; //1.0;       //real, 0 < x < 1                
+        this.activityDecayRate = 1.0; //1.0;       //real, 0 < x < 1                
         this.rangeDecayRate = Math.pow(10, -5); //# Constants for adaptively rescaling the cable activities        
         
         this.maxVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
@@ -166,7 +166,7 @@ public class Block {
             /*# Cogs are only allowed to start forming bundles once 
               # the number of cables exceeds the fill_fraction_threshold*/
             boolean enoughCables = ziptie.getCableFractionInBundle(cogIndex) > fillFractionThreshold;
-               
+                       
             DenseMatrix64F cogBundleActivities = c.stepUp(cogCableActivities, enoughCables);
                     
             //self.bundle_activities = np.concatenate((self.bundle_activities,cog_bundle_activities))
@@ -234,11 +234,16 @@ public class Block {
             assert(cogCableIndices.getNumRows() == 1);
                        
             //paddingReaction = pad(c.getReaction(), cogCableIndices.getNumRows(), 0, 0.0);
-            final DenseMatrix64F cs = c.getSurprise();
+            final DenseMatrix64F cs = transpose(c.getSurprise(), null);
             
             final double[] ccid = cogCableIndices.getData();
+                           
             
+            
+            
+            int comparedI = 0, comparedIS = 0;
             for (int i = 0; i < ccid.length; i++) {
+                
                 if (ccid[i]>0) {
                     
                     for (int j = 0; j < cableGoals.getNumCols(); j++) {
@@ -247,9 +252,9 @@ public class Block {
                         
                         //TODO: DECIDE IF THIS IS CORRECT
                         //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
-                        if (cableGoalsByCog.getNumRows() > i)
+                        if ((cableGoalsByCog.getNumRows() > comparedI) && (cableGoalsByCog.getNumCols() > 0))
                             cableGoals.set(i, j, 
-                                    Math.max(cableGoals.get(i, j), cableGoalsByCog.get(i, 0)));
+                                    Math.max(cableGoals.get(i, j), cableGoalsByCog.get(comparedI++, 0)));
                     }
                     
                         //#self.reaction[cog_cable_indices] = np.maximum(
@@ -260,22 +265,25 @@ public class Block {
                         //TODO: DECIDE IF THIS IS CORRECT
                         //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])
                         //System.out.println(j + " " + i + " " + m(cs) + " " + m(surprise));                                               
-                    for (int j = 0; j < surprise.getNumCols(); j++) {
-                    
-                        if (cs.getNumRows() > i)
-                            surprise.set(i, j, 
-                                    Math.max(surprise.get(i, j), cs.get(i, 0)));
-
-                    }
                 
+                    //for (int j = 0; j < surprise.getNumRows(); j++) {
+
+                    if (cs.getNumRows() > comparedIS) {
+                        surprise.set(i, 0, 
+                                Math.max(surprise.get(i, 0), cs.get(comparedIS++, 0)));
+                    }
+
+                    //}
                 
                 }
-                
+
+                /*if (elementSum(cs) > 0)
+                    System.out.println(m(surprise) + " " + m(cs) + elementSum(cs) + " " + elementSum(surprise));*/
             }
             
-        }
+        }                
         
-        //hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
+        hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
                         
         return hubCableGoals;
     }

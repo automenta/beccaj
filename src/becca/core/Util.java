@@ -25,10 +25,10 @@ public class Util extends CommonOps {
         assert(a.getNumRows() == b.getNumRows());
         assert(a.getNumCols() == b.getNumCols());
         
-        DenseMatrix64F c = new DenseMatrix64F(a.getNumRows(), a.getNumCols());
-        double[] cd = c.getData();
-        double[] ad = a.getData();
-        double[] bd = b.getData();
+        final DenseMatrix64F c = new DenseMatrix64F(a.getNumRows(), a.getNumCols());
+        final double[] cd = c.getData();
+        final double[] ad = a.getData();
+        final double[] bd = b.getData();
         for (int i = 0; i < cd.length; i++) {
             cd[i] = ad[i] * bd[i];
         }
@@ -49,8 +49,7 @@ public class Util extends CommonOps {
         //weighted_sum_values = np.sum(values * weights, axis=0)                 
         DenseMatrix64F valueWeightProduct = multMatrixMatrix(values, weights);        
         
-        DenseMatrix64F weightedSumValues = new DenseMatrix64F(valueWeightProduct.getNumCols(), 1);
-        sumCols(valueWeightProduct, weightedSumValues);        
+        DenseMatrix64F weightedSumValues = sumCols(valueWeightProduct, null);        
         
         //sum_of_weights = np.sum(weights, axis=0)         
         DenseMatrix64F sumOfWeights = sumCols(weights, null);        
@@ -60,6 +59,9 @@ public class Util extends CommonOps {
         
         final double[] wsd = weightedSumValues.getData();
         final double[] sowd = sumOfWeights.getData();
+        
+        assert(weightedSumValues.getNumRows() == sumOfWeights.getNumRows());
+        assert(weightedSumValues.getNumCols() == sumOfWeights.getNumCols());
         for (int i = 0; i < wsd.length; i++)
             wsd[i] /= sowd[i];
         return weightedSumValues;        
@@ -114,30 +116,32 @@ public class Util extends CommonOps {
         double[] ad = a.getData();
         double[] bd = b.getData();
         assert(ad.length == bd.length);
+        assert(a.getNumRows() == b.getNumRows());
+        assert(a.getNumCols() == b.getNumCols());
         double sum = 0;
         for (int i = 0; i < ad.length; i++)
             sum += ad[i] * bd[i];        
         return sum;        
     }
     
-    public static DenseMatrix64F getGeneralizedMean(DenseMatrix64F values, DenseMatrix64F weights, double exponent) {
-        DenseMatrix64F shiftedValues = values.copy();
+    public static DenseMatrix64F getGeneralizedMean(final DenseMatrix64F values, final DenseMatrix64F weights, final double exponent) {
+        final DenseMatrix64F shiftedValues = values.copy();
         add(shiftedValues, 1.0);
 
-        DenseMatrix64F valuesToPower = shiftedValues.copy();
+        final DenseMatrix64F valuesToPower = shiftedValues;
         matrixPower(valuesToPower, exponent);
 
 
         //mean_values_to_power = weighted_average(values_to_power, weights)
-        DenseMatrix64F meanValuesToPower = getWeightedAverage(valuesToPower, weights);
+        final DenseMatrix64F meanValuesToPower = getWeightedAverage(valuesToPower, weights);
         
         //shifted_mean = (mean_values_to_power + EPSILON) ** (1./exponent)
-        DenseMatrix64F shiftedMean = meanValuesToPower;
+        final DenseMatrix64F shiftedMean = meanValuesToPower;
         add(shiftedMean, EPSILON);
         matrixPower(shiftedMean, (1.0/exponent));
         
         
-        DenseMatrix64F mean = shiftedMean;
+        final DenseMatrix64F mean = shiftedMean;
         
         //mean = shifted_mean - 1.
         add(mean, -1);
@@ -145,26 +149,30 @@ public class Util extends CommonOps {
         //# Find means for which all weights are zero. These are undefined.
         //# Set them equal to zero.
         //sum_weights = np.sum(weights, axis=0)
-        DenseMatrix64F sumWeights = sumCols(weights, null);
+        final DenseMatrix64F sumWeights = sumCols(weights, null);
         
                 
         //zero_indices = np.where(np.abs(sum_weights) < EPSILON)
         //mean[zero_indices] = 0.        
-        double[] meanD = mean.getData();
-        double[] sumWeightsD = sumWeights.getData();
+        final double[] meanD = mean.getData();
+        final double[] sumWeightsD = sumWeights.getData();
+        
+        assert(sumWeights.getNumRows() == mean.getNumRows());
+        assert(sumWeights.getNumCols() == mean.getNumCols());
         for (int i = 0; i < sumWeights.getNumRows(); i++) {
-            double a = Math.abs(sumWeightsD[i]);
-            if (a < EPSILON)
+            if (Math.abs(sumWeightsD[i]) < EPSILON)
                 meanD[i] = 0;
         }
         
         return mean;        
     }
 
-    public static double[] mapOneToInf(final double[] a) {
+    //A->B, B can be null in which case it operates just on A
+    public static double[] mapOneToInf(final double[] a, double[] b) {
         //""" Map values from [0, 1] onto [0, inf) and map values from [-1, 0] onto (-inf, 0]
         final double eps = 2.2204460492503131e-16; //eps = np.finfo(np.double).eps
-        final double[] b = new double[a.length];
+        if (b == null)
+            b = a;
         //a_prime = np.sign(a) / (1 - np.abs(a) + eps) - np.sign(a)
         for (int i = 0; i < a.length; i++) {
             final double A = a[i];
@@ -173,9 +181,11 @@ public class Util extends CommonOps {
         }
         return b;
     }
-    public static double[] mapInfToOne(final double[] b) {
+    public static double[] mapInfToOne(final double[] b, double[] a) {
         //""" Map values from [0, inf) onto [0, 1] and map values from  (-inf, 0] onto [-1, 0] """
-        final double[] a = new double[b.length];
+        if (a == null)
+            a = b;                
+        
         //a = np.sign(a_prime) * (1 - 1 / (np.abs(a_prime) + 1))
         for (int i = 0; i < a.length; i++) {
             final double B = b[i];
@@ -223,7 +233,7 @@ public class Util extends CommonOps {
         return DenseMatrix64F.wrap(result.length, 1, result);
     }
 
-    static double[] boundedSum(int axis, double[]... a) {
+    static double[] boundedSum(final int axis, final double[]... a) {
         /* 
             Sum elements nonlinearly, such that the total is less than 1 
 
@@ -231,17 +241,17 @@ public class Util extends CommonOps {
             and 1, their sum will also be between -1 and 1. a can be a 
             list or a numpy array. 
         */                
-        double[] total = new double[a[0].length];
-        int size = a[0].length;
-        for (double[] x : a) {
+        final int size = a[0].length;
+        final double[] total = new double[size];
+        final double[] y = new double[size];
+        for (final double[] x : a) {
             assert(size==x.length);
             
-            double[] m = mapOneToInf(x);            
+            double[] m = mapOneToInf(x, y);            
             for (int i = 0; i < size; i++)
                 total[i] += m[i];            
         }
-        return mapInfToOne(total);
-        
+        return mapInfToOne(total, null);        
         /*
         def bounded_sum(a, axis=0):
             

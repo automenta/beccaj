@@ -71,7 +71,7 @@ public class DaisyChain {
         def get_surprise(self):
             return self.surprise[:self.num_cables]
         */
-        
+               
         if (surprise.getNumRows() > numCables) {
             if (numCables == 0)
                 return new DenseMatrix64F(0, 1);
@@ -191,7 +191,6 @@ public class DaisyChain {
         //self.reaction = tools.weighted_average(self.expected_cable_activities, self.pre)        
             //daisychain stepup reaction param (8, 8) (8, 1)
         reaction = getWeightedAverage(expectedCableActivities, pre);
-        assert(reaction.getNumRows() == expectedCableActivities.getNumRows());
         
 
         //# Surprise is the difference between the expected post and the actual one

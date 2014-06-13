@@ -1,7 +1,6 @@
 package becca.world;
 
 import becca.core.Simulation;
-import becca.core.Util;
 import becca.core.World;
 
 /*
@@ -30,12 +29,12 @@ public class Grid1DSimple implements World {
     private final double noise;
 
     public Grid1DSimple(int size, int totalTime, double noise, double focusVelocity) {
-        this.time = 0;
+        this.time = 1;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
-        this.ENERGY_COST_FACTOR = 0.5;
-        this.MATCH_REWARD_FACTOR = 16.0;
-        this.REWARD_MAGNITUDE = 100.0;
+        this.ENERGY_COST_FACTOR = 0.7;
+        this.MATCH_REWARD_FACTOR = 1.0;
+        this.REWARD_MAGNITUDE = 10.0;
         this.JUMP_FRACTION = 0.000;        
         this.noise = noise;
         this.focusVelocity = focusVelocity;
@@ -45,10 +44,12 @@ public class Grid1DSimple implements World {
     }
     
     @Override    public String getName()    {     return "Grid1D";    }
-    @Override    public int getNumSensors() {     return size;    }
+    @Override    public int getNumSensors() {     return size*2;    }
     @Override    public int getNumActions() {     return size;    }
     @Override    public boolean isActive()  {     return time < totalTime;   }
 
+    double[] action2 = null;
+    
     @Override
     public double step(double[] action, double[] sensor) {
 
@@ -73,25 +74,36 @@ public class Grid1DSimple implements World {
         # Represent the presence or absence of the current position in the bin.
         */
 
+        //blur the action
+        /*if (action2 == null) action2 = new double[action.length];
+        for (int i = 0; i < action2.length; i++) {
+            action2[i] = action[i];
+            if (i > 0) action2[i] += 0.5 * action[i-1];
+            if (i < action2.length-1) action2[i] += 0.5 * action[i+1];
+        } */           
+                  
         double match = 0;        
         double energyCost = 0;
-        for (int i = 0; i < sensor.length; i++) {
+        for (int i = 0; i < action.length; i++) {
             match += Math.abs(sensor[i] * action[i]);
             energyCost += action[i];
         }
         
-        double reward = REWARD_MAGNITUDE * ((MATCH_REWARD_FACTOR * match) - (energyCost * ENERGY_COST_FACTOR)) - REWARD_MAGNITUDE/4.0;
-
+        double reward = REWARD_MAGNITUDE * ((MATCH_REWARD_FACTOR * match) - (energyCost * ENERGY_COST_FACTOR));
         
-        for (int i = 0; i < sensor.length; i++) {
-            final double exp = 3.0; //sharpen
+        
+        
+        
+        
+        for (int i = 0; i < action.length; i++) {
+            final double exp = 2.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
             if (sensor[i] < 0.0)
                 sensor[i] = 0;
-        }            
-        
-        
-        
+            
+            sensor[i+action.length] = action[i];            
+        }
+                
         return reward;        
     }
         
@@ -148,6 +160,6 @@ public class Grid1DSimple implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1DSimple(12, 150000, 0.04, 0.001));
+        new Simulation(new Grid1DSimple(4, 990000, 0.02, 0.0002));
     }
 }

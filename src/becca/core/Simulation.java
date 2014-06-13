@@ -7,7 +7,6 @@
 package becca.core;
 
 import becca.gui.AgentPanel;
-import java.util.Date;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 
@@ -46,7 +45,8 @@ public class Simulation {
     }
     private double reward;
     
-    long displayPeriodMS = 100;
+    long cycleDelayMS = 50;
+    long displayPeriodMS = 50;
     long lastDisplay = -1;
     
     public Simulation(World world) {
@@ -73,6 +73,8 @@ public class Simulation {
         action = np.zeros((world.num_actions,1))
         */
         
+        int time = 0;
+        
         while (world.isActive()) {
             /*    
             # Repeat the loop through the duration of the existence of the world 
@@ -89,9 +91,18 @@ public class Simulation {
             long now = System.currentTimeMillis();
             if ((lastDisplay == -1) || (now - lastDisplay > displayPeriodMS)) {
                 if (ap!=null) ap.update();
-                if (jf!=null) jf.setTitle("Reward: " + reward);
+                if (jf!=null) jf.setTitle("Reward: " + reward + ", @" + time);
                 lastDisplay = System.currentTimeMillis();
             }
+            
+            if (cycleDelayMS > 0) {
+                try {
+                    Thread.sleep(cycleDelayMS);
+                } catch (InterruptedException ex) {
+                }
+            }
+            
+            time++;
         }
         
         System.out.println("Simulation Finished.");

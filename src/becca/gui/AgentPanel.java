@@ -29,7 +29,7 @@ public class AgentPanel extends JPanel {
     private final Agent agent;
 
     boolean showZipTies = false;
-    int maxMatrixSize = 33;
+    int maxMatrixSize = 80;
     
     public AgentPanel(Agent a) {
         super();
