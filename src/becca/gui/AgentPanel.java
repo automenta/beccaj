@@ -20,6 +20,7 @@ import becca.core.ZipTie;
 import java.awt.BorderLayout;
 import javax.swing.BoxLayout;
 import javax.swing.border.EmptyBorder;
+import rlpark.DynamicChart;
 
 /**
  *
@@ -28,11 +29,14 @@ import javax.swing.border.EmptyBorder;
 public class AgentPanel extends JPanel {
     private final Agent agent;
 
-    boolean showZipTies = false;
+    boolean showZipTies = true;
+    boolean showDaisyChains = false;
+    
     int maxMatrixSize = 80;
     
     public AgentPanel(Agent a) {
         super();
+
         
         BoxLayout bl = new BoxLayout(this, BoxLayout.PAGE_AXIS);        
         setLayout(bl);
@@ -120,11 +124,13 @@ public class AgentPanel extends JPanel {
                 ZipTie z = c.ziptie;
                 if ((z!=null) && (showZipTies))
                     addZipTie(cPrefix, z);
-                
-                DaisyChain d = c.daisychain;
-                String dPrefix = "daisychain.";
-                addMatrix(bPrefix + dPrefix + "surprise", d.getSurprise());
-                addMatrix(bPrefix + dPrefix + "reaction", d.getReaction());
+    
+                if (showDaisyChains) {
+                    DaisyChain d = c.daisychain;
+                    String dPrefix = "daisychain.";
+                    addMatrix(bPrefix + dPrefix + "surprise", d.getSurprise());
+                    addMatrix(bPrefix + dPrefix + "reaction", d.getReaction());
+                }
                 
             }
                 

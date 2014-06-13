@@ -232,6 +232,7 @@ public class ZipTie {
         DenseMatrix64F bundle = new DenseMatrix64F(maxBundles, 1);
         bundle.set(bundleIndex, 0, 1.0);
 
+        //TODO may not need to invert 3 times
         //projection = np.sign(np.max(self.bundle_map * bundle,axis=0))[np.newaxis, :]        
         DenseMatrix64F bmb = transpose(matrixVector(transpose(bundleMap,null), transpose(bundle,null)),null);
         

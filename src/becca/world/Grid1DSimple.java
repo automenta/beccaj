@@ -32,20 +32,21 @@ public class Grid1DSimple implements World {
         this.time = 1;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
-        this.ENERGY_COST_FACTOR = 0.7;
-        this.MATCH_REWARD_FACTOR = 1.0;
-        this.REWARD_MAGNITUDE = 10.0;
-        this.JUMP_FRACTION = 0.000;        
+        this.ENERGY_COST_FACTOR = 1.0;
+        this.MATCH_REWARD_FACTOR = size*1.0;
+        this.REWARD_MAGNITUDE = 1;
+        this.JUMP_FRACTION = 0.0;        
         this.noise = noise;
         this.focusVelocity = focusVelocity;
         
-        this.focusPosition = 0.0;
+        this.focusPosition = size/2;
         this.totalTime = totalTime;
     }
+
     
     @Override    public String getName()    {     return "Grid1D";    }
     @Override    public int getNumSensors() {     return size*2;    }
-    @Override    public int getNumActions() {     return size;    }
+    @Override    public int getNumActions() {     return size*2;    }
     @Override    public boolean isActive()  {     return time < totalTime;   }
 
     double[] action2 = null;
@@ -84,25 +85,43 @@ public class Grid1DSimple implements World {
                   
         double match = 0;        
         double energyCost = 0;
-        for (int i = 0; i < action.length; i++) {
-            match += Math.abs(sensor[i] * action[i]);
-            energyCost += action[i];
+        for (int i = 0; i < size; i++) {
+            match += Math.abs(sensor[i] * sensor[i+size] );
+            energyCost += sensor[i+size];
         }
+        
         
         double reward = REWARD_MAGNITUDE * ((MATCH_REWARD_FACTOR * match) - (energyCost * ENERGY_COST_FACTOR));
         
+        /*if (reward!=0)
+            System.out.println(match + " " + energyCost + " -> " + reward);*/
         
         
         
-        
-        for (int i = 0; i < action.length; i++) {
+        double min=0, max=0;
+        for (int i = 0; i < size; i++) {
             final double exp = 2.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
             if (sensor[i] < 0.0)
                 sensor[i] = 0;
+            if (i == 0) {
+                min = max = sensor[i];
+            }
+            else {
+                if (sensor[i] < min) min = sensor[i];
+                if (sensor[i] > max) max = sensor[i];
+            }
+                        
+            sensor[i+size] = 1.0 * action[i];        
+            sensor[i+size] = 1.0 * action[i+size];   
+            sensor[i+size] = Math.max(0, sensor[i+size]);
             
-            sensor[i+action.length] = action[i];            
         }
+        //normalize
+        for (int i = 0; i < size; i++) {
+            sensor[i] = (max-min)*(sensor[i] - min);
+        }
+        
                 
         return reward;        
     }
@@ -160,6 +179,7 @@ public class Grid1DSimple implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1DSimple(4, 990000, 0.02, 0.0002));
+        new Simulation(new Grid1DSimple(8, 990000, 0.02, 0.01));
+        
     }
 }

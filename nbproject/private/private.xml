@@ -3,15 +3,17 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+            <file>file:/home/me/share/beccaj/src/becca/gui/AgentPanel.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/World.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/Cog.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/Util.java</file>
-            <file>file:/home/me/share/beccaj/src/becca/test/TestAgent.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/Block.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/Hub.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/DaisyChain.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/ZipTie.java</file>
             <file>file:/home/me/share/beccaj/src/becca/core/Agent.java</file>
+            <file>file:/home/me/share/beccaj/src/becca/core/Simulation.java</file>
+            <file>file:/home/me/share/beccaj/src/becca/world/Grid1DSimple.java</file>
         </group>
     </open-files>
 </project-private>

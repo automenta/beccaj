@@ -52,8 +52,8 @@ public class Hub {
         this.INITIAL_REWARD = 1.0;
         this.UPDATE_RATE = Math.pow(10, -2);
         this.REWARD_DECAY_RATE = .7;
-        this.FORGETTING_RATE = Math.pow(10, -3);
-        this.TRACE_LENGTH = 512;
+        this.FORGETTING_RATE = Math.pow(10, -5);
+        this.TRACE_LENGTH = 10;
         this.EXPLORATION = .1;
         
         

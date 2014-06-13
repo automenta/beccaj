@@ -9,6 +9,7 @@ package becca.core;
 import becca.gui.AgentPanel;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
+import rlpark.DynamicChart;
 
 
 
@@ -41,12 +42,23 @@ public class Simulation {
         jf.setSize(700,1000);
         jf.setVisible(true);
         jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        new DynamicChart() {
+
+            @Override
+            public double getNextValue() {
+                double r = rewardTotal;
+                rewardTotal = 0;
+                return r;
+            }
+            
+        };
         
     }
-    private double reward;
+    private double reward, rewardTotal;
     
-    long cycleDelayMS = 50;
-    long displayPeriodMS = 50;
+    long cycleDelayMS = 0;
+    long displayPeriodMS = 250;
     long lastDisplay = -1;
     
     public Simulation(World world) {
@@ -85,7 +97,8 @@ public class Simulation {
             */
 
             reward = world.step(agent.action, agent.sensor);
-
+            rewardTotal+=reward;
+            
             agent.step(reward);
 
             long now = System.currentTimeMillis();
@@ -101,6 +114,7 @@ public class Simulation {
                 } catch (InterruptedException ex) {
                 }
             }
+            if (time % 1000==0) System.out.println(time);
             
             time++;
         }
