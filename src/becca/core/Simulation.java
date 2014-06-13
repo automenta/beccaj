@@ -7,6 +7,7 @@
 package becca.core;
 
 import becca.gui.AgentPanel;
+import java.util.Date;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 
@@ -19,6 +20,8 @@ import javax.swing.JScrollPane;
 public class Simulation {
 
     public final Agent agent;
+    private AgentPanel ap;
+    private JFrame jf;
     
     /*
     Run BECCA with world.  
@@ -33,28 +36,18 @@ public class Simulation {
 
     */
     public void displayAgent(Agent a) {
-        JFrame jf = new JFrame();
-        final AgentPanel ap = new AgentPanel(a);
+        jf = new JFrame();
+        ap = new AgentPanel(a);
         jf.setContentPane(new JScrollPane(ap, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
         jf.setSize(700,1000);
         jf.setVisible(true);
         jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    ap.update();
-                    jf.setTitle("Reward: " + reward);
-                    try {                        
-                        Thread.sleep(1000);
-                    } catch (InterruptedException ex) {
-                    }
-                }
-            }            
-        }).start();
     }
     private double reward;
+    
+    long displayPeriodMS = 50;
+    long lastDisplay = -1;
     
     public Simulation(World world) {
         
@@ -93,6 +86,12 @@ public class Simulation {
 
             agent.step(reward);
 
+            long now = System.currentTimeMillis();
+            if ((lastDisplay == -1) || (now - lastDisplay > displayPeriodMS)) {
+                ap.update();
+                jf.setTitle("Reward: " + reward);
+                lastDisplay = System.currentTimeMillis();
+            }
         }
         
         System.out.println("Simulation Finished.");

@@ -28,6 +28,8 @@ import javax.swing.border.EmptyBorder;
 public class AgentPanel extends JPanel {
     private final Agent agent;
 
+    boolean showZipTies = false;
+    
     public AgentPanel(Agent a) {
         super();
         
@@ -108,10 +110,13 @@ public class AgentPanel extends JPanel {
                 addMatrix(bPrefix + cPrefix + "surprise", c.getSurprise());
                 
                 ZipTie z = c.ziptie;
-                if (z!=null)
+                if ((z!=null) && (showZipTies))
                     addZipTie(cPrefix, z);
                 
                 DaisyChain d = c.daisychain;
+                String dPrefix = "daisychain";
+                addMatrix(bPrefix + dPrefix + "surprise", d.getSurprise());
+                addMatrix(bPrefix + dPrefix + "reaction", d.getReaction());
                 
             }
                 

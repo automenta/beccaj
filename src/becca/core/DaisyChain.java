@@ -283,6 +283,10 @@ public class DaisyChain {
         return sb.toString();
     }
 
+    public DenseMatrix64F getReaction() {
+        return reaction;
+    }
+
     
 
 }
