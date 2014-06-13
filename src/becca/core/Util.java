@@ -85,12 +85,12 @@ public class Util extends CommonOps {
         if (vector.getNumRows() == 1) {
             assert(matrix.getNumCols() == vector.getNumCols());
             
-            for (int i = 0; i < matrix.getNumRows(); i++) {
-               for (int j = 0; j < matrix.getNumCols(); j++) {
-                   if (multiply)
-                       result.set(i, j, matrix.get(i, j) * vector.get(0, j));
-                   else
-                       result.set(i, j, matrix.get(i, j) / vector.get(0, j));
+            for (int j = 0; j < matrix.getNumCols(); j++) {
+                final double vdi = vdata[j];                   
+                for (int i = 0; i < matrix.getNumRows(); i++) {
+                   final double mij = matrix.unsafe_get(i, j);
+                   final double r = multiply ? mij * vdi : mij / vdi;
+                   result.unsafe_set(i, j, r);
                }
             }
         }
@@ -98,11 +98,11 @@ public class Util extends CommonOps {
             assert(matrix.getNumRows() == vector.getNumRows());
 
             for (int i = 0; i < matrix.getNumRows(); i++) {
+               final double vdi = vdata[i];
                for (int j = 0; j < matrix.getNumCols(); j++) {
-                   if (multiply)
-                       result.set(i, j, matrix.get(i, j) * vector.get(i, 0));
-                   else
-                       result.set(i, j, matrix.get(i, j) / vector.get(i, 0));
+                   final double mij = matrix.unsafe_get(i, j);
+                   final double r = multiply ? mij * vdi : mij / vdi;
+                   result.unsafe_set(i, j, r);
                }
             }
 
@@ -389,34 +389,36 @@ public class Util extends CommonOps {
         return projection;
     }
     
-    static DenseMatrix64F maxRow(DenseMatrix64F x) {
+    static DenseMatrix64F maxRow(final DenseMatrix64F x) {
         final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
+        final double[] pd = projection.getData();
         for (int i = 0; i < x.getNumRows(); i++) {
             for (int j = 0; j < x.getNumCols(); j++) {
                 if (i == 0) {
-                    projection.set(0, j, x.get(0, j));
+                    pd[j] = x.unsafe_get(0, j);
                 }
                 else {
-                    double cg = x.get(i, j);
-                    if (cg > projection.get(0, j))
-                        projection.set(0, j, cg);
+                    final double cg = x.unsafe_get(i, j);
+                    if (cg > pd[j])
+                        pd[j] = cg;
                 }
             }
         }
         return projection;
     }
     //TODO unify these two funcs ^v
-    static DenseMatrix64F minRow(DenseMatrix64F x) {
+    static DenseMatrix64F minRow(final DenseMatrix64F x) {
         final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
+        final double[] pd = projection.getData();
         for (int i = 0; i < x.getNumRows(); i++) {
             for (int j = 0; j < x.getNumCols(); j++) {
                 if (i == 0) {
-                    projection.set(0, j, x.get(0, j));
+                    pd[j] = x.unsafe_get(0, j);
                 }
                 else {
-                    double cg = x.get(i, j);
-                    if (cg < projection.get(0, j))
-                        projection.set(0, j, cg);
+                    final double cg = x.unsafe_get(i, j);
+                    if (cg < pd[j])
+                        pd[j] = cg;
                 }
             }
         }
@@ -438,11 +440,14 @@ public class Util extends CommonOps {
 
     static DenseMatrix64F broadcastRows(final DenseMatrix64F col, final int numCols) {
         //TODO see if can be created by arraycopy repeatedly, depends on row ordering        
+        assert(col.getNumCols() == 1);
+        final double[] cd = col.getData();
         int numRows = col.getNumRows();
         final DenseMatrix64F r = new DenseMatrix64F(numRows, numCols);
         for (int i = 0; i < numRows; i++) {
+            final double C = cd[i];
             for (int j = 0; j < numCols; j++) {
-                r.set(i, j, col.get(i, 0));
+                r.unsafe_set(i, j, C);                
             }
         }
         return r;

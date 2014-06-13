@@ -88,8 +88,8 @@ public class Simulation {
 
             long now = System.currentTimeMillis();
             if ((lastDisplay == -1) || (now - lastDisplay > displayPeriodMS)) {
-                ap.update();
-                jf.setTitle("Reward: " + reward);
+                if (ap!=null) ap.update();
+                if (jf!=null) jf.setTitle("Reward: " + reward);
                 lastDisplay = System.currentTimeMillis();
             }
         }
