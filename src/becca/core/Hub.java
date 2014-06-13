@@ -16,10 +16,9 @@ The hub is the central action selection mechanism
 */
 import java.util.ArrayList;
 import org.ejml.data.DenseMatrix64F;
-import org.ejml.ops.CommonOps;
 
 import static becca.core.Util.*;
-import java.util.ArrayDeque;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Hub {
@@ -35,13 +34,13 @@ public class Hub {
     private double rewardMax;
     
     private double oldReward;
-    private ArrayDeque<Double> rewardTrace;
+    private LinkedList<Double> rewardTrace;
     
     private DenseMatrix64F count;
     private DenseMatrix64F expectedReward;
     private DenseMatrix64F cableActivities;
-    private ArrayDeque<DenseMatrix64F> pre;
-    private ArrayDeque<DenseMatrix64F> post;
+    private LinkedList<DenseMatrix64F> pre;
+    private LinkedList<DenseMatrix64F> post;
     private DenseMatrix64F chainActivities;
     private DenseMatrix64F estimatedRewardValue;
 
@@ -65,7 +64,7 @@ public class Hub {
                 
         this.count = new DenseMatrix64F(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
         
-        this.rewardTrace = new ArrayDeque(TRACE_LENGTH);
+        this.rewardTrace = new LinkedList();
         for (int i = 0; i < TRACE_LENGTH; i++)
             rewardTrace.add(0.0);
         
@@ -77,8 +76,8 @@ public class Hub {
         /*# pre represents the feature and sensor activities at a given
           # time step.
           # post represents the goal or action that was taken following. */
-        this.pre = new ArrayDeque(this.TRACE_LENGTH);
-        this.post = new ArrayDeque(this.TRACE_LENGTH);
+        this.pre = new LinkedList();
+        this.post = new LinkedList();
         for (int i = 0; i < this.TRACE_LENGTH; i++) {
             /*this.pre = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH) 
             this.post = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH)*/
@@ -105,10 +104,10 @@ public class Hub {
 
         
         //# All the cable activities from all the blocks, at the current time
-        for (DenseMatrix64F p : pre)
-            pad(p, numCables, 1, 0.0);
-        for (DenseMatrix64F p : post)
-            pad(p, numCables, 1, 0.0);
+        for (int i = 0; i < pre.size(); i++) {
+            pre.set(i, pad(pre.get(i), numCables, 1, 0.0));
+            post.set(i, pad(post.get(i), numCables, 1, 0.0));
+        }
     }
         
     void step(ArrayList<Block> blocks, double unscaledReward) {
@@ -159,13 +158,10 @@ public class Hub {
         
         DenseMatrix64F firstPre = pre.peekFirst();
         DenseMatrix64F firstPost = post.peekFirst();
-        
-        if (!((chainActivities!=null) && (chainActivities.getNumRows()==firstPre.getNumRows()) && (chainActivities.getNumRows()==firstPost.getNumCols())))
-            chainActivities = new DenseMatrix64F(firstPre.getNumRows(), firstPost.getNumRows());
-            
+                
+        assert(firstPre.getNumRows() == count.getNumRows());        
+        chainActivities = new DenseMatrix64F(firstPre.getNumRows(), firstPre.getNumRows());            
         mult(firstPre, transpose(firstPost, null), chainActivities);
-
-        //# Update the count of how often each feature has been active
         addEquals(count, chainActivities);
 
         //# Decay the count gradually to encourage occasional re-exploration 
@@ -213,18 +209,23 @@ public class Hub {
             rewardArray[i] *= decayExponents[i];
             reward += rewardArray[i];
         }
-        
+
+        //System.out.println("ER: " + elementSum(expectedReward) );        
+
         //reward_difference = reward - this.expected_reward
         DenseMatrix64F rewardDifference = expectedReward.copy();
         scale(-1, rewardDifference);
         add(rewardDifference, reward);
-        
+
+        //System.out.println("ER: " + elementSum(expectedReward) + " RD:" + elementSum(rewardDifference) + " " + reward);
         
         //this.expected_reward += reward_difference * update_rate
-        DenseMatrix64F erDelta = new DenseMatrix64F(rewardDifference.getNumRows(), updateRate.getNumCols());
-        mult(rewardDifference, updateRate, erDelta);
+        //DenseMatrix64F erDelta = new DenseMatrix64F(rewardDifference.getNumRows(), updateRate.getNumCols());
+        //mult(rewardDifference, updateRate, erDelta);
+        DenseMatrix64F erDelta = multMatrixMatrix(rewardDifference, updateRate);        
         addEquals(expectedReward, erDelta);
         
+        //System.out.println("ERDelta: " + elementSum(erDelta));
         
         //# Decay the reward value gradually to encourage re-exploration 
         //this.expected_reward *= 1. - this.FORGETTING_RATE
