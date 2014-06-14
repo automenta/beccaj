@@ -8,7 +8,6 @@ package becca.core;
 
 import becca.gui.AgentPanel;
 import javax.swing.JFrame;
-import javax.swing.JScrollPane;
 import rlpark.DynamicChart;
 
 
@@ -35,13 +34,10 @@ public class Simulation {
     profile_flag in the top level script environment to True.
 
     */
+    
     public void displayAgent(Agent a) {
-        jf = new JFrame();
         ap = new AgentPanel(a);
-        jf.setContentPane(new JScrollPane(ap, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
-        jf.setSize(700,1000);
-        jf.setVisible(true);
-        jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        jf = AgentPanel.window(ap, true);
 
         new DynamicChart() {
 

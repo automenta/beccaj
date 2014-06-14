@@ -22,6 +22,53 @@ import static becca.core.Util.*;
     Each pre-post chain also tracks the expected reward, the uncertainty in
     the estimates of the post activity and reward, and a count of how many
     times the chain has been active.
+     
+Dasiychain is an incremental algorithm that estimates
+the probability of one cable being active following an-
+other. It represents this as a conditional probability:
+given that one cable is active what is the expected ac-
+tivity of a second cable in the next time step. (Figure
+7) High expected chain activities indicate sequences of
+cable activities that co-occur regularly. They identify
+temporal structure in the data.
+
+Expected chain activities are similar to transition prob-
+abilities in Markov models. The difference is that in a
+Markov model, only one state can be occupied at each
+time step. This is analogous to just one cable being
+active. In a daisychain, many cables can be completely
+or partially active at once. As a result, transition prob-
+abilities can sum to much more than one. 
+ 
+A temporal sequence of one cable being active, followed
+by another, is a chain. The activity of a chain is given
+by the product of the two cable activities involved.
+
+A leaky accumulation of the activity on each cable and
+on each chain is also maintained.
+
+The expected chain activities are maintained and up-
+dated based on the current chain activities. 
+
+In addition, the expected deviation from the expected
+chain activities are maintained and updated based on
+the difference between the current and expected chain
+activities.
+
+The temporal structure captured in the expected chain
+activities provide a basis for making short-term predic-
+tions.The reaction is the predicted next set of cable ac-
+tivities.
+
+The most recently observed cable activities can be compared
+to those that would have been predicted from the previous 
+cable activities to find surprising events.
+
+As chain goals are propagated down through the daisy-
+chain, they are combined to form the cable goals. Each
+cable goal is a weighted, bounded sum of all the goals
+of the chains it belongs to.
+
  */
 public class DaisyChain {
     private final double AGING_TIME_CONSTANT;
@@ -30,21 +77,25 @@ public class DaisyChain {
     private final int time;
     private final DenseMatrix64F count;
     private final DenseMatrix64F expectedCableActivities;
-    private final DenseMatrix64F postUncertainty;
     private DenseMatrix64F pre;
     private final DenseMatrix64F preCount;
     private DenseMatrix64F post;
+    private final DenseMatrix64F postUncertainty;
     private int numCables;
     private DenseMatrix64F surprise;
     private DenseMatrix64F reaction;
+    private final boolean allowSelfTransitions;
 
+
+    
     public DaisyChain(int maxCables) {
         
         this.maxCables = maxCables;
 
-        this.AGING_TIME_CONSTANT = Math.pow(10, 6); //# real, large
-        this.CHAIN_UPDATE_RATE = Math.pow(10,-1); // # real, 0 < x < 1
-                
+        this.AGING_TIME_CONSTANT = Math.pow(10, 3); //# real, large
+        this.CHAIN_UPDATE_RATE = Math.pow(10,-1); // # real, 0 < x < 1         
+        this.allowSelfTransitions = false;
+        
         this.time = 0;
         
         //this.shape = (max_num_cables, max_num_cables)        
@@ -92,8 +143,7 @@ public class DaisyChain {
 
     public DenseMatrix64F stepUp(DenseMatrix64F cableActivities) {
         //""" Train the daisychain using the current cable_activities """
-    
-        
+            
         //self.num_cables = np.maximum(self.num_cables, cable_activities.size)        
         numCables = Math.max(numCables, cableActivities.getNumElements());
         
@@ -118,20 +168,28 @@ public class DaisyChain {
         
         //set the main diagonal (of size pre) of chainActivities to zero
         //chain_activities[np.nonzero(np.eye(self.pre.size))] = 0.
-        DenseMatrix64F eye = identity(pre.getNumElements());
-        scale(-1, eye);
-        add(eye, 1);
-        elementMult(chainActivities, eye);
+        if (allowSelfTransitions) {
+            DenseMatrix64F eye = identity(pre.getNumElements());
+            scale(-1, eye);
+            add(eye, 1);
+            elementMult(chainActivities, eye);
+        }
         
         //self.count += chain_activities
         addEquals(count, chainActivities);
         
         //self.count -= 1 / (self.AGING_TIME_CONSTANT * self.count + tools.EPSILON)
         DenseMatrix64F countDelta = count.copy();
-        scale(AGING_TIME_CONSTANT, countDelta);
-        add(countDelta, EPSILON);
-        matrixPower(countDelta, -1);
+        /*scale(AGING_TIME_CONSTANT, countDelta);
+        add(countDelta, EPSILON);        
+        matrixPower(countDelta, -1);        
+        subEquals(count, countDelta);*/
+        
+        //ALTERNATE CALCULIATON
+        scale(1.0 - (1.0 / AGING_TIME_CONSTANT), countDelta);
         subEquals(count, countDelta);
+        
+        
         
         //self.count = np.maximum(self.count, 0)
         matrixMaximum(count, 0);
@@ -286,6 +344,28 @@ public class DaisyChain {
         return reaction;
     }
 
-    
+    public DenseMatrix64F getCount() {
+        return count;
+    }
 
+    public DenseMatrix64F getPre() {
+        return pre;
+    }
+
+    public DenseMatrix64F getPreCount() {
+        return preCount;
+    }
+
+    public DenseMatrix64F getPost() {
+        return post;
+    }
+
+    public DenseMatrix64F getPostUncertainty() {
+        return postUncertainty;
+    }
+
+    public DenseMatrix64F getExpectedCableActivities() {
+        return expectedCableActivities;
+    }
+    
 }

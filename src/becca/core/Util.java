@@ -2,6 +2,7 @@ package becca.core;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.util.Precision;
 import org.ejml.alg.dense.mult.SubmatrixOps;
 import org.ejml.data.DenseMatrix64F;
@@ -9,7 +10,7 @@ import org.ejml.data.ReshapeMatrix64F;
 import org.ejml.ops.CommonOps;
 
 public class Util extends CommonOps {
-    public final static double EPSILON = Precision.EPSILON;   // // sys.float_info.epsilon = 2.220446049250313e-16
+    public final static double EPSILON = 2.0 * Precision.EPSILON;   // // sys.float_info.epsilon = 2.220446049250313e-16
     public final static double BIG = Math.pow(10, 20);
     public final static int MAX_INT16 = 32767;     // np.iinfo(np.int16).max
 
@@ -475,13 +476,19 @@ public class Util extends CommonOps {
         return r;
     }
 
-    public static DenseMatrix64F randMatrix(int numRows, int numCols, double range) {
+    //numpy.random.normal(loc=0.0, scale=1.0, size=None)
+    public static final NormalDistribution nd = new NormalDistribution(0.0, 1.0);
+    
+    public static DenseMatrix64F normRandMatrix(int numRows, int numCols, double scale, double min) {
         //TODO use normal distribution
         final DenseMatrix64F r = new DenseMatrix64F(numRows, numCols);
+        normRand(r, scale, min);
+        return r;
+    }
+    public static void normRand(DenseMatrix64F r, double scale, double min) {
         final double[] d = r.getData();
         for (int i = 0; i < d.length; i++)
-            d[i] = Math.random() * range;
-        return r;
+            d[i] = nd.sample() * scale + min;        
     }
     
     

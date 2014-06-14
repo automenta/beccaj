@@ -238,7 +238,7 @@ public class Hub {
         # encouraging exploration.
         reward_uncertainty = (np.random.normal(size=this.count.shape) * this.EXPLORATION / (this.count + 1.))
          */
-        DenseMatrix64F uncertainNumerator = randMatrix(count.getNumRows(), count.getNumCols(), EXPLORATION);        
+        DenseMatrix64F uncertainNumerator = normRandMatrix(count.getNumRows(), count.getNumCols(), EXPLORATION, 0.0);        
         DenseMatrix64F rewardUncertainty = count.copy();        add(rewardUncertainty, 1.0);
         matrixDivBy(rewardUncertainty, uncertainNumerator);
         

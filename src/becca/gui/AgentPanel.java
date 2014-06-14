@@ -19,20 +19,20 @@ import static becca.core.Util.*;
 import becca.core.ZipTie;
 import java.awt.BorderLayout;
 import javax.swing.BoxLayout;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
-import rlpark.DynamicChart;
 
 /**
  *
  * @author me
  */
-public class AgentPanel extends JPanel {
+public class AgentPanel extends MatrixPanel {
     private final Agent agent;
 
     boolean showZipTies = true;
-    boolean showDaisyChains = false;
+    boolean showDaisyChains = true;
     
-    int maxMatrixSize = 80;
     
     public AgentPanel(Agent a) {
         super();
@@ -46,39 +46,6 @@ public class AgentPanel extends JPanel {
         update();
     }
     
-    protected void addMatrix(String id, DenseMatrix64F m) {
-        if (m!=null)
-            if ((m.getNumCols() > maxMatrixSize) || (m.getNumRows() > maxMatrixSize))
-                return;
-
-        JPanel x = new JPanel(new BorderLayout());
-        x.setBorder(new EmptyBorder(8,8,8,8));
-        x.setAlignmentX(JPanel.LEFT_ALIGNMENT);
-        
-        
-        x.add(new JLabel(id + " " + (m != null ? m(m) : "") ), BorderLayout.NORTH);
-
-        if ((m!=null) && ((m.getNumCols() > 0) && (m.getNumRows() > 0))) {
-            int px = 8; //min pixels per cell
-            int maxPX = 12; //max pixels per cell
-            if (m.getNumCols() == 1)
-                m = transpose(m, null);
-            
-            int w = (int)Math.max(m.getNumCols()*px, Math.log(m.getNumCols()*maxPX));
-            int h = (int)Math.max(m.getNumRows()*px, Math.log(m.getNumRows()*maxPX));
-            
-            MatrixComponent mv = new MatrixComponent(w,h);
-            mv.setMatrix(m);
-            
-            x.add(mv, BorderLayout.CENTER);
-        }
-        else {
-            x.add(new JLabel("(null)"), BorderLayout.CENTER);
-        }
-        
-        add(x);
-        
-    }
     
     protected void addZipTie(String bPrefix, ZipTie z) {
         addMatrix(bPrefix + "ziptie.bundleActivities" , 
