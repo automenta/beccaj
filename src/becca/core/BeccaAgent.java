@@ -7,6 +7,8 @@ import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
+import becca.test.Agent;
+import becca.test.World;
 import java.util.ArrayDeque;
        
 /**
@@ -15,48 +17,84 @@ import java.util.ArrayDeque;
  * Takes in a time series of sensory input vectors and a scalar reward and puts
  * out a time series of action commands.
  */
-public class Agent implements Serializable {
+public class BeccaAgent implements Agent, Serializable {
 
-    public final String name;
-    public final ArrayList<Block> blocks = new ArrayList();
+    
+    public ArrayList<Block> blocks = new ArrayList();
     private int time; //current time step
 
     private ArrayDeque<Double> recentSurpriseHistory;
-    private final int RECENT_SURPRISE_HISTORY_SIZE = 100;
+    private int RECENT_SURPRISE_HISTORY_SIZE = 100;
 
-    private final int numSensors;
-    private final int numActions;
+    private int numSensors;
+    private int numActions;
     private int timeSinceRewardLog;
     private double cumulativeReward;
-    private final LinkedList<Double> rewardHistory;
-    private final LinkedList<Double> surpriseHistory;
-    private final LinkedList<Object> rewardSteps;
-    public final Hub hub;
-    public final double[] sensor;
-    public final double[] action;
+    private LinkedList<Double> rewardHistory;
+    private LinkedList<Double> surpriseHistory;
+    private LinkedList<Object> rewardSteps;
+    public Hub hub;
+    public double[] sensor;
+    public double[] action;
     private double reward;
     private double typicalSurprise;
 
+    
     /*
-         Configure the Agent
+         Configure the BeccaAgent
 
          num_sensors and num_actions are the only absolutely necessary
          arguments. They define the number of elements in the 
          sensor and action arrays that the agent and the world use to
          communicate with each other. 
     */
-    public Agent(String name, int numSensors, int numActions) {
+    
+    public BeccaAgent() {
         
+    }
+    
+    public BeccaAgent(final int na, final int ns) {
+        init(new World() {
+
+            @Override
+            public int getNumActions() {
+                return na;
+            }
+
+            @Override
+            public int getNumSensors() {
+                return ns;
+            }
+
+            
+            @Override
+            public double step(double[] action, double[] sensor) {
+                return 0;
+            }
+
+            @Override
+            public String getName() {
+                return "";
+            }
+
+            @Override
+            public boolean isActive() {
+                return false;
+            }
+           
+        });
+    }
+
+    @Override
+    public void init(World world) {
         //self.BACKUP_PERIOD = 10 ** 4
-
-        this.name = name;
-
+        
         this.time = 0;
 
         //TODO: Automatically adapt to the number of sensor pass in
-        this.numSensors = numSensors;
+        this.numSensors = world.getNumSensors();
         this.sensor = new double[numSensors];
-        this.numActions = numActions;
+        this.numActions = world.getNumActions();
         this.action = new double[numActions];
 
         //first_block_name = ''.join(('block_', str(self.num_blocks - 1)))
@@ -260,7 +298,7 @@ public class Agent implements Serializable {
 
     public String toString() {
         StringBuffer x = new StringBuffer();
-        x.append("Agent " + this.name + " (sensors=" + this.numSensors + ", actions=" + this.numActions + ") @ time=" + this.time + ":\n");
+        x.append("BeccaAgent (sensors=" + this.numSensors + ", actions=" + this.numActions + ") @ time=" + this.time + ":\n");
         x.append("  " + this.blocks + "\n");
         x.append("  " + this.hub);
         
@@ -308,4 +346,12 @@ public class Agent implements Serializable {
      return  
   
      */
+
+    @Override public double[] getSensor() {
+        return sensor;
+    }
+
+    @Override public double[] getAction() {
+        return action;
+    }
 }

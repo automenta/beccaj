@@ -8,9 +8,10 @@ import java.io.Serializable;
  * @author Elser
  */
 public abstract class Perception implements Serializable{
+        boolean rawInput = false;
 	private static final double NEURON_ON = 0.85;
 	private static final long serialVersionUID = 1;
-	private double[] output;
+	protected double[] output;
 	private int outputIter;
 	private boolean addRandomInput = false;
 
@@ -38,7 +39,6 @@ public abstract class Perception implements Serializable{
 	 */
 	public void perceive() {
 		outputIter = 0;
-		setNextValue(10); // constant value
 		if (addRandomInput) {
 			setNextValue(Rand.d(-2, 2)); // random value
 		}
@@ -61,12 +61,16 @@ public abstract class Perception implements Serializable{
 	 * @param input
 	 */
 	protected void setNextValue(double input) {
-		if(output!=null) {
+		if(output!=null) { 
+                    if (rawInput)
+                        output[outputIter] = input;
+                    else {
 			if(isUnipolar()) {
 				output[outputIter] = Mat.sigmoidUni(input);
 			} else {
 				output[outputIter] = Mat.sigmoidBi(input);
 			}
+                    }
 		}
 		outputIter++;
 	}

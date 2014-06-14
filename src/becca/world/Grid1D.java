@@ -1,7 +1,6 @@
 package becca.world;
 
-import becca.core.Simulation;
-import becca.core.World;
+import becca.test.World;
 
 /*
     One-dimensional grid task
@@ -180,6 +179,6 @@ public class Grid1D implements World {
      */
     
     public static void main(String[] args) {
-        new Simulation(new Grid1D(9, 50000, 0.1, 0.001));
+        //new Simulation(new Grid1D(9, 50000, 0.1, 0.001));
     }
 }

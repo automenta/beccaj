@@ -4,13 +4,11 @@
  * and open the template in the editor.
  */
 
-package becca.core;
+package becca.test;
 
-import becca.gui.AgentPanel;
 import javax.swing.JFrame;
 import rlpark.DynamicChart;
-
-
+import becca.gui.AgentPanel;
 
 /**
  *
@@ -36,17 +34,30 @@ public class Simulation {
     */
     
     public void displayAgent(Agent a) {
-        ap = new AgentPanel(a);
-        jf = AgentPanel.window(ap, true);
+        /*if (agent instanceof BeccaAgent) {        
+            ap = new AgentPanel(a);
+            jf = AgentPanel.window(ap, true);
+        }*/
 
         new DynamicChart() {
 
             @Override
-            public double getNextValue() {
+            public double getReward() {
                 double r = rewardTotal;
                 rewardTotal = 0;
                 return r;
             }
+
+            @Override
+            public double[] getAction() {
+                return agent.getAction();
+            }
+
+            @Override
+            public double[] getSensor() {
+                return agent.getSensor();
+            }
+            
             
         };
         
@@ -57,14 +68,12 @@ public class Simulation {
     long displayPeriodMS = 250;
     long lastDisplay = -1;
     
-    public Simulation(World world) {
+    public Simulation(Class<? extends Agent> agentClass, World world) throws Exception {
         
-        /*
-        if agent_name is None:
-            agent_name = '_'.join((world.name, 'agent'))
-        */
-        this.agent = new Agent(world.getName() + " Agent", 
-                            world.getNumSensors(), world.getNumActions());
+        this.agent = agentClass.newInstance();
+        agent.init(world);
+
+        
         
         displayAgent(agent);
         
@@ -92,7 +101,7 @@ public class Simulation {
             return agent.report_performance()
             */
 
-            reward = world.step(agent.action, agent.sensor);
+            reward = world.step(agent.getAction(), agent.getSensor());
             rewardTotal+=reward;
             
             agent.step(reward);

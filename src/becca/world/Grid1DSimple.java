@@ -1,7 +1,9 @@
 package becca.world;
 
-import becca.core.Simulation;
-import becca.core.World;
+import becca.core.BeccaAgent;
+import becca.test.Agent;
+import becca.test.Simulation;
+import becca.test.World;
 
 /*
     Simplest one-dimensional grid task
@@ -32,9 +34,9 @@ public class Grid1DSimple implements World {
         this.time = 1;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
-        this.ENERGY_COST_FACTOR = 1.0;
+        this.ENERGY_COST_FACTOR = 2.0;
         this.MATCH_REWARD_FACTOR = size*1.0;
-        this.REWARD_MAGNITUDE = 1;
+        this.REWARD_MAGNITUDE = 10;
         this.JUMP_FRACTION = 0.0;        
         this.noise = noise;
         this.focusVelocity = focusVelocity;
@@ -45,8 +47,8 @@ public class Grid1DSimple implements World {
 
     
     @Override    public String getName()    {     return "Grid1D";    }
-    @Override    public int getNumSensors() {     return size*2;    }
-    @Override    public int getNumActions() {     return size*2;    }
+    @Override    public int getNumSensors() {     return size;    }
+    @Override    public int getNumActions() {     return size;    }
     @Override    public boolean isActive()  {     return time < totalTime;   }
 
     double[] action2 = null;
@@ -86,8 +88,8 @@ public class Grid1DSimple implements World {
         double match = 0;        
         double energyCost = 0;
         for (int i = 0; i < size; i++) {
-            match += Math.abs(sensor[i] * sensor[i+size] );
-            energyCost += sensor[i+size];
+            match += Math.abs( sensor[i] * action[i] );
+            energyCost += action[i];
         }
         
         
@@ -102,7 +104,7 @@ public class Grid1DSimple implements World {
         for (int i = 0; i < size; i++) {
             final double exp = 2.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
-            if (sensor[i] < 0.0)
+            if (sensor[i] < 0.05)
                 sensor[i] = 0;
             if (i == 0) {
                 min = max = sensor[i];
@@ -111,17 +113,14 @@ public class Grid1DSimple implements World {
                 if (sensor[i] < min) min = sensor[i];
                 if (sensor[i] > max) max = sensor[i];
             }
-                        
-            sensor[i+size] = 1.0 * action[i];        
-            sensor[i+size] = 1.0 * action[i+size];   
-            sensor[i+size] = Math.max(0, sensor[i+size]);
             
         }
+        /*
         //normalize
         for (int i = 0; i < size; i++) {
             sensor[i] = (max-min)*(sensor[i] - min);
         }
-        
+        */        
                 
         return reward;        
     }
@@ -178,8 +177,11 @@ public class Grid1DSimple implements World {
     pass
      */
     
-    public static void main(String[] args) {
-        new Simulation(new Grid1DSimple(8, 990000, 0.02, 0.01));
+    public static void main(String[] args) throws Exception {
+        Class<? extends Agent> a = BeccaAgent.class;
+        //Class<? extends Agent> a = QLAgent.class;
+        
+        new Simulation(a, new Grid1DSimple(16, 11990000, 0.01, 0.005));
         
     }
 }

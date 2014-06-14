@@ -6,35 +6,28 @@
 
 package becca.gui;
 
-import becca.core.Agent;
+import becca.core.BeccaAgent;
 import becca.core.Block;
 import becca.core.Cog;
 import becca.core.DaisyChain;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import org.ejml.data.DenseMatrix64F;
-import org.ejml.ops.MatrixComponent;
-
-import static becca.core.Util.*;
 import becca.core.ZipTie;
-import java.awt.BorderLayout;
 import javax.swing.BoxLayout;
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.border.EmptyBorder;
+import org.ejml.data.DenseMatrix64F;
+
+
 
 /**
  *
  * @author me
  */
 public class AgentPanel extends MatrixPanel {
-    private final Agent agent;
+    private final BeccaAgent agent;
 
     boolean showZipTies = true;
     boolean showDaisyChains = true;
     
     
-    public AgentPanel(Agent a) {
+    public AgentPanel(BeccaAgent a) {
         super();
 
         

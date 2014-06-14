@@ -10,7 +10,7 @@ package rlpark;
  * @author me
  */
 
-import becca.core.World;
+import becca.test.World;
 import becca.world.Grid1DSimple;
 import java.util.Arrays;
 import java.util.Random;
@@ -184,7 +184,7 @@ public class QLearningGrid1D implements Runnable {
         new DynamicChart() {
 
             @Override
-            public double getNextValue() {
+            public double getReward() {
                 return problem.getReward();
             }
             

@@ -6,21 +6,18 @@
 
 package becca.test;
 
-import becca.core.BeccaAgent;
+
 
 /**
  *
  * @author me
  */
-public class TestAgent {
-
-    public TestAgent() {
-        BeccaAgent a = new BeccaAgent(8, 8);
-        System.out.println(a);
-    }
+public interface Agent {
     
-    public static void main(String[] args) {
-        new TestAgent();
-    }
+    public int step(double reward);
+    public double[] getSensor();
+    public double[] getAction();
+
+    public void init(World world);
     
 }

@@ -84,4 +84,52 @@ public class Mat {
 		 if(x>max) return max;
 		 return x;
 	}
+    
+    static public double sqr(double d) {
+        return d*d;
+    }
+    
+    static public int sqr(int i) {
+        return i*i;
+    }
+//    public static double fastSqrt(double x) {
+//        //return Math.sqrt(x);
+//        //*
+//        if(x<100) {
+//            return sqrtPrecomputedTo100[(int) (x*10)];
+//        } else if(x<sqrtPrecomputedLimit) {
+//            return sqrtPrecomputedMore100[(int) (x/10)];
+//        } else {
+//            return Math.sqrt(x);
+//        }/**/
+//    }
+//
+//    public static double sin(int i) {
+//        return sinPrecomputed[i%360];
+//    }
+//
+//    public static double cos(int i) {
+//        return sinPrecomputed[(i+90)%360];
+//    }
+//
+//    static public double lim(double x,double d) {
+//        return lim(x,-d,d);
+//    }
+//
+//    public static double minDist(double max, double a, double b, double c, double d) {
+//        double min = max;
+//        if(a>0 && a < min) {
+//			min=a;
+//		}
+//        if(b>0 && b < min) {
+//			min=b;
+//		}
+//        if(c>0 && c < min) {
+//			min=c;
+//		}
+//        if(d>0 && d < min) {
+//			min=d;
+//		}
+//        return min;
+//	}
 }

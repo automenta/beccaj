@@ -1,4 +1,4 @@
-package becca.core;
+package becca.test;
 
 
 public interface World {
