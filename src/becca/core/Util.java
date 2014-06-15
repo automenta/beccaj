@@ -231,6 +231,8 @@ public class Util extends CommonOps {
             drows[i] = rows[i].getData();
         
         double[] result = boundedSum(0, drows);
+        assert(result.length > 0);
+        
         return DenseMatrix64F.wrap(result.length, 1, result);
     }
 

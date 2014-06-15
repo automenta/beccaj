@@ -7,6 +7,7 @@
 package becca.test;
 
 import becca.core.DaisyChain;
+import static becca.core.Util.normRand;
 import becca.gui.MatrixPanel;
 import javax.swing.BoxLayout;
 import org.ejml.data.DenseMatrix64F;
@@ -16,30 +17,37 @@ import org.ejml.data.DenseMatrix64F;
  *
  * @author me
  */
-public class TestDaisyChain {
-    private final DenseMatrix64F cableActivities;
+abstract public class TestDaisyChain {
+    protected final DaisyChainPanel p;
+    protected final DaisyChain d;
+    protected final DenseMatrix64F cableActivities;
+    protected final DenseMatrix64F cableGoalsIn;
 
     public class DaisyChainPanel extends MatrixPanel {
         private final DaisyChain d;
-        private final DenseMatrix64F cableActivities;
 
-        public DaisyChainPanel(DaisyChain d, DenseMatrix64F cableActivities) {
+        public DaisyChainPanel(DaisyChain d) {
             super();
             
             setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
             
             this.d = d;
-            this.cableActivities = cableActivities;
     
-            update((DenseMatrix64F)null);
+            update((DenseMatrix64F)null, (DenseMatrix64F)null);
         }
 
-        public void update(DenseMatrix64F chainActivities) {
+        public void update(DenseMatrix64F chainActivities, DenseMatrix64F cableGoalsOut) {
             removeAll();
             
-            addMatrix("cableActivities (stepup input)", cableActivities);
+            if (cableActivities!=null)
+                addMatrix("cableActivities (stepup input)", cableActivities);
+            if (cableGoalsIn!=null)
+                addMatrix("cableGoals (stepdown input)", cableGoalsIn);
+            
             if (chainActivities!=null)
                 addMatrix("chainActivities (stepup output)", chainActivities);
+            if (cableGoalsOut!=null)
+                addMatrix("cableGoals (stepdown output)", cableGoalsOut);
 
             
             addMatrix("count", d.getCount());
@@ -61,11 +69,13 @@ public class TestDaisyChain {
     }
     
     public TestDaisyChain(int numCables) {
-        final DaisyChain d = new DaisyChain(numCables);
+        d = new DaisyChain(numCables);
         
         cableActivities = new DenseMatrix64F(numCables, 1);
+        cableGoalsIn = new DenseMatrix64F(numCables, numCables);
         
-        final DaisyChainPanel p = new DaisyChainPanel(d, cableActivities);
+        p = new DaisyChainPanel(d);
+        
         MatrixPanel.window(p, true);
         
         init();
@@ -76,17 +86,12 @@ public class TestDaisyChain {
             public void run() {
                 long startTime = System.currentTimeMillis();
                 while (true) {
-        
-                    DenseMatrix64F chainActivities = d.stepUp(cableActivities);
-                    
-                    p.update(chainActivities);
-                    
-                    
+
+                    update((System.currentTimeMillis() - startTime)/1000.0); 
+
                     try {
                         Thread.sleep(50);
                     } catch (InterruptedException ex) { }
-                            
-                    update((System.currentTimeMillis() - startTime)/1000.0); 
                     
                 }
             }
@@ -98,15 +103,18 @@ public class TestDaisyChain {
         cableActivities.set(0,0,1.0);
     }
     
-    public void update(double t) {
-        //normRand(cableActivities, 1.0, 0.0);
-        cableActivities.set(0, 0, Math.sin(t)/2.0+1.0);
-        cableActivities.set(1, 0, Math.sin(t*2.0)/2.0+1.0);
-        cableActivities.set(2, 0, Math.sin(t*4.0)/2.0+1.0);
-        cableActivities.set(3, 0, Math.sin(t*8.0)/2.0+1.0);        
+    protected void setRandom(double t) {
+        normRand(cableActivities, 1.0, 0.0);        
     }
     
-    public static void main(String[] args) {
-        new TestDaisyChain(4);
+    protected void setSinusoidal(int col, double t, DenseMatrix64F m, double baseFreq, double phase) {
+        
+        for (int i = 0; i < m.getNumRows(); i++) {
+            m.set(i, col, Math.sin(phase + t/((double)(1+i))/3.14159*baseFreq)/2.0+1.0);                
+        }
     }
+    
+    abstract public void update(double t);
+    
+    
 }

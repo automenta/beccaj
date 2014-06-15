@@ -92,8 +92,8 @@ public class DaisyChain {
         
         this.maxCables = maxCables;
 
-        this.AGING_TIME_CONSTANT = Math.pow(10, 3); //# real, large
-        this.CHAIN_UPDATE_RATE = Math.pow(10,-1); // # real, 0 < x < 1         
+        this.AGING_TIME_CONSTANT = Math.pow(10, 1); //# real, large
+        this.CHAIN_UPDATE_RATE = 0.01; // # real, 0 < x < 1         
         this.allowSelfTransitions = false;
         
         this.time = 0;
@@ -293,7 +293,8 @@ public class DaisyChain {
         //cable_goals = tools.bounded_sum([upstream_goals, self.reaction])
         DenseMatrix64F cableGoals = 
                 DenseMatrix64F.wrap(upstreamGoals.getNumRows(), 1,
-                        boundedSum(0, upstreamGoals.getData(), reaction.getData()));
+                        boundedSum(0, upstreamGoals.getData(), 
+                                reaction.getData()));
         
         //return cable_goals[:self.num_cables]        
         if (numCables == 0) 
