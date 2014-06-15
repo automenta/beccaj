@@ -5,6 +5,7 @@ import becca.core.Hub;
 import static becca.core.Util.setSinusoidal;
 import becca.gui.MatrixPanel;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import javax.swing.BoxLayout;
 import org.ejml.data.DenseMatrix64F;
 
@@ -45,14 +46,15 @@ public class TestHub {
             if (hubCableGoals!=null)
                 addMatrix("hubCableGoals (out)", h.hubCableGoals);*/
             
-            double[] rt = h.getRewardHistory();
+            
+            double[] rt = h.getRewardArray();
             addMatrix("rewardTrace", DenseMatrix64F.wrap(rt.length, 1, rt));
             
             
             for (int i = 0; i < blocks.size(); i++) {
-                addMatrix("block" + i + ".cableActivities", 
+                addMatrix("block" + i + ".cableActivities (in)", 
                         blocks.get(i).getCableActivities());
-                addMatrix("block" + i + ".hubCableGoals", 
+                addMatrix("block" + i + ".hubCableGoals (out)", 
                         blocks.get(i).getHubCableGoals());
             }
 
@@ -60,13 +62,18 @@ public class TestHub {
             addMatrix("chainActivities", h.getChainActivities());
             addMatrix("expectedReward", h.getExpectedReward());
             addMatrix("estimatedRewardValue", h.getEstimatedRewardValue());
-            
-            /*
-            public LinkedList<DenseMatrix64F> getPre() {
-            public LinkedList<DenseMatrix64F> getPost() {
-            */
-            
+
             addMatrix("count", h.getCount());
+            
+            LinkedList<DenseMatrix64F> pres = h.getPre();
+            LinkedList<DenseMatrix64F> posts = h.getPre();
+            for (int i = 0; i < pres.size(); i++) {
+                addMatrix("pre." + i, pres.get(i));
+            }
+            for (int i = 0; i < posts.size(); i++) {
+                addMatrix("post." + i, posts.get(i));            
+            }
+            
             
 
             
@@ -122,7 +129,7 @@ public class TestHub {
     protected void update(double t) {
         
         
-        double r = Math.sin(t)/2.0 + 1.0;
+        double r = Math.sin(t);
         
         int f = blocks.size();
         for (Block b : blocks) {
@@ -142,7 +149,7 @@ public class TestHub {
     }    
     
     public static void main(String[] args) {
-        new TestHub(2, 32);
+        new TestHub(1, 32);
     }
     
 }

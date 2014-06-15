@@ -53,7 +53,7 @@ public class Cog {
         this.daisychain = new DaisyChain(maxCables);        
         
         if (maxBundles > 0)
-            this.ziptie = new ZipTie((int)Math.pow(maxCables, 2), maxBundles, maxChainsPerBundle);
+            this.ziptie = new ZipTie(false, (int)Math.pow(maxCables, 2), maxBundles, maxChainsPerBundle);
         else
             this.ziptie = null;
         

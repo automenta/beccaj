@@ -179,15 +179,14 @@ public class DaisyChain {
         addEquals(count, chainActivities);
         
         //self.count -= 1 / (self.AGING_TIME_CONSTANT * self.count + tools.EPSILON)
-        DenseMatrix64F countDelta = count.copy();
-        /*scale(AGING_TIME_CONSTANT, countDelta);
+        /*DenseMatrix64F countDelta = count.copy();
+        scale(AGING_TIME_CONSTANT, countDelta);
         add(countDelta, EPSILON);        
         matrixPower(countDelta, -1);        
         subEquals(count, countDelta);*/
         
         //ALTERNATE CALCULIATON
-        scale(1.0 - (1.0 / AGING_TIME_CONSTANT), countDelta);
-        subEquals(count, countDelta);
+        scale(1.0 - (1.0 / AGING_TIME_CONSTANT), count);
         
         
         
@@ -199,31 +198,50 @@ public class DaisyChain {
                                    (self.pre_count + tools.EPSILON) +
                                     self.CHAIN_UPDATE_RATE))         
         */        
-        DenseMatrix64F updateRateRawPost = preCount.copy(); add(updateRateRawPost, EPSILON);
-        matrixPower(updateRateRawPost, -1);
-        scale(1 - CHAIN_UPDATE_RATE, updateRateRawPost);
-        add(updateRateRawPost, CHAIN_UPDATE_RATE);
-        elementMult(updateRateRawPost, pre);
+//        final DenseMatrix64F updateRateRawPost = preCount.copy(); add(updateRateRawPost, EPSILON);
+//        matrixPower(updateRateRawPost, -1);
+//        scale(1 - CHAIN_UPDATE_RATE, updateRateRawPost);
+//        add(updateRateRawPost, CHAIN_UPDATE_RATE);
+//        elementMult(updateRateRawPost, pre);                
+//        
+//        //update_rate_post = np.minimum(0.5, update_rate_raw_post)
+//        final DenseMatrix64F updateRatePost = updateRateRawPost;
+//        matrixMinimum(updateRatePost, 0.5);
         
-        //update_rate_post = np.minimum(0.5, update_rate_raw_post)
-        DenseMatrix64F updateRatePost = updateRateRawPost.copy();
-        matrixMinimum(updateRatePost, 0.5);
+        //ALTERNATE CALCULATION of updateRatePost:
+        final DenseMatrix64F updateRatePost = preCount.copy();
+        final double[] updateRatePostD = updateRatePost.getData();
+        for (int i = 0; i < updateRatePostD.length; i++) {
+            final double u = updateRatePostD[i];
+            final double v = 
+                    Math.min(
+                            (1-CHAIN_UPDATE_RATE) * 
+                            (1 + CHAIN_UPDATE_RATE* (u + EPSILON)) /
+                            (u + EPSILON), 0.5);                        
+            updateRatePostD[i] = v;
+        }
+        
         
         //self.pre_count += self.pre
         addEquals(preCount, pre);
-                        
+  
+        
+        
         //self.pre_count -= 1 / (self.AGING_TIME_CONSTANT * self.pre_count + tools.EPSILON)
-        DenseMatrix64F preCountDelta = preCount.copy();
-        scale(AGING_TIME_CONSTANT, preCountDelta);
+        //DenseMatrix64F preCountDelta = preCount.copy();
+        /*scale(AGING_TIME_CONSTANT, preCountDelta);
         add(preCountDelta, EPSILON);
         matrixPower(preCountDelta, -1);
-        subEquals(preCount, preCountDelta);
-       
+        subEquals(preCount, preCountDelta);*/
+        
+        //ALTERNATE CALCULATION
+        scale(1.0 - (1.0 / AGING_TIME_CONSTANT), preCount);
+                       
         //self.pre_count = np.maximum(self.pre_count, 0)
         matrixMaximum(preCount, 0);
         
-        //post_difference = np.abs(self.pre * self.post.T - self.expected_cable_activities)
         
+        //post_difference = np.abs(self.pre * self.post.T - self.expected_cable_activities)        
         DenseMatrix64F postDifference = new DenseMatrix64F(pre.getNumRows(), postT.getNumCols());
         mult(pre, postT, postDifference);
         subEquals(postDifference, expectedCableActivities);

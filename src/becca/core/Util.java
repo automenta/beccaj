@@ -39,6 +39,8 @@ public class Util extends CommonOps {
     
     public static DenseMatrix64F getWeightedAverage(DenseMatrix64F values, DenseMatrix64F weights) {
         //""" Perform a weighted average of values, using weights """
+                
+        assert(values.getNumRows() == weights.getNumRows());
         
         if (values.getNumCols() < weights.getNumCols()) {
             values = broadcastRows(values, weights.getNumCols());
@@ -50,21 +52,20 @@ public class Util extends CommonOps {
         //weighted_sum_values = np.sum(values * weights, axis=0)                 
         DenseMatrix64F valueWeightProduct = multMatrixMatrix(values, weights);        
         
-        DenseMatrix64F weightedSumValues = sumCols(valueWeightProduct, null);        
+        final DenseMatrix64F weightedSumValues = sumCols(valueWeightProduct, null);        
         
         //sum_of_weights = np.sum(weights, axis=0)         
-        DenseMatrix64F sumOfWeights = sumCols(weights, null);        
+        final DenseMatrix64F sumOfWeights = sumCols(weights, null);        
         
         //return (weighted_sum_values / (sum_of_weights + EPSILON))[:,np.newaxis]
-        add(sumOfWeights, EPSILON);
         
         final double[] wsd = weightedSumValues.getData();
         final double[] sowd = sumOfWeights.getData();
         
-        assert(weightedSumValues.getNumRows() == sumOfWeights.getNumRows());
-        assert(weightedSumValues.getNumCols() == sumOfWeights.getNumCols());
+        assert(weightedSumValues.getNumRows()==sumOfWeights.getNumRows());
+        assert(weightedSumValues.getNumCols()==sumOfWeights.getNumCols());
         for (int i = 0; i < wsd.length; i++)
-            wsd[i] /= sowd[i];
+            wsd[i] /= (sowd[i]+EPSILON);
         return weightedSumValues;        
     }
 
@@ -333,11 +334,13 @@ public class Util extends CommonOps {
     }
     */
 
+    /** zeros the resulting matrix and puts 1 where the input matrix is non-zero */
     public static DenseMatrix64F getNonZeroMask(final DenseMatrix64F x) {
-        final DenseMatrix64F y = x.copy();
+        final DenseMatrix64F y = new DenseMatrix64F(x.getNumCols(), x.getNumRows());
+        final double[] xd = x.getData();
         final double[] yd = y.getData();
         for (int i = 0; i < yd.length; i++)
-            if (yd[i]!=0) yd[i] = 1;
+            if (xd[i]!=0) yd[i] = 1;
         return y;
     }
     
@@ -384,23 +387,49 @@ public class Util extends CommonOps {
                 d[i] = Math.pow(d[i], exponent);
         }
     }
-
+   public static void matrixPowerExp(final DenseMatrix64F m, final double base) {        
+        final double[] d = m.getData();
+        for (int i = 0; i < d.length; i++) {
+            d[i] = Math.pow(base, d[i]);
+        }
+    }
+    
     static DenseMatrix64F maxCol(DenseMatrix64F x) {
         final DenseMatrix64F projection = new DenseMatrix64F(x.getNumRows(), 1);
+        final double[] pd = projection.getData();
         for (int i = 0; i < x.getNumCols(); i++) {
             for (int j = 0; j < x.getNumRows(); j++) {
                 if (i == 0) {
-                    projection.set(j, 0, x.get(j, 0));
+                    projection.unsafe_set(j, 0, x.get(j, 0));
                 }
                 else {
-                    double cg = x.get(j,i);
-                    if (cg > projection.get(j,0))
-                        projection.set(j, 0, cg);
+                    double cg = x.unsafe_get(j,i);
+                    if (cg < pd[j])
+                        projection.unsafe_set(j, 0, cg);
                 }
             }
         }
         return projection;
     }
+    //TODO unify these
+    static DenseMatrix64F minCol(DenseMatrix64F x) {
+        final DenseMatrix64F projection = new DenseMatrix64F(x.getNumRows(), 1);
+        final double[] pd = projection.getData();        
+        for (int i = 0; i < x.getNumCols(); i++) {
+            for (int j = 0; j < x.getNumRows(); j++) {
+                if (i == 0) {
+                    projection.unsafe_set(j, 0, x.get(j, 0));
+                }
+                else {
+                    double cg = x.unsafe_get(j,i);
+                    if (cg < pd[j])
+                        projection.unsafe_set(j, 0, cg);
+                }
+            }
+        }
+        return projection;
+    }
+
     
     static DenseMatrix64F maxRow(final DenseMatrix64F x) {
         final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
@@ -487,6 +516,13 @@ public class Util extends CommonOps {
         normRand(r, scale, min);
         return r;
     }
+    
+    public static void matrixAddNoise(DenseMatrix64F m, double scale) {
+        final double[] d = m.getData();
+        for (int i = 0; i < d.length; i++)
+            d[i] += Math.random()*scale;       
+    }
+    
     public static void normRand(DenseMatrix64F r, double scale, double min) {
         final double[] d = r.getData();
         for (int i = 0; i < d.length; i++)
@@ -495,8 +531,14 @@ public class Util extends CommonOps {
 
     public static void setSinusoidal(DenseMatrix64F m, int col, double t, double baseFreq, double phase) {
         for (int i = 0; i < m.getNumRows(); i++) {
-            m.set(i, col, Math.sin(phase + t / ((double) (1 + i)) / 3.14159 * baseFreq) / 2.0 + 1.0);
+            m.set(i, col, Math.sin(phase + t / ((double) (1 + i)) / 3.14159 * baseFreq) / 2.0 + 0.5);
         }
+    }
+
+    public static void addNoise(DenseMatrix64F m, double NOISE_FACTOR) {
+        double[] d = m.getData();
+        for (int i = 0; i < d.length; i++)
+            d[i] += Math.random()*NOISE_FACTOR;
     }
     
     

@@ -1,9 +1,9 @@
 package becca.world;
 
+import becca.core.BeccaAgent;
 import becca.test.Agent;
 import becca.test.Simulation;
 import becca.test.World;
-import ql.QLAgent;
 
 
 public class Grid2DSimple implements World {
@@ -141,8 +141,8 @@ public class Grid2DSimple implements World {
      */
     
     public static void main(String[] args) throws Exception {
-        //Class<? extends Agent> a = BeccaAgent.class;
-        Class<? extends Agent> a = QLAgent.class;
+        Class<? extends Agent> a = BeccaAgent.class;
+        //Class<? extends Agent> a = QLAgent.class;
         
         new Simulation(a, new Grid2DSimple(4,4, 11990000, 0.01, 0.005));
         

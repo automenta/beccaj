@@ -73,7 +73,7 @@ public class Block  {
         this.maxCogs = maxCables / maxBundlesPerCog;
         this.maxBundles = this.maxCogs * this.maxBundlesPerCog;
         
-        this.ziptie = new ZipTie(this.maxCables, this.maxCogs, this.maxCablesPerCog, -2);
+        this.ziptie = new ZipTie(true, this.maxCables, this.maxCogs, this.maxCablesPerCog, -2);
             //ziptie_name = ''.join(('ziptie_', self.name))
         
         this.cogs = new ArrayList<Cog>();

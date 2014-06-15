@@ -58,7 +58,7 @@ public class MatrixPanel extends JPanel {
         x.add(new JLabel(id + " " + (m != null ? m(m) : "") ), BorderLayout.NORTH);
 
         if ((m!=null) && ((m.getNumCols() > 0) && (m.getNumRows() > 0))) {
-            int px = 4; //min pixels per cell
+            int px = 8; //min pixels per cell
             int maxPX = 12; //max pixels per cell
             if (m.getNumCols() == 1)
                 m = transpose(m, null);
