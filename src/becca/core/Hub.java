@@ -34,7 +34,7 @@ public class Hub {
     private double rewardMax;
     
     private double oldReward;
-    private LinkedList<Double> rewardTrace;
+    public final LinkedList<Double> rewardTrace;
     
     private DenseMatrix64F count;
     private DenseMatrix64F expectedReward;
@@ -43,7 +43,6 @@ public class Hub {
     private LinkedList<DenseMatrix64F> post;
     private DenseMatrix64F chainActivities;
     private DenseMatrix64F estimatedRewardValue;
-
 
     public Hub(int initialNumCables) {
         this.numCables = initialNumCables;
@@ -110,7 +109,12 @@ public class Hub {
         }
     }
         
-    void step(ArrayList<Block> blocks, double unscaledReward) {
+    /*public interface HubBlock {
+        DenseMatrix64F getCableActivities();
+        DenseMatrix64F getHubCableGoals();
+    }*/
+    
+    public void step(ArrayList<Block> blocks, double unscaledReward) {
         /*
         """ Advance the hub one step:
         1. Comb tower of blocks, collecting cable activities from each
@@ -142,7 +146,7 @@ public class Hub {
         
         for (Block b : blocks) {
             int blockSize = b.getCableActivities().getNumElements();
-            double[] cad = cableActivities.getData();
+            final double[] cad = cableActivities.getData();
             System.arraycopy(b.getCableActivities().getData(), 0, cableActivities.getData(), cableIndex, blockSize );
             cableIndex+=blockSize;            
         }
@@ -301,10 +305,23 @@ public class Hub {
                 
         
         //# Break any ties by lottery
-        //winner = potential_winners[np.random.randint(potential_winners.size)]
-        int pwi = (int)(Math.random() * potentialWinners.size());
-        //System.out.println(goalVotes + " " + maxGoalVote + " " +  potentialWinners.size() + " " + pwi);
-        int winner = potentialWinners.get( pwi );
+        /*
+        if potential_winners.size < 1:
+             print 'npw', potential_winners.size
+             print 'max', np.max(goal_votes)
+             winner = 0
+         else:
+             winner = potential_winners[np.random.randint(
+                     potential_winners.size)]        
+        */
+        final int winner;
+        if (potentialWinners.isEmpty()) {
+            winner = 0;
+        }
+        else {
+            int pwi = (int)(Math.random() * potentialWinners.size());
+            winner = potentialWinners.get( pwi );
+        }
         
         //# Figure out which block the goal cable belongs to 
         //goal_cable = np.remainder(winner, this.cable_activities.size)
@@ -314,6 +331,9 @@ public class Hub {
         
         for (Block b : blocks) {
             DenseMatrix64F h = b.getHubCableGoals();
+            
+            
+            
             int block_size =  h.getNumElements();
             if (cableIndex >= block_size) {
                 cableIndex -= block_size;
@@ -356,7 +376,7 @@ public class Hub {
             }
         }
         
-        System.err.println("No goal chosen");
+        //System.err.println("No goal chosen");
         
     }
         
@@ -428,5 +448,29 @@ public class Hub {
     
     */
 
+    public double[] getRewardHistory() {
+        //very slow
+        double[] h = new double[rewardTrace.size()];
+        for (int i =0; i < rewardTrace.size(); i++)
+            h[i] = rewardTrace.get(i);
+        return h;
+    }
 
+    public DenseMatrix64F getExpectedReward() {
+        return expectedReward;
+    }
+
+    public DenseMatrix64F getEstimatedRewardValue() {
+        return estimatedRewardValue;
+    }
+
+    public LinkedList<DenseMatrix64F> getPre() {
+        return pre;
+    }
+
+    public LinkedList<DenseMatrix64F> getPost() {
+        return post;
+    }
+    
+    
 }

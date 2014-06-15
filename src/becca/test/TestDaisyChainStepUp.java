@@ -6,6 +6,7 @@
 
 package becca.test;
 
+import becca.core.Util;
 import org.ejml.data.DenseMatrix64F;
 
 /**
@@ -19,7 +20,7 @@ public class TestDaisyChainStepUp extends TestDaisyChain {
     }
 
     public void update(double t) {
-        setSinusoidal(0, t, cableActivities, 32.0, 0);
+        Util.setSinusoidal(cableActivities, 0, t, 32.0, 0);
         DenseMatrix64F chainActivities = d.stepUp(cableActivities);
         p.update(chainActivities, null);
     }

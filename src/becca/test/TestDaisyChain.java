@@ -100,19 +100,12 @@ abstract public class TestDaisyChain {
     }
    
     public void init() {
-        cableActivities.set(0,0,1.0);
     }
     
     protected void setRandom(double t) {
         normRand(cableActivities, 1.0, 0.0);        
     }
     
-    protected void setSinusoidal(int col, double t, DenseMatrix64F m, double baseFreq, double phase) {
-        
-        for (int i = 0; i < m.getNumRows(); i++) {
-            m.set(i, col, Math.sin(phase + t/((double)(1+i))/3.14159*baseFreq)/2.0+1.0);                
-        }
-    }
     
     abstract public void update(double t);
     

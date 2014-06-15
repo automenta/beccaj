@@ -492,6 +492,12 @@ public class Util extends CommonOps {
         for (int i = 0; i < d.length; i++)
             d[i] = nd.sample() * scale + min;        
     }
+
+    public static void setSinusoidal(DenseMatrix64F m, int col, double t, double baseFreq, double phase) {
+        for (int i = 0; i < m.getNumRows(); i++) {
+            m.set(i, col, Math.sin(phase + t / ((double) (1 + i)) / 3.14159 * baseFreq) / 2.0 + 1.0);
+        }
+    }
     
     
 }

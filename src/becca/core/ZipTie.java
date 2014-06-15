@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package becca.core;
 
 import org.ejml.data.DenseMatrix64F;
@@ -14,6 +8,10 @@ import java.util.List;
 
 
 /**
+ * 
+ * TODO incorporate these changes:
+ * https://github.com/brohrer/becca/blob/124d10140011cd9396a5dda8585c59cbfbba54cd/core/ziptie.py
+ * 
     An incremental unsupervised learning algorithm
 
     Input channels are clustered together into mutually co-active sets.

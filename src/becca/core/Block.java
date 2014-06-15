@@ -33,7 +33,7 @@ import static becca.core.Util.*;
     to convert cable activities into bundle activities and back again.
     
     */
-public class Block {
+public class Block  {
     public final int maxCables;
     private final int maxBundlesPerCog;
     private final int maxCablesPerCog;
@@ -58,12 +58,15 @@ public class Block {
         this(minCables, 0);
     }
     
-    //""" Initialize the level, defining the dimensions of its cogs """
+
     public Block(int minCables, int level) {
-        
-        this.maxCables = (int)Math.round( Math.pow(2, 1 + Math.ceil(Util.log(minCables, 2))));
-        
+        this(minCables, (int)Math.round( Math.pow(2, 1 + Math.ceil(Util.log(minCables, 2)))), level);
+    }
+
+   //""" Initialize the level, defining the dimensions of its cogs """
+    public Block(int minCables, int maxCables, int level) {        
         this.level = level;
+        this.maxCables = maxCables;        
         
         this.maxCablesPerCog = 8;
         this.maxBundlesPerCog = 4;
@@ -86,8 +89,8 @@ public class Block {
         this.hubCableGoals = new DenseMatrix64F(this.maxCables, 1); //np.zeros((self.max_cables, 1))
         
         this.fillFractionThreshold = 0.7;        
-        this.activityDecayRate = 1.0; //1.0;       //real, 0 < x < 1                
-        this.rangeDecayRate = Math.pow(10, -5); //# Constants for adaptively rescaling the cable activities        
+        this.activityDecayRate = 0.9; //1.0;       //real, 0 < x < 1                
+        this.rangeDecayRate = Math.pow(10, -3); //# Constants for adaptively rescaling the cable activities        
         
         this.maxVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
         this.minVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1))
@@ -160,7 +163,7 @@ public class Block {
             /* # Pick out the cog's cable_activities, process them, 
                # and assign the results to block's bundle_activities*/
             
-            //cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).ravel().astype(bool)]
+            //cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).astype(bool)]
             DenseMatrix64F cogCableActivities = Util.extractBooleanized(cableActivities, ziptie.getIndexProjection(cogIndex));
             
             /*# Cogs are only allowed to start forming bundles once 
@@ -186,16 +189,20 @@ public class Block {
         //concat finished
         
         
+        goalDecay();
+        
+        
+        return bundleActivities;
+    }
+    
+    public void goalDecay() {
         //# Goal fulfillment and decay
         /*self.hub_cable_goals -= self.cable_activities
         self.hub_cable_goals *= self.ACTIVITY_DECAY_RATE
         self.hub_cable_goals = np.maximum(self.hub_cable_goals, 0.) */
         subEquals(hubCableGoals, cableActivities);
         scale(activityDecayRate, hubCableGoals);
-        matrixMaximum(hubCableGoals, 0);
-        
-        
-        return bundleActivities;
+        matrixMaximum(hubCableGoals, 0);        
     }
 
     public DenseMatrix64F stepDown(DenseMatrix64F bundleGoals) {
@@ -229,7 +236,7 @@ public class Block {
             //cable_goals_by_cog = cog.step_down(cog_bundle_goals)
             DenseMatrix64F cableGoalsByCog = c.stepDown(cogBundleGoals);
                         
-            //cog_cable_indices = self.ziptie.get_index_projection(cog_index).ravel().astype(bool)
+            //cog_cable_indices = self.ziptie.get_index_projection(cog_index).astype(bool)
             DenseMatrix64F cogCableIndices = matrixBooleanize(ziptie.getIndexProjection(cogIndex));
             assert(cogCableIndices.getNumRows() == 1);
                        
