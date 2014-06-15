@@ -126,6 +126,7 @@ public class Util extends CommonOps {
         return sum;        
     }
     
+    /** the result is a 1-D matrix which can be transposed depending on the context */
     public static DenseMatrix64F getGeneralizedMean(final DenseMatrix64F values, final DenseMatrix64F weights, final double exponent) {
         final DenseMatrix64F shiftedValues = values.copy();
         add(shiftedValues, 1.0);
