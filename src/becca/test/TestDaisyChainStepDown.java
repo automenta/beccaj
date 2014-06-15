@@ -22,7 +22,7 @@ public class TestDaisyChainStepDown extends TestDaisyChain {
         
         double phaseDelta = 0.1;
         for (int r = 0; r < cableGoalsIn.getNumCols(); r++) {
-            Util.setSinusoidal(cableGoalsIn, r, t, 32.0, r * phaseDelta);
+            Util.setSinusoidal(cableGoalsIn, r, t, 32.0, r * phaseDelta, 1.0, 0.0);
         }
         if (NOISE_FACTOR > 0)
             Util.addNoise(cableGoalsIn, NOISE_FACTOR);

@@ -81,13 +81,14 @@ public class TestZipTie {
             @Override
             public void run() {
                 long startTime = System.currentTimeMillis();
+                
                 while (true) {
 
                     update((System.currentTimeMillis() - startTime)/1000.0); 
 
                     try {
                         Thread.sleep(10);
-                    } catch (InterruptedException ex) { }
+                    } catch (InterruptedException ex) { } 
                     
                 }
             }
@@ -101,21 +102,25 @@ public class TestZipTie {
     
     //abstract public void update(double t);
     
+    int cycle = 0;
     public void update(double t) {
         
-        setSinusoidal(cableActivitiesIn, 0, t, 60.0, 0);
-        setSinusoidal(bundleGoalsIn, 0, t, 40.0, 0.5);
+        setSinusoidal(cableActivitiesIn, 0, t, 220.0, 0);
+        setSinusoidal(bundleGoalsIn, 0, t, 10.0, 0.5, 1.0, 0.0);
 
         
         bundleActivitiesOut = z.stepUp(cableActivitiesIn);
         
-        //cableGoalsOut = z.stepDown(bundleGoalsIn);
+        cableGoalsOut = z.stepDown(bundleGoalsIn);
         
         p.update();
         
+        /*if (cycle % 2500 == 0)
+            p.update();
+        cycle++;*/
     }
     
     public static void main(String[] args) {
-        new TestZipTie(true, 16,8,8);
+        new TestZipTie(true, 32,16,64);
     }
 }

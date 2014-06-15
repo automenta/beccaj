@@ -133,7 +133,7 @@ public class TestHub {
         
         int f = blocks.size();
         for (Block b : blocks) {
-            setSinusoidal(b.getCableActivities(), 0, t, 5.0*f, 0);
+            setSinusoidal(b.getCableActivities(), 0, t, 5.0*f, 1.0);
             f--;
         }
         
@@ -149,7 +149,7 @@ public class TestHub {
     }    
     
     public static void main(String[] args) {
-        new TestHub(1, 32);
+        new TestHub(2, 32);
     }
     
 }

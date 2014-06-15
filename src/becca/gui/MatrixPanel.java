@@ -38,7 +38,7 @@ public class MatrixPanel extends JPanel {
     public static JFrame window(JPanel content, boolean closeOnExit) {
         JFrame jf = new JFrame();        
         jf.setContentPane(new JScrollPane(content, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
-        jf.setSize(700,1000);
+        jf.setSize(400,1000);
         jf.setVisible(true);
         if (closeOnExit)
             jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);        

@@ -78,6 +78,16 @@ public class ZipTie {
             this.NUCLEATION_ENERGY_RATE = 1E-5;
             this.AGGLOMERATION_THRESHOLD = 0.1;
             this.AGGLOMERATION_ENERGY_RATE = 1.E-3;
+            this.ACTIVATION_WEIGHTING_EXPONENT = 512;
+
+            //high-speed learning
+            /*
+            this.NUCLEATION_THRESHOLD = 0.25;
+            this.NUCLEATION_ENERGY_RATE = 1E-2;
+            this.AGGLOMERATION_THRESHOLD = 0.25;
+            this.AGGLOMERATION_ENERGY_RATE = 1.E-1;
+            this.ACTIVATION_WEIGHTING_EXPONENT = 128;          
+            */
         }
         else {
             //For zipties within cogs
@@ -85,6 +95,7 @@ public class ZipTie {
             this.NUCLEATION_ENERGY_RATE = 1E-5;
             this.AGGLOMERATION_THRESHOLD = 0.1;
             this.AGGLOMERATION_ENERGY_RATE = 1.E-4;
+            this.ACTIVATION_WEIGHTING_EXPONENT = 512;
         }
         
         /*
@@ -95,7 +106,6 @@ public class ZipTie {
         this.MEAN_EXPONENT = meanExponent;
 
         //Exponent controlling the strength of inhibition between bundles
-        this.ACTIVATION_WEIGHTING_EXPONENT = 512;
         
               
         this.bundlesFull = false;
@@ -117,7 +127,7 @@ public class ZipTie {
 
         this.cableActivities = cableActivitiesIn;
 
-        DenseMatrix64F cableActivitiesTranspose = transpose(cableActivities, null);
+        /*DenseMatrix64F cableActivitiesTranspose = transpose(cableActivities, null);*/
         
         /*
         # Find bundle activities by taking the generalized mean of
@@ -325,6 +335,8 @@ public class ZipTie {
                                       self.agglomeration_energy * 
                                       self.AGGLOMERATION_ENERGY_RATE)
         */
+        
+        
         DenseMatrix64F cableActivitiesT = transpose(cableActivities, null);
         DenseMatrix64F aggMinus = matrixVector(agglomerationEnergy, cableActivitiesT);
         scale(AGGLOMERATION_ENERGY_RATE, aggMinus);     
@@ -341,7 +353,7 @@ public class ZipTie {
         scale(AGGLOMERATION_ENERGY_RATE, aggPlus);
         addEquals(agglomerationEnergy, aggPlus);
         
-        
+
         
         /*
         # For any bundles that are already full, don't change their coactivity                
@@ -434,13 +446,12 @@ public class ZipTie {
             
             //cable_activity_goals = tools.bounded_sum(self.bundle_map * bundle_goals, axis=0)
             //self.bundle_map * bundle_goals
-            DenseMatrix64F mapgoals = bundleMap.copy();            
-            
-            matrixVector(mapgoals, bundleGoals);
+            DenseMatrix64F mapgoals = matrixVector(bundleMap, bundleGoals);
             assert(mapgoals.getNumRows() == bundleMap.getNumRows());
             assert(mapgoals.getNumCols() == bundleMap.getNumCols());
                                     
             cableActivityGoals = boundedRowSum(mapgoals);            
+            //cableActivityGoals = sumCols(mapgoals, null);
         }
         else {
             cableActivityGoals = new DenseMatrix64F(maxCables, 1);
@@ -450,7 +461,14 @@ public class ZipTie {
 
     public DenseMatrix64F getIndexProjection(int bundleIndex) {
         //""" Project bundle indices down to their cable indices """
-        DenseMatrix64F bundle = new DenseMatrix64F(maxBundles, 1);
+        
+        //projection = self.bundle_map[bundle_index,:]
+        return extract(bundleMap,bundleIndex,bundleIndex+1,0,bundleMap.getNumCols());
+
+        ///OLD CODE ----------------
+        
+        
+        /*DenseMatrix64F bundle = new DenseMatrix64F(maxBundles, 1);
         bundle.set(bundleIndex, 0, 1.0);
 
         //TODO may not need to invert 3 times
@@ -462,7 +480,7 @@ public class ZipTie {
         DenseMatrix64F projection = maxRow(bmb);
         matrixSign(projection);
                 
-        return projection;
+        return projection; */
     }
     
         

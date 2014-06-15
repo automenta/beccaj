@@ -179,7 +179,7 @@ public class Util extends CommonOps {
         //a_prime = np.sign(a) / (1 - np.abs(a) + eps) - np.sign(a)
         for (int i = 0; i < a.length; i++) {
             final double A = a[i];
-            final double asign = (A > 0 ? +1 :((A < 0) ? -1 : 0));
+            final double asign = Math.signum(A);
             b[i] = asign / (1 - Math.abs(A) + eps) - asign;
         }
         return b;
@@ -192,7 +192,7 @@ public class Util extends CommonOps {
         //a = np.sign(a_prime) * (1 - 1 / (np.abs(a_prime) + 1))
         for (int i = 0; i < a.length; i++) {
             final double B = b[i];
-            final double bsign = (B > 0 ? +1 :((B < 0) ? -1 : 0));
+            final double bsign = Math.signum(B);
             a[i] = bsign * (1.0 - 1.0 / (Math.abs(B) + 1));
         }
         return a;        
@@ -226,16 +226,13 @@ public class Util extends CommonOps {
     }
 
     public static DenseMatrix64F boundedRowSum(DenseMatrix64F m) {
-        DenseMatrix64F[] rows = new DenseMatrix64F[m.getNumRows()];
-        rowsToVector(m, rows);
-        double[][] drows = new double[m.getNumRows()][];
-        for (int i = 0; i < rows.length; i++)
-            drows[i] = rows[i].getData();
+        DenseMatrix64F n = m.copy();
+        mapOneToInf(n.getData(), null);
         
-        double[] result = boundedSum(0, drows);
-        assert(result.length > 0);
+        DenseMatrix64F r = transpose(sumCols(n, null), null);
         
-        return DenseMatrix64F.wrap(result.length, 1, result);
+        mapInfToOne(r.getData(), null);
+        return r;
     }
 
     static double[] boundedSum(final int axis, final double[]... a) {
@@ -531,8 +528,12 @@ public class Util extends CommonOps {
     }
 
     public static void setSinusoidal(DenseMatrix64F m, int col, double t, double baseFreq, double phase) {
+        setSinusoidal(m, col, t, baseFreq, phase, 0.5, 0.5);
+    }
+            
+    public static void setSinusoidal(DenseMatrix64F m, int col, double t, double baseFreq, double phase, double scale, double offset) {
         for (int i = 0; i < m.getNumRows(); i++) {
-            m.set(i, col, Math.sin(phase + t / ((double) (1 + i)) / 3.14159 * baseFreq) / 2.0 + 0.5);
+            m.set(i, col, Math.sin(phase + t / ((double) (1 + i)) / 3.14159 * baseFreq) * scale + offset);
         }
     }
 
