@@ -27,7 +27,7 @@ import org.ejml.ops.MatrixComponent;
  */
 abstract public class DynamicChart {
 
-    public DynamicChart() {
+    public DynamicChart(String name) {
         // Create a chart:  
         Chart2D chart = new Chart2D();
         chart.setMinimumSize(new Dimension(400, 200));
@@ -50,6 +50,7 @@ abstract public class DynamicChart {
     // Make it visible:
         // Create a frame. 
         JFrame frame = new JFrame("MinimalDynamicChart");
+        frame.setTitle(name);
         // add the chart to the frame: 
         frame.getContentPane().add(p);
         frame.setSize(700, 800);
@@ -79,6 +80,7 @@ abstract public class DynamicChart {
 
             private double m_y = 0;
             private long m_starttime = System.currentTimeMillis();
+            private double m_x;
 
             /**
              * @see java.util.TimerTask#run()
@@ -87,8 +89,11 @@ abstract public class DynamicChart {
             public void run() {
 
                 this.m_y = getReward();
+                this.m_x = getTime();
                 // This is the important thing: Point is added from separate Thread.
-                trace.addPoint(((double) System.currentTimeMillis() - this.m_starttime),
+                /*trace.addPoint(((double) System.currentTimeMillis() - this.m_starttime),
+                        this.m_y);*/
+                trace.addPoint(this.m_x,
                         this.m_y);
 
                 s.removeAll();
@@ -107,6 +112,7 @@ abstract public class DynamicChart {
                 p.repaint();
             }
 
+
         };
         // Every 20 milliseconds a new value is collected.
         timer.schedule(task, 1000, 500);
@@ -118,4 +124,5 @@ abstract public class DynamicChart {
 
     abstract public double getReward();
 
+    abstract public double getTime();
 }

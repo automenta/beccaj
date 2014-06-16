@@ -20,6 +20,7 @@ public class Simulation {
     public final Agent agent;
     private AgentPanel ap;
     private JFrame jf;
+    private int time;
     
     /*
     Run BECCA with world.  
@@ -40,7 +41,7 @@ public class Simulation {
             jf = AgentPanel.window(ap, true);
         }
 
-        new DynamicChart() {
+        new DynamicChart(a.getClass().getName()) {
 
             @Override
             public double getReward() {
@@ -58,6 +59,11 @@ public class Simulation {
             public double[] getSensor() {
                 return agent.getSensor();
             }
+
+            @Override
+            public double getTime() {
+                return time;
+            }
             
             
         };
@@ -65,8 +71,8 @@ public class Simulation {
     }
     private double reward, rewardTotal;
     
-    long cycleDelayMS = 0;
-    long displayPeriodMS = 250;
+    long cycleDelayMS = 50;
+    long displayPeriodMS = 10;
     long lastDisplay = -1;
     
     public Simulation(Class<? extends Agent> agentClass, World world) throws Exception {
@@ -91,7 +97,7 @@ public class Simulation {
         action = np.zeros((world.num_actions,1))
         */
         
-        int time = 0;
+        time = 0;
         
         while (world.isActive()) {
             /*    

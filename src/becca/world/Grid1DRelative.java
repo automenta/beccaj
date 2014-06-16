@@ -1,18 +1,20 @@
 package becca.world;
 
-import becca.core.BeccaAgent;
-import becca.core.Util;
 import becca.test.Agent;
 import becca.test.Simulation;
 import becca.test.World;
+import ql.QLAgent;
 
 /*
     Simplest one-dimensional grid task
     
     In this task, the agent's goal is to activate the same pattern as
     it sees in its sensor field.
+
+    It has 3 outputs: move left, move right, or neither.  it is shown its position in a copy of the sensor field
+
 */
-public class Grid1DSimple implements World {
+public class Grid1DRelative implements World {
     private final int size;
     
     private final double VISUALIZE_PERIOD;
@@ -21,6 +23,7 @@ public class Grid1DSimple implements World {
     private final double ENERGY_COST_FACTOR;
     private final double MATCH_REWARD_FACTOR;
 
+    private double position;
     private double focusPosition;
     private double focusVelocity;
         
@@ -31,14 +34,14 @@ public class Grid1DSimple implements World {
     
     private final double noise;
 
-    public Grid1DSimple(int size, int totalTime, double noise, double focusVelocity) {
+    public Grid1DRelative(int size, int totalTime, double noise, double focusVelocity) {
         this.time = 1;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
-        this.ENERGY_COST_FACTOR = 0.5;
-        this.MATCH_REWARD_FACTOR = size*1.1;
+        this.ENERGY_COST_FACTOR = 1.0;
+        this.MATCH_REWARD_FACTOR = 1.0;
         this.REWARD_MAGNITUDE = 1;
-        this.JUMP_FRACTION = 0.0;
+        this.JUMP_FRACTION = 0.01;
         this.noise = noise;
         this.focusVelocity = focusVelocity;
         
@@ -48,8 +51,8 @@ public class Grid1DSimple implements World {
 
     
     @Override    public String getName()    {     return "Grid1D";    }
-    @Override    public int getNumSensors() {     return size;    }
-    @Override    public int getNumActions() {     return size;    }
+    @Override    public int getNumSensors() {     return size*2;    }
+    @Override    public int getNumActions() {     return 3;    }
     @Override    public boolean isActive()  {     return time < totalTime;   }
 
     double[] action2 = null;
@@ -70,8 +73,8 @@ public class Grid1DSimple implements World {
         }
         
         //# Ensure that the world state falls between 0 and 9
-        if (focusPosition > size) focusPosition = focusPosition - size;
-        if (focusPosition < 0) focusPosition = size + focusPosition;
+        if (focusPosition > size) focusPosition = 0;
+        if (focusPosition < 0) focusPosition = size-1;
         
         /*        
         # Assign basic_feature_input elements as binary. 
@@ -85,13 +88,31 @@ public class Grid1DSimple implements World {
             if (i > 0) action2[i] += 0.5 * action[i-1];
             if (i < action2.length-1) action2[i] += 0.5 * action[i+1];
         } */           
-                  
+            
+        
+        if (action[0] > 0.5) {
+            //nothing
+        }
+        if ((action[1] > 0.5) && !(action[2] > 0.5)) {
+            position--;
+        }
+        if ((action[2] > 0.5) && !(action[1] > 0.5)) {
+            position++;
+        }
+        if (position < 0) position = 0;
+        if (position >= size) position = size-1;
+        
         double match = 0;        
         double energyCost = 0;
-        for (int i = 0; i < size; i++) {
-            match += Math.abs( sensor[i] * action[i] );
-            energyCost += action[i];
-        }
+        
+        match = 1.0 / (1.0 + Math.abs(position - focusPosition));
+        
+        if (action[0] > 0.25)
+            energyCost += 0.5;
+        if (action[1] > 0.25)
+            energyCost += 1.0;
+        if (action[2] > 0.25)
+            energyCost += 1.0;
         
         
         double reward = REWARD_MAGNITUDE * ((MATCH_REWARD_FACTOR * match) - (energyCost * ENERGY_COST_FACTOR));
@@ -100,7 +121,7 @@ public class Grid1DSimple implements World {
         
         double min=0, max=0;
         for (int i = 0; i < size; i++) {
-            final double exp = 3.0; //sharpen
+            final double exp = 1.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
             if (sensor[i] < 0.25)
                 sensor[i] = 0;
@@ -111,14 +132,11 @@ public class Grid1DSimple implements World {
                 if (sensor[i] < min) min = sensor[i];
                 if (sensor[i] > max) max = sensor[i];
             }
-            
+         
+            //show agent's own location
+            sensor[i+size] = (i == position) ? 1.0 : 0.0;
         }
-        /*
-        //normalize
-        for (int i = 0; i < size; i++) {
-            sensor[i] = (max-min)*(sensor[i] - min);
-        }
-        */        
+  
                 
         return reward;        
     }
@@ -176,10 +194,10 @@ public class Grid1DSimple implements World {
      */
     
     public static void main(String[] args) throws Exception {
-        Class<? extends Agent> a = BeccaAgent.class;
-        //Class<? extends Agent> a = QLAgent.class;
+        //Class<? extends Agent> a = BeccaAgent.class;
+        Class<? extends Agent> a = QLAgent.class;
         
-        new Simulation(a, new Grid1DSimple(5, 11990000, 0.05, 0.01));
+        new Simulation(a, new Grid1DRelative(24, 11990000, 0.05, 0.00));
         
     }
 }

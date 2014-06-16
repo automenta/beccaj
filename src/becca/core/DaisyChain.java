@@ -71,10 +71,9 @@ of the chains it belongs to.
 
  */
 public class DaisyChain {
-    private final double AGING_TIME_CONSTANT;
-    private final double CHAIN_UPDATE_RATE;
+    private final double countDecayRate;
+    private final double chainUpdateRate;
     private final int maxCables;
-    private final int time;
     private final DenseMatrix64F count;
     private final DenseMatrix64F expectedCableActivities;
     private DenseMatrix64F pre;
@@ -92,12 +91,10 @@ public class DaisyChain {
         
         this.maxCables = maxCables;
 
-        this.AGING_TIME_CONSTANT = Math.pow(10, 1); //# real, large
-        this.CHAIN_UPDATE_RATE = 0.01; // # real, 0 < x < 1         
-        this.allowSelfTransitions = false;
-        
-        this.time = 0;
-        
+        this.countDecayRate = BeccaParams.daisyCountDecayRate;
+        this.chainUpdateRate = BeccaParams.daisyChainUpdateRate;; // # real, 0 < x < 1         
+        this.allowSelfTransitions = BeccaParams.daisyAllowSelfTransitions;
+                
         //this.shape = (max_num_cables, max_num_cables)        
         this.count = new DenseMatrix64F(maxCables, maxCables);        
         this.expectedCableActivities = new DenseMatrix64F(maxCables, maxCables);        
@@ -168,7 +165,7 @@ public class DaisyChain {
         
         //set the main diagonal (of size pre) of chainActivities to zero
         //chain_activities[np.nonzero(np.eye(self.pre.size))] = 0.
-        if (allowSelfTransitions) {
+        if (!allowSelfTransitions) {
             DenseMatrix64F eye = identity(pre.getNumElements());
             scale(-1, eye);
             add(eye, 1);
@@ -186,7 +183,7 @@ public class DaisyChain {
         subEquals(count, countDelta);*/
         
         //ALTERNATE CALCULIATON
-        scale(1.0 - (1.0 / AGING_TIME_CONSTANT), count);
+        scale(1.0 - countDecayRate, count);
         
         
         
@@ -215,8 +212,8 @@ public class DaisyChain {
             final double u = updateRatePostD[i];
             final double v = 
                     Math.min(
-                            (1-CHAIN_UPDATE_RATE) * 
-                            (1 + CHAIN_UPDATE_RATE* (u + EPSILON)) /
+                            (1-chainUpdateRate) * 
+                            (1 + chainUpdateRate* (u + EPSILON)) /
                             (u + EPSILON), 0.5);                        
             updateRatePostD[i] = v;
         }
@@ -235,7 +232,7 @@ public class DaisyChain {
         subEquals(preCount, preCountDelta);*/
         
         //ALTERNATE CALCULATION
-        scale(1.0 - (1.0 / AGING_TIME_CONSTANT), preCount);
+        scale(1.0 - countDecayRate, preCount);
                        
         //self.pre_count = np.maximum(self.pre_count, 0)
         matrixMaximum(preCount, 0);

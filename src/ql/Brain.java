@@ -77,7 +77,7 @@ public class Brain implements Serializable {
      * selected by the NN
      */
     private double randActions;
-    private static final double RAND_ACTIONS_DEFAULT = 0.1;
+    private static final double RAND_ACTIONS_DEFAULT = 5.0;
     /**
      * Use Boltzmann probability (instead of maximum Q-value)
      */

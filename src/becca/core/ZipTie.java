@@ -9,10 +9,6 @@ import java.util.List;
 
 
 /**
- * 
- * TODO incorporate these changes:
- * https://github.com/brohrer/becca/blob/124d10140011cd9396a5dda8585c59cbfbba54cd/core/ziptie.py
- * 
     An incremental unsupervised learning algorithm
 
     Input channels are clustered together into mutually co-active sets.
@@ -50,11 +46,11 @@ public class ZipTie {
     private List<int[]> newCandidates = new ArrayList();
 
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle) {
-        this(inBlock, maxCables, maxBundles, maxCablesPerBundle, -4);
+        this(inBlock, maxCables, maxBundles, maxCablesPerBundle, BeccaParams.ziptieMeanExponent);
     }
 
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent) {
-        this(inBlock, maxCables, maxBundles, maxCablesPerBundle, meanExponent, 0.05, 1.0);
+        this(inBlock, maxCables, maxBundles, maxCablesPerBundle, meanExponent, BeccaParams.ziptieJoiningThreshold, BeccaParams.ziptieSpeedUp);
     }
     
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent, double joiningThreshold, double speedup) {
@@ -69,33 +65,26 @@ public class ZipTie {
         this.maxCablesPerBundle = maxCablesPerBundle;
         
         this.numBundles = 0;
+        this.ACTIVATED_BUNDLE_MAP_NOISE = BeccaParams.ziptieActivatedBundlemapNoise;
+        
 
         //Identify whether the ziptie is located in a block or in a cog.
         //This changes several aspects of its operation.         
         if (inBlock) {
             //These seem to strike a nice balance between feature quality and learning speed
-            this.NUCLEATION_THRESHOLD = 0.1;
-            this.NUCLEATION_ENERGY_RATE = 1E-5;
-            this.AGGLOMERATION_THRESHOLD = 0.1;
-            this.AGGLOMERATION_ENERGY_RATE = 1.E-3;
-            this.ACTIVATION_WEIGHTING_EXPONENT = 512;
-
-            //high-speed learning
-            /*
-            this.NUCLEATION_THRESHOLD = 0.25;
-            this.NUCLEATION_ENERGY_RATE = 1E-2;
-            this.AGGLOMERATION_THRESHOLD = 0.25;
-            this.AGGLOMERATION_ENERGY_RATE = 1.E-1;
-            this.ACTIVATION_WEIGHTING_EXPONENT = 128;          
-            */
+            this.NUCLEATION_THRESHOLD = BeccaParams.blockziptieNucleationThreshold;
+            this.NUCLEATION_ENERGY_RATE = BeccaParams.blockziptieNucleationEnergyRate;
+            this.AGGLOMERATION_THRESHOLD = BeccaParams.blockziptieAgglomerationThreshold;
+            this.AGGLOMERATION_ENERGY_RATE = BeccaParams.blockziptieAgglomerationEnergyRate;
+            this.ACTIVATION_WEIGHTING_EXPONENT = BeccaParams.blockziptieActivationWeightingExponent;
         }
         else {
             //For zipties within cogs
-            this.NUCLEATION_THRESHOLD = 0.1;
-            this.NUCLEATION_ENERGY_RATE = 1E-5;
-            this.AGGLOMERATION_THRESHOLD = 0.1;
-            this.AGGLOMERATION_ENERGY_RATE = 1.E-4;
-            this.ACTIVATION_WEIGHTING_EXPONENT = 512;
+            this.NUCLEATION_THRESHOLD = BeccaParams.cogziptieNucleationThreshold;
+            this.NUCLEATION_ENERGY_RATE = BeccaParams.cogziptieNucleationEnergyRate;
+            this.AGGLOMERATION_THRESHOLD = BeccaParams.cogziptieAgglomerationThreshold;
+            this.AGGLOMERATION_ENERGY_RATE = BeccaParams.cogziptieAgglomerationEnergyRate;
+            this.ACTIVATION_WEIGHTING_EXPONENT = BeccaParams.cogziptieActivationWeightingExponent;            
         }
         
         /*
@@ -112,12 +101,13 @@ public class ZipTie {
                 
                 
         this.bundleActivities = new DenseMatrix64F(this.maxBundles, 1);
-                
+
+        assert(maxCables > 0);
         this.bundleMap = new DenseMatrix64F(maxBundles, maxCables);        
+
         this.agglomerationEnergy = new DenseMatrix64F(maxBundles, maxCables);
         
         this.nucleationEnergy = new DenseMatrix64F(this.maxCables, 1);
-        this.ACTIVATED_BUNDLE_MAP_NOISE = 0.001;
     }
     
 
@@ -140,6 +130,7 @@ public class ZipTie {
          */
         DenseMatrix64F bundleMapT = transpose(bundleMap, null);
         
+        
         /*initial_bundle_activities = tools.generalized_mean(
                 self.cable_activities, self.bundle_map.T, self.MEAN_EXPONENT)*/
         DenseMatrix64F initialBundleActivities = getGeneralizedMean(cableActivities, bundleMapT, MEAN_EXPONENT); //WAS transposed before
@@ -158,7 +149,6 @@ public class ZipTie {
                                 bundle_contribution_map)
         */
         DenseMatrix64F activatedBundleMap = matrixVector(bundleContributionMap, initialBundleActivities);
-        ACTIVATED_BUNDLE_MAP_NOISE = 0.0001;
         
         /*
         # Add just a little noise to break ties
@@ -239,6 +229,7 @@ public class ZipTie {
         }
         growBundles();
                  
+        
         //return self.bundle_activities[:self.num_bundles,:]
         if (numBundles > 0)
             return extract(cableActivities, 0, numBundles, 0, cableActivities.getNumCols() );
@@ -255,10 +246,7 @@ public class ZipTie {
         # Decay the energy        
         self.nucleation_energy -= (self.cable_activities *
                                    self.nucleation_energy * 
-                                   self.NUCLEATION_ENERGY_RATE)
-        self.nucleation_energy += (self.nonbundle_activities * 
-                                   (1. - self.nucleation_energy) *
-                                   self.NUCLEATION_ENERGY_RATE)   
+                                   self.NUCLEATION_ENERGY_RATE) 
         */
         DenseMatrix64F nucleationEnergyDelta = nucleationEnergy.copy();
         elementMult(nucleationEnergyDelta, cableActivities);        
@@ -274,7 +262,7 @@ public class ZipTie {
         DenseMatrix64F oneMinusNE = nucleationEnergy.copy();
         scale(-1, oneMinusNE);
         add(oneMinusNE, 1.0);        
-        
+                
         DenseMatrix64F nucleationEnergyDelta2 = oneMinusNE.copy();        
         elementMult(nucleationEnergyDelta2, nonBundleActivities);
         scale(NUCLEATION_ENERGY_RATE, nucleationEnergyDelta2);

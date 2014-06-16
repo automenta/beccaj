@@ -54,7 +54,7 @@ public class QLAgent implements Agent {
                 for (int i = 0; i < sensor.length; i++)
                     setNextValue(sensor[i]);        
             }
-        }, qaction, new int[] { sensor.length } );
+        }, qaction, new int[] { 20,16 } );
         
         /*brain = new Brain(new SDAPerception(sensor, 4) {
 

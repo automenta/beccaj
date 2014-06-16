@@ -13,7 +13,7 @@ import org.ejml.data.DenseMatrix64F;
  *
  * @author me
  */
-public class TestHub {
+public class TestHubWithBlock {
     
     protected final HubPanel p;
     protected final Hub h;
@@ -84,7 +84,7 @@ public class TestHub {
         }
     }
     
-    public TestHub(int numBlocks, int numCables) {
+    public TestHubWithBlock(int numBlocks, int numCables) {
         h = new Hub(numCables);
         
         this.numBlocks = numBlocks;
@@ -149,7 +149,7 @@ public class TestHub {
     }    
     
     public static void main(String[] args) {
-        new TestHub(2, 32);
+        new TestHubWithBlock(2, 32);
     }
     
 }

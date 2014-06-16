@@ -86,8 +86,7 @@ public class Util extends CommonOps {
         final DenseMatrix64F result = new DenseMatrix64F(matrix.getNumRows(), matrix.getNumCols());
         final double[] vdata = vector.getData();
         
-        if (vector.getNumRows() == 1) {
-            assert(matrix.getNumCols() == vector.getNumCols());
+        if ((vector.getNumRows() == 1) && (matrix.getNumCols() == vector.getNumCols())) {
             
             for (int j = 0; j < matrix.getNumCols(); j++) {
                 final double vdi = vdata[j];                   
