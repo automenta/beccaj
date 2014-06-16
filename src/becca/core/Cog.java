@@ -75,26 +75,28 @@ public class Cog {
             System.err.println("Cog: Number of max cables exceeded in " + this);
         }
         
-        activities = daisychain.stepUp(activities);
+        DenseMatrix64F dactivities = daisychain.stepUp(activities);
         surprise = daisychain.getSurprise();
+        DenseMatrix64F zactivities;
         
         if (enoughCables) {
-            activities = ziptie.stepUp(activities);
+            zactivities = ziptie.stepUp(dactivities);
         }
         else {
-            activities = new DenseMatrix64F(0, 1);
+            zactivities = new DenseMatrix64F(0, 1);
         }
         
-        activities = pad(activities, maxBundles, 1, 0.0);
+        if (activities.getNumRows() < maxBundles)
+            zactivities = pad(activities, maxBundles, 1, 0.0);
         
-        return activities;
+        return zactivities;
     }
     
     //""" bundle_goals percolate downward """
     public DenseMatrix64F stepDown(DenseMatrix64F goals) {
-        goals = ziptie.stepDown(goals);
-        goals = daisychain.stepDown(goals);
-        return goals;
+        DenseMatrix64F zgoals = ziptie.stepDown(goals);
+        DenseMatrix64F dgoals = daisychain.stepDown(zgoals);
+        return dgoals;
     }
     
     //""" How many bundles have been created in this cog? """

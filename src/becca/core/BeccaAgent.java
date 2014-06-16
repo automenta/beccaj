@@ -9,6 +9,7 @@ import org.ejml.data.DenseMatrix64F;
 import static becca.core.Util.*;
 import becca.test.Agent;
 import becca.test.World;
+import static java.lang.Double.NaN;
 import java.util.ArrayDeque;
        
 /**
@@ -38,7 +39,7 @@ public class BeccaAgent implements Agent, Serializable {
     public double[] action;
     private double reward;
     private double typicalSurprise;
-
+    double blockInitializationThreshold;
     
     /*
          Configure the BeccaAgent
@@ -106,6 +107,7 @@ public class BeccaAgent implements Agent, Serializable {
         this.rewardHistory = new LinkedList();
         this.rewardSteps = new LinkedList();
         this.surpriseHistory = new LinkedList();
+        this.blockInitializationThreshold = 0.5;
         
         this.recentSurpriseHistory = new ArrayDeque(RECENT_SURPRISE_HISTORY_SIZE);
         for (int i = 0; i < RECENT_SURPRISE_HISTORY_SIZE; i++)
@@ -132,15 +134,14 @@ public class BeccaAgent implements Agent, Serializable {
         System.arraycopy(sensor, 0, cableActivities.getData(), numActions, numSensors);
         
         //# Propogate the new sensor inputs up through the blocks
+        DenseMatrix64F nextUp = cableActivities;
         for (final Block b : blocks) {
-            b.stepUp(cableActivities);
+            nextUp = b.stepUp(nextUp);
         }
         
         //# Create a new block if the top block has had enough bundles assigned
         Block topBlock = blocks.get(blocks.size()-1); //top block        
         double blockBundlesFull = ((double)(topBlock.getBundlesCreated())) / ((double)(topBlock.maxBundles));
-        
-        double blockInitializationThreshold = 0.5;
         
         if (blockBundlesFull > blockInitializationThreshold) {
             Block b = new Block(numActions + numSensors, blocks.size());
@@ -195,6 +196,23 @@ public class BeccaAgent implements Agent, Serializable {
         # with a magnitude of 1.
         */
         System.arraycopy(cableGoals.getData(), 0, action, 0, numActions);
+
+        //Util.printArray(action);
+        
+        //test if action contains NaN or Inf
+        boolean invalidAction = false;
+        for (int ii = 0; ii < action.length; ii++) {
+            if ((!Double.isFinite(action[ii])) || (action[ii] == NaN)) {
+                invalidAction = true; 
+                break;
+            }
+        }
+        if (invalidAction) {
+            System.err.println("Invalid action");
+            printArray(action);
+            System.out.println(this);
+            System.exit(1);            
+        }
         
         
         //backup?

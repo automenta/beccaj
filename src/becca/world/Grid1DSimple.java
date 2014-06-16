@@ -1,6 +1,7 @@
 package becca.world;
 
 import becca.core.BeccaAgent;
+import becca.core.Util;
 import becca.test.Agent;
 import becca.test.Simulation;
 import becca.test.World;
@@ -34,10 +35,10 @@ public class Grid1DSimple implements World {
         this.time = 1;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
-        this.ENERGY_COST_FACTOR = 2.0;
-        this.MATCH_REWARD_FACTOR = size*1.0;
-        this.REWARD_MAGNITUDE = 10;
-        this.JUMP_FRACTION = 0.0;        
+        this.ENERGY_COST_FACTOR = 0.1;
+        this.MATCH_REWARD_FACTOR = size*1.1;
+        this.REWARD_MAGNITUDE = 90;
+        this.JUMP_FRACTION = 0.0;
         this.noise = noise;
         this.focusVelocity = focusVelocity;
         
@@ -95,16 +96,13 @@ public class Grid1DSimple implements World {
         
         double reward = REWARD_MAGNITUDE * ((MATCH_REWARD_FACTOR * match) - (energyCost * ENERGY_COST_FACTOR));
         
-        /*if (reward!=0)
-            System.out.println(match + " " + energyCost + " -> " + reward);*/
-        
         
         
         double min=0, max=0;
         for (int i = 0; i < size; i++) {
             final double exp = 2.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
-            if (sensor[i] < 0.05)
+            if (sensor[i] < 0.02)
                 sensor[i] = 0;
             if (i == 0) {
                 min = max = sensor[i];
@@ -181,7 +179,7 @@ public class Grid1DSimple implements World {
         Class<? extends Agent> a = BeccaAgent.class;
         //Class<? extends Agent> a = QLAgent.class;
         
-        new Simulation(a, new Grid1DSimple(4, 11990000, 0.01, 0.005));
+        new Simulation(a, new Grid1DSimple(12, 11990000, 0.05, 0.0));
         
     }
 }

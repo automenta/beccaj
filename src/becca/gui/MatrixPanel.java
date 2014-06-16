@@ -23,16 +23,22 @@ import org.ejml.ops.MatrixComponent;
  * @author me
  */
 public class MatrixPanel extends JPanel {
-        int maxMatrixSize = 256;
+    int maxMatrixSize = 2048;
+    protected JPanel target = this;
 
     public MatrixPanel(LayoutManager layout) {
         super(layout);
     }
 
     public MatrixPanel() {
-        super();
+        this((JPanel)null);
     }
-
+    public MatrixPanel(JPanel target) {
+        super();
+        if (target == null)
+            target = this;
+        this.target = target;
+    }
         
             
     public static JFrame window(JPanel content, boolean closeOnExit) {
@@ -58,8 +64,8 @@ public class MatrixPanel extends JPanel {
         x.add(new JLabel(id + " " + (m != null ? m(m) : "") ), BorderLayout.NORTH);
 
         if ((m!=null) && ((m.getNumCols() > 0) && (m.getNumRows() > 0))) {
-            int px = 8; //min pixels per cell
-            int maxPX = 12; //max pixels per cell
+            int px = 6; //min pixels per cell
+            int maxPX = 8; //max pixels per cell
             if (m.getNumCols() == 1)
                 m = transpose(m, null);
             
@@ -75,7 +81,7 @@ public class MatrixPanel extends JPanel {
             x.add(new JLabel("(null)"), BorderLayout.CENTER);
         }
         
-        add(x);
+        target.add(x);
         
     }
     

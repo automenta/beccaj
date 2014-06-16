@@ -6,6 +6,7 @@
 
 package becca.test;
 
+import becca.core.BeccaAgent;
 import javax.swing.JFrame;
 import rlpark.DynamicChart;
 import becca.gui.AgentPanel;
@@ -34,10 +35,10 @@ public class Simulation {
     */
     
     public void displayAgent(Agent a) {
-        /*if (agent instanceof BeccaAgent) {        
-            ap = new AgentPanel(a);
+        if (agent instanceof BeccaAgent) {        
+            ap = new AgentPanel((BeccaAgent)a);
             jf = AgentPanel.window(ap, true);
-        }*/
+        }
 
         new DynamicChart() {
 

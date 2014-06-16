@@ -10,6 +10,7 @@ import static becca.core.Util.setSinusoidal;
 import becca.core.ZipTie;
 import becca.gui.MatrixPanel;
 import javax.swing.BoxLayout;
+import javax.swing.JPanel;
 import org.ejml.data.DenseMatrix64F;
 
 
@@ -26,18 +27,30 @@ public class TestZipTie {
     protected DenseMatrix64F bundleActivitiesOut;
     protected DenseMatrix64F cableGoalsOut;
 
-    public class ZipTiePanel extends MatrixPanel {
+    public static class ZipTiePanel extends MatrixPanel {
+        private final ZipTie z;
     
 
-        public ZipTiePanel() {
-            super();
+        public ZipTiePanel(ZipTie z) {
+            this(z, null);
+        }
+        public ZipTiePanel(ZipTie z, JPanel target) {
+            super(target);
+            
+            
+            this.z = z;
             
             setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
-                            
-            update();
+            
+            update(null,null,null,null);
         }
 
-        public void update() {
+        public void update(
+                DenseMatrix64F cableActivitiesIn,
+                DenseMatrix64F bundleGoalsIn,
+                DenseMatrix64F bundleActivitiesOut,
+                DenseMatrix64F cableGoalsOut
+                ) {
             removeAll();
             
             if (cableActivitiesIn!=null)
@@ -55,12 +68,19 @@ public class TestZipTie {
             addMatrix("bundleMap", z.getBundleMap());
             addMatrix("agglomerationEnergy", z.getAgglomerationEnergy());
             addMatrix("nucleationEnergy", z.getNucleationEnergy());
+            addMatrix("bundleActivities", z.getNonBundleActivities());
+            addMatrix("nonBundleActivities", z.getBundleActivities());         
+            
+            
 
             
-            if (getParent()!=null)
-                getParent().validate();
-            validate();
-            repaint();            
+
+            if (target==this) {
+                if (getParent()!=null)
+                    getParent().validate();
+                validate();
+                repaint();            
+            }
         }
     }
     
@@ -70,7 +90,7 @@ public class TestZipTie {
         cableActivitiesIn = new DenseMatrix64F(maxCables, 1);
         bundleGoalsIn = new DenseMatrix64F(maxBundles, 1);
         
-        p = new ZipTiePanel();
+        p = new ZipTiePanel(z);
         
         MatrixPanel.window(p, true);
         
@@ -113,7 +133,8 @@ public class TestZipTie {
         
         cableGoalsOut = z.stepDown(bundleGoalsIn);
         
-        p.update();
+        p.update(cableActivitiesIn, bundleGoalsIn, 
+                bundleActivitiesOut, cableGoalsOut);
         
         /*if (cycle % 2500 == 0)
             p.update();
@@ -121,6 +142,6 @@ public class TestZipTie {
     }
     
     public static void main(String[] args) {
-        new TestZipTie(true, 32,16,64);
+        new TestZipTie(false, 32,16,64);
     }
 }

@@ -213,7 +213,7 @@ public class Block  {
         //bundle_goals = tools.pad(bundle_goals, (self.max_bundles, 1))        
         bundleGoals = pad(bundleGoals, maxBundles, 1, 0.0);
         
-        DenseMatrix64F cableGoals = new DenseMatrix64F(maxCables, 1);
+        //DenseMatrix64F cableGoals = new DenseMatrix64F(maxCables, 1);
         
         //self.surprise = np.zeros((self.max_cables, 1))
         surprise = new DenseMatrix64F(maxCables, 1);
@@ -252,7 +252,7 @@ public class Block  {
             for (int i = 0; i < ccid.length; i++) {
                 
                 if (ccid[i]>0) {
-                    
+                    /*
                     for (int j = 0; j < cableGoals.getNumCols(); j++) {
                         
                         //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
@@ -263,6 +263,7 @@ public class Block  {
                             cableGoals.set(i, j, 
                                     Math.max(cableGoals.get(i, j), cableGoalsByCog.get(comparedI++, 0)));
                     }
+                    */
                     
                         //#self.reaction[cog_cable_indices] = np.maximum(
                         //#        tools.pad(cog.reaction, (cog_cable_indices[0].size, 0)),
@@ -290,9 +291,9 @@ public class Block  {
             
         }                
         
-        hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
+        /*hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );*/
                         
-        return hubCableGoals;
+        return this.hubCableGoals;
     }
 
 
