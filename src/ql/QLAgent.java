@@ -54,7 +54,7 @@ public class QLAgent implements Agent {
                 for (int i = 0; i < sensor.length; i++)
                     setNextValue(sensor[i]);        
             }
-        }, qaction, new int[] { 20,16 } );
+        }, qaction/*, new int[] { 20,16 }*/ );
         
         /*brain = new Brain(new SDAPerception(sensor, 4) {
 
@@ -74,11 +74,15 @@ public class QLAgent implements Agent {
         brain.reset();
     }
 
+    double minReward = Double.MAX_VALUE;
+    double maxReward = Double.MIN_VALUE;
     
     @Override
     public int step(double reward) {
-        this.nextReward = reward;
-
+        maxReward = Math.max(reward, maxReward);
+        minReward = Math.min(reward, minReward);
+        this.nextReward = (reward - minReward)/(maxReward-minReward)-0.5;
+        
         brain.getPerception().perceive();
         brain.count();
         

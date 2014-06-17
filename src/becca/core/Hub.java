@@ -171,6 +171,9 @@ public class Hub {
         DenseMatrix64F firstPost = post.peekFirst();
 
         assert (firstPre.getNumRows() == count.getNumRows());
+        assert (firstPre.getNumRows() == firstPost.getNumRows());
+        assert (firstPre.getNumCols() == 1);
+        assert (firstPost.getNumCols() == 1);
         mult(firstPre, transpose(firstPost, null), chainActivities);
 
         //self.count = self.count + self.chain_activities        
@@ -191,7 +194,7 @@ public class Hub {
         scale((1.0 - UPDATE_RATE), updateRateRawFactor);
         add(updateRateRawFactor, UPDATE_RATE);
         final DenseMatrix64F updateRate = new DenseMatrix64F(chainActivities.getNumRows(), updateRateRawFactor.getNumCols());
-        mult(chainActivities, updateRateRawFactor, updateRate);
+        elementMult(chainActivities, updateRateRawFactor, updateRate);
 
         //update_rate = np.minimum(0.5, update_rate_raw)
         matrixMinimum(updateRate, 0.5);

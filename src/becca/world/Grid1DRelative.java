@@ -38,7 +38,7 @@ public class Grid1DRelative implements World {
         this.time = 1;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
-        this.ENERGY_COST_FACTOR = 1.0;
+        this.ENERGY_COST_FACTOR = 0.01;
         this.MATCH_REWARD_FACTOR = 1.0;
         this.REWARD_MAGNITUDE = 1;
         this.JUMP_FRACTION = 0.01;
@@ -52,7 +52,7 @@ public class Grid1DRelative implements World {
     
     @Override    public String getName()    {     return "Grid1D";    }
     @Override    public int getNumSensors() {     return size*2;    }
-    @Override    public int getNumActions() {     return 3;    }
+    @Override    public int getNumActions() {     return 2;    }
     @Override    public boolean isActive()  {     return time < totalTime;   }
 
     double[] action2 = null;
@@ -90,17 +90,17 @@ public class Grid1DRelative implements World {
         } */           
             
         
-        if (action[0] > 0.5) {
+        /*if (action[0] > 0.5) {
             //nothing
-        }
-        if ((action[1] > 0.5) && !(action[2] > 0.5)) {
+        }*/
+        if ((action[0] > 0.5) && !(action[1] > 0.5)) {
             position--;
         }
-        if ((action[2] > 0.5) && !(action[1] > 0.5)) {
+        if ((action[1] > 0.5) && !(action[0] > 0.5)) {
             position++;
         }
-        if (position < 0) position = 0;
-        if (position >= size) position = size-1;
+        if (position < 0) position = size-1;
+        if (position >= size) position = 0;
         
         double match = 0;        
         double energyCost = 0;
@@ -108,10 +108,8 @@ public class Grid1DRelative implements World {
         match = 1.0 / (1.0 + Math.abs(position - focusPosition));
         
         if (action[0] > 0.25)
-            energyCost += 0.5;
-        if (action[1] > 0.25)
             energyCost += 1.0;
-        if (action[2] > 0.25)
+        if (action[1] > 0.25)
             energyCost += 1.0;
         
         
@@ -121,9 +119,9 @@ public class Grid1DRelative implements World {
         
         double min=0, max=0;
         for (int i = 0; i < size; i++) {
-            final double exp = 1.0; //sharpen
+            final double exp = 3.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
-            if (sensor[i] < 0.25)
+            if (sensor[i] < 0.4)
                 sensor[i] = 0;
             if (i == 0) {
                 min = max = sensor[i];
@@ -141,63 +139,12 @@ public class Grid1DRelative implements World {
         return reward;        
     }
         
-
-    @Override
-    public String toString() {
-        String s = "";
-        for (int i = 0; i < size; i++) {
-            char c;
-            if (i == (int)focusPosition)
-                c = 'O';
-            else
-                c = '.';
-            s += c;
-        }
-        s += "\n";
-        for (int i = 0; i < size; i++) {
-            char c;
-            if (action[i] > 0)
-                c = 'X';
-            else
-                c = '.';
-            s += c;
-        }
-        s += "\n";
-        return s;
-    }
-    
-    /*
-    def visualize(self, agent):
-        """ Show what's going on in the world """
-        if (this.display_state):
-            state_image = ['.'] * (this.num_sensors + this.num_actions + 2)
-            state_image[this.simple_state] = 'O'
-            state_image[this.num_sensors:this.num_sensors + 2] = '||'
-            action_index = np.where(this.action > 0.1)[0]
-            if action_index.size > 0:
-                for i in range(action_index.size):
-                    state_image[this.num_sensors + 2 + action_index[i]] = 'x'
-            print(''.join(state_image))
-            
-        if (this.timestep % this.VISUALIZE_PERIOD) == 0:
-            print("world age is %s timesteps " % this.timestep)    
-    */
-
-    /*
-    
-    def set_agent_parameters(self, agent):
-    """ Turn a few of the knobs to adjust BECCA for this world """
-    # Prevent the agent from forming any groups
-    #agent.reward_min = -100.
-    #agent.reward_max = 100.
-    pass
-     */
     
     public static void main(String[] args) throws Exception {
         //Class<? extends Agent> a = BeccaAgent.class;
         Class<? extends Agent> a = QLAgent.class;
         
-        new Simulation(a, new Grid1DRelative(24, 11990000, 0.05, 0.00));
+        new Simulation(a, new Grid1DRelative(8, 11990000, 0.05, 0.05));
         
     }
 }

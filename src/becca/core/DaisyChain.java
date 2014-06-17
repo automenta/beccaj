@@ -158,6 +158,8 @@ public class DaisyChain {
 
         //chain_activities = self.pre * self.post.T
         DenseMatrix64F chainActivities = new DenseMatrix64F(pre.getNumRows(), postT.getNumCols());
+        assert(pre.getNumCols() == 1);
+        assert(postT.getNumRows() == 1);
         mult(pre, postT, chainActivities);
         
 
@@ -241,13 +243,14 @@ public class DaisyChain {
         //post_difference = np.abs(self.pre * self.post.T - self.expected_cable_activities)        
         DenseMatrix64F postDifference = new DenseMatrix64F(pre.getNumRows(), postT.getNumCols());
         mult(pre, postT, postDifference);
+        
+        DenseMatrix64F ecDelta = postDifference.copy(); //used below
+
         subEquals(postDifference, expectedCableActivities);
         matrixAbs(postDifference);
         
         
-        //self.expected_cable_activities += update_rate_post * (self.pre * self.post.T - self.expected_cable_activities)
-        DenseMatrix64F ecDelta = new DenseMatrix64F(pre.getNumRows(), postT.getNumCols());
-        mult(pre, postT, ecDelta);
+        //self.expected_cable_activities += update_rate_post * (self.pre * self.post.T - self.expected_cable_activities)        
         subEquals(ecDelta, expectedCableActivities);        
         matrixVector(ecDelta, updateRatePost);        
         addEquals(expectedCableActivities, ecDelta);
