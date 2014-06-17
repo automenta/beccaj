@@ -53,7 +53,7 @@ public class Minimal1 implements World {
         
         
         
-        final int duration = 10000;
+        final int duration = 9000000;
         final double freq = 0.5;
         
         new Thread(new Runnable() {

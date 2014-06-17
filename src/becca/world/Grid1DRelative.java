@@ -1,9 +1,9 @@
 package becca.world;
 
+import becca.core.BeccaAgent;
 import becca.test.Agent;
 import becca.test.Simulation;
 import becca.test.World;
-import ql.QLAgent;
 
 /*
     Simplest one-dimensional grid task
@@ -41,7 +41,7 @@ public class Grid1DRelative implements World {
         this.ENERGY_COST_FACTOR = 0.01;
         this.MATCH_REWARD_FACTOR = 1.0;
         this.REWARD_MAGNITUDE = 1;
-        this.JUMP_FRACTION = 0.01;
+        this.JUMP_FRACTION = 0.002;
         this.noise = noise;
         this.focusVelocity = focusVelocity;
         
@@ -119,9 +119,9 @@ public class Grid1DRelative implements World {
         
         double min=0, max=0;
         for (int i = 0; i < size; i++) {
-            final double exp = 3.0; //sharpen
+            final double exp = 2.0; //sharpen
             sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
-            if (sensor[i] < 0.4)
+            if (sensor[i] < 0.2)
                 sensor[i] = 0;
             if (i == 0) {
                 min = max = sensor[i];
@@ -141,10 +141,10 @@ public class Grid1DRelative implements World {
         
     
     public static void main(String[] args) throws Exception {
-        //Class<? extends Agent> a = BeccaAgent.class;
-        Class<? extends Agent> a = QLAgent.class;
+        Class<? extends Agent> a = BeccaAgent.class;
+        //Class<? extends Agent> a = QLAgent.class;
         
-        new Simulation(a, new Grid1DRelative(8, 11990000, 0.05, 0.05));
+        new Simulation(a, new Grid1DRelative(8, 11990000, 0.05, 0.01));
         
     }
 }

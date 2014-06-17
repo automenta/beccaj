@@ -71,8 +71,8 @@ public class Simulation {
     }
     private double reward, rewardTotal;
     
-    long cycleDelayMS = 50;
-    long displayPeriodMS = 10;
+    long cycleDelayMS = 0;
+    long displayPeriodMS = 5500;
     long lastDisplay = -1;
     
     public Simulation(Class<? extends Agent> agentClass, World world) throws Exception {

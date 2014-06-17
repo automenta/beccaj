@@ -115,7 +115,7 @@ abstract public class DynamicChart {
 
         };
         // Every 20 milliseconds a new value is collected.
-        timer.schedule(task, 1000, 500);
+        timer.schedule(task, 1000, 1500);
     }
 
     abstract public double[] getSensor();
