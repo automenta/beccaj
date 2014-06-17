@@ -32,9 +32,10 @@ public class Grid2DRelative implements World {
 
     private double positionX;
     private double positionY;
-    private final Image2DPanel image;
+    private Image2DPanel image;
     private final double POSITION_VELOCITY;
     private double[] sensor;
+    private boolean showDisplay;
 
     public class Image2DPanel extends JPanel {
         private final BufferedImage bi;
@@ -96,8 +97,10 @@ public class Grid2DRelative implements World {
         this.POSITION_VELOCITY = 0.1;
         this.noise = noise;
 
-        image = new Image2DPanel();
-        AgentPanel.window(image, true);
+        if (showDisplay) {
+            image = new Image2DPanel();
+            AgentPanel.window(image, true);
+        }
         
         this.totalTime = totalTime;
         randomFocus();
@@ -221,7 +224,9 @@ public class Grid2DRelative implements World {
 
         }
 
-        image.updateImage();
+        if (showDisplay) {
+            image.updateImage();
+        }
         
         return reward;
     }

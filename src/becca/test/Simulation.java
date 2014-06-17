@@ -71,7 +71,7 @@ public class Simulation {
     }
     private double reward, rewardTotal;
     
-    long cycleDelayMS = 1;
+    long cycleDelayMS = 0;
     long displayPeriodMS = 25;
     long lastDisplay = -1;
     

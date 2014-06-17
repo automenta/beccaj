@@ -64,6 +64,7 @@ public class Hub {
         this.oldReward = 0.0;
 
         this.count = new DenseMatrix64F(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
+        //this.count = new DenseMatrix(this.numCables, this.numCables);
 
         this.rewardTrace = new LinkedList();
         for (int i = 0; i < TRACE_LENGTH; i++) {
@@ -108,7 +109,7 @@ public class Hub {
         cableActivities = pad(cableActivities, numCables, 1, 0.0);
         chainActivities = pad(chainActivities, numCables, numCables, 0.0);
         estimatedRewardValue = pad(estimatedRewardValue, numCables, numCables, 0.0);
-
+        
         count = pad(count, numCables, numCables, 0.0);
         rewardUncertainty = pad(rewardUncertainty, numCables, numCables, 0.0);
 
