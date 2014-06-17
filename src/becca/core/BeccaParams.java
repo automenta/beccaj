@@ -7,11 +7,11 @@ public class BeccaParams {
     
     //Block ---------------------------------------------------        
     
-    static int blockMaxCablesPerCog = 16;
-    static int blockMaxBundlesPerCog = 8;    
+    static int blockMaxCablesPerCog = 8;
+    static int blockMaxBundlesPerCog = 4;    
     static double blockFillFractionThreshold = 0.5;
     static double blockRangeDecayRate =  Math.pow(10, -3);
-    static double blockActivityDecayRate = 0.5; //real, 0 < x < 1, higher decays faster
+    static double blockActivityDecayRate = 0.9; //real, 0 < x < 1, higher decays faster
     
     //DaisyChain ---------------------------------------------------        
     static double daisyCountDecayRate = 0.1; //real, 0 < x < 1; higher = decays more quickly
@@ -20,14 +20,14 @@ public class BeccaParams {
     
     
     //Hub -----------------------------------
-    static int hubTraceLength = 24;
+    static int hubTraceLength = 12;
     static double hubInitialReward = 0.0;
     static double hubUpdateRate = Math.pow(10, -3);
     
     static double hubRewardDecayRate = .6; //Recalculate in terms of how many cycles before reward at that history is insignificant (< epsilon).  this cycle time should be approximately equal to hubTraceLength, or can be exactly that
     
     static double hubForgettingRate = Math.pow(10, -3);
-    static double hubExploration = .05;
+    static double hubExploration = .1;
     
     //ZipTie ----------------------------------------
     static double ziptieJoiningThreshold = 0.05;

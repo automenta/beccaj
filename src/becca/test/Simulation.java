@@ -71,8 +71,8 @@ public class Simulation {
     }
     private double reward, rewardTotal;
     
-    long cycleDelayMS = 0;
-    long displayPeriodMS = 5500;
+    long cycleDelayMS = 1;
+    long displayPeriodMS = 25;
     long lastDisplay = -1;
     
     public Simulation(Class<? extends Agent> agentClass, World world) throws Exception {
@@ -82,7 +82,7 @@ public class Simulation {
 
         
         
-        displayAgent(agent);
+        //displayAgent(agent);
         
         /*if restore:
             agent = agent.restore()*/

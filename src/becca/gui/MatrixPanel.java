@@ -23,7 +23,7 @@ import org.ejml.ops.MatrixComponent;
  * @author me
  */
 public class MatrixPanel extends JPanel {
-    int maxMatrixSize = 2048;
+    int maxMatrixSize = 64;
     protected JPanel target = this;
 
     public MatrixPanel(LayoutManager layout) {
