@@ -58,7 +58,7 @@ public class AgentPanel extends MatrixPanel {
     public void update() {
         removeAll();
         
-        addMatrix("sensors", DenseMatrix64F.wrap(agent.sensor.length, 1, agent.sensor));
+        addMatrix("sensors", DenseMatrix64F.wrap(agent.getPercept().length, 1, agent.getPercept()));
         addMatrix("actions", DenseMatrix64F.wrap(agent.action.length, 1, agent.action));
             
         addMatrix("hub.count", agent.hub.getCount());                

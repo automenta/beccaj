@@ -22,13 +22,13 @@ public class BeccaAgent implements Agent, Serializable {
 
     
     public ArrayList<Block> blocks = new ArrayList();
-    private int time; //current time step
+    protected int time; //current time step
 
     private ArrayDeque<Double> recentSurpriseHistory;
     private int RECENT_SURPRISE_HISTORY_SIZE = BeccaParams.agentRecentSurpriseHistorySize;
 
-    private int numSensors;
-    private int numActions;
+    protected int numSensors;
+    protected int numActions;
     private int timeSinceRewardLog;
     private double cumulativeReward;
     //private LinkedList<Double> rewardHistory;
@@ -90,11 +90,18 @@ public class BeccaAgent implements Agent, Serializable {
     public void init(World world) {
         //self.BACKUP_PERIOD = 10 ** 4
         
+        
         this.time = 0;
+        
+        this.sensor = new double[world.getNumSensors()];
 
         //TODO: Automatically adapt to the number of sensor pass in
-        this.numSensors = world.getNumSensors();
-        this.sensor = new double[numSensors];
+        if (getPercept() == null) {
+            this.numSensors = world.getNumSensors();
+        }
+        else {
+            this.numSensors = getPercept().length;
+        }
         this.numActions = world.getNumActions();
         this.action = new double[numActions];
 
@@ -131,8 +138,8 @@ public class BeccaAgent implements Agent, Serializable {
             cableActivitiesData[i][1] = sensor[i];*/        
         DenseMatrix64F cableActivities = new DenseMatrix64F(numActions + numSensors, 1);
         System.arraycopy(action, 0, cableActivities.getData(), 0, numActions);
-        System.arraycopy(sensor, 0, cableActivities.getData(), numActions, numSensors);
-        
+        System.arraycopy(getPercept(), 0, cableActivities.getData(), numActions, numSensors);
+                
         //# Propogate the new sensor inputs up through the blocks
         DenseMatrix64F nextUp = cableActivities;
         for (final Block b : blocks) {
@@ -352,6 +359,10 @@ public class BeccaAgent implements Agent, Serializable {
      */
 
     @Override public double[] getSensor() {
+        return sensor;
+    }
+    
+    public double[] getPercept() {
         return sensor;
     }
 

@@ -23,7 +23,7 @@ import org.ejml.ops.MatrixComponent;
  * @author me
  */
 public class MatrixPanel extends JPanel {
-    int maxMatrixSize = 64;
+    int maxMatrixSize = 128;
     protected JPanel target = this;
 
     public MatrixPanel(LayoutManager layout) {
@@ -43,7 +43,7 @@ public class MatrixPanel extends JPanel {
             
     public static JFrame window(JPanel content, boolean closeOnExit) {
         JFrame jf = new JFrame();        
-        jf.setContentPane(new JScrollPane(content, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
+        jf.setContentPane(new JScrollPane(content));
         jf.setSize(400,1000);
         jf.setVisible(true);
         if (closeOnExit)
@@ -65,7 +65,7 @@ public class MatrixPanel extends JPanel {
 
         if ((m!=null) && ((m.getNumCols() > 0) && (m.getNumRows() > 0))) {
             int px = 6; //min pixels per cell
-            int maxPX = 8; //max pixels per cell
+            int maxPX = 12; //max pixels per cell
             if (m.getNumCols() == 1)
                 m = transpose(m, null);
             

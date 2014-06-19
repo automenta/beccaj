@@ -433,28 +433,35 @@ public class Util extends CommonOps {
 
     public static void matrixSign(final DenseMatrix64F x) {
         final double[] d = x.getData();
-        for (int j = 0; j < d.length; j++) {
-            d[j] = Math.signum(d[j]);
+        for (int j = 0; j < x.elements; j++) {
+            //d[j] = Math.signum(d[j]);
+            if (d[j] < 0) d[j] = -1;
+            else if (d[j] > 0) d[j] = +1;
+            else d[j] = 0;
         }
     }
 
     public static void matrixMaximum(final DenseMatrix64F x, final double v) {
         final double[] d = x.getData();
-        for (int j = 0; j < d.length; j++) {
-            d[j] = Math.max(d[j], v);
+        for (int j = 0; j < x.elements; j++) {
+            //d[j] = Math.max(d[j], v);
+            if (v > d[j])
+                d[j] = v;
         }
     }
 
     public static void matrixMinimum(final DenseMatrix64F x, final double v) {
         final double[] d = x.getData();
-        for (int j = 0; j < d.length; j++) {
-            d[j] = Math.min(d[j], v);
+        for (int j = 0; j < x.elements; j++) {
+            //d[j] = Math.min(d[j], v);
+            if (v < d[j] )
+                d[j] = v;
         }
     }
 
     public static void matrixAbs(final DenseMatrix64F x) {
         final double[] d = x.getData();
-        for (int j = 0; j < d.length; j++) {
+        for (int j = 0; j < x.elements; j++) {
             d[j] = Math.abs(d[j]);
         }
     }

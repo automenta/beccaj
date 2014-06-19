@@ -55,7 +55,7 @@ public class Block  {
     private DenseMatrix64F surprise;
     private DenseMatrix64F bundleActivities;
     private DenseMatrix64F hubCableGoals;
-    private boolean parallelCogs = true;
+    private boolean parallelCogs = BeccaParams.cogParallel;
 
     public Block(int minCables) {    
         this(minCables, 0);
@@ -264,15 +264,32 @@ public class Block  {
                         
             //# Update the downward outputs for the level 
             //cable_goals_by_cog = cog.step_down(cog_bundle_goals)
-            DenseMatrix64F cableGoalsByCog = c.stepDown(cogBundleGoals);
-                        
+            c.preStepDown(cogBundleGoals);
+        }
+        
+        
+        if (parallelCogs) {
+            cogs.parallelStream().forEach(c -> c.stepDown(null));
+        }
+        else {
+            for (final Cog c : cogs) {                
+                c.stepDown(null);
+            }
+        }        
+            
+
+        for (int cogIndex = 0; cogIndex < cogs.size(); cogIndex++) {
+            final Cog c = cogs.get(cogIndex);         
+            final DenseMatrix64F cableGoalsByCog = c.getGoalsStepDownOut();
+            
             //cog_cable_indices = self.ziptie.get_index_projection(cog_index).astype(bool)
             DenseMatrix64F cogCableIndices = matrixBooleanize(ziptie.getIndexProjection(cogIndex));
             assert(cogCableIndices.getNumRows() == 1);
                        
             //paddingReaction = pad(c.getReaction(), cogCableIndices.getNumRows(), 0, 0.0);
-            final DenseMatrix64F cs = transpose(c.getSurprise(), null);
+            final DenseMatrix64F cs = c.getSurprise(); //transpose(c.getSurprise(), null);
             
+            final double[] csd = cs.getData();
             final double[] ccid = cogCableIndices.getData();
                            
             
@@ -307,9 +324,9 @@ public class Block  {
                     //for (int j = 0; j < surprise.getNumRows(); j++) {
 
                     
-                    if ((cs.getNumRows() > comparedIS) && (cs.elements > comparedIS)) {
+                    if ((cs.elements> comparedIS) && (cs.elements > comparedIS)) {
                         surprise.set(i, 0, 
-                                Math.max(surprise.get(i, 0), cs.get(comparedIS++, 0)));
+                                Math.max(surprise.get(i, 0), csd[comparedIS++]));
                     }
 
                     //}

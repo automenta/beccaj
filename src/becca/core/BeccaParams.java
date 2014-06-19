@@ -52,6 +52,7 @@ public class BeccaParams {
     static double cogziptieAgglomerationThreshold = 0.1;
     static double cogziptieAgglomerationEnergyRate = 1E-4;
     static double cogziptieActivationWeightingExponent = 5;
+    static boolean cogParallel = false;
     
    
     public static double decayRate(int cycles) {

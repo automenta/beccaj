@@ -1,10 +1,12 @@
+package becca.core;
 
+
+import deeplearning.dA.src.*;
 import static becca.core.Util.printArray;
 import java.util.Random;
 
 public class dA {
 
-    public int N;
     public int n_visible;
     public int n_hidden;
     public double[][] W;
@@ -37,14 +39,13 @@ public class dA {
     public static double sigmoid(double x) {
         return 1.0 / (1.0 + Math.pow(Math.E, -x));
     }
-
-    public dA(int N, int n_visible, int n_hidden) {
-        this(N, n_visible, n_hidden, null, null, null, null);
-    }
     
-    public dA(int N, int n_visible, int n_hidden,
+    public dA(int n_visible, int n_hidden) {
+        this(n_visible, n_hidden, null, null, null, null);
+    }
+
+    public dA(int n_visible, int n_hidden,
             double[][] W, double[] hbias, double[] vbias, Random rng) {
-        this.N = N;
         this.n_visible = n_visible;
         this.n_hidden = n_hidden;
 
@@ -97,14 +98,30 @@ public class dA {
     }
 
     // Encode
-    public void getEncoded(double[] x, double[] y) {
+    public void getEncoded(double[] x, double[] y, boolean sigmoid, boolean normalize) {
+        double max=0, min=0;
         for (int i = 0; i < n_hidden; i++) {
             y[i] = 0;
             for (int j = 0; j < n_visible; j++) {
                 y[i] += W[i][j] * x[j];
             }
             y[i] += hbias[i];
-            y[i] = sigmoid(y[i]);
+            
+            if (sigmoid)
+                y[i] = sigmoid(y[i]);
+            
+            if (i == 0)
+                max = min = y[i];
+            else {
+                if (y[i] > max) max = y[i];
+                if (y[i] < min) min = y[i];
+            }
+                
+        }
+        if (normalize) {
+            for (int i = 0; i < n_hidden; i++) {
+                y[i] = (y[i]-min)/(max-min);
+            }            
         }
     }
 
@@ -128,16 +145,19 @@ public class dA {
         double[] L_vbias = new double[n_visible];
         double[] L_hbias = new double[n_hidden];
 
-        double p = 1 - corruption_level;
-
-        get_corrupted_input(x, tilde_x, p);
-        getEncoded(tilde_x, y);
+        if (corruption_level > 0) {        
+            get_corrupted_input(x, tilde_x, 1 - corruption_level);
+        }
+        else {
+            tilde_x = x;
+        }
+        getEncoded(tilde_x, y, true, false);
         get_reconstructed_input(y, z);
 
         // vbias
         for (int i = 0; i < n_visible; i++) {
             L_vbias[i] = x[i] - z[i];
-            vbias[i] += lr * L_vbias[i] / N;
+            vbias[i] += lr * L_vbias[i];
         }
 
         // hbias
@@ -147,13 +167,13 @@ public class dA {
                 L_hbias[i] += W[i][j] * L_vbias[j];
             }
             L_hbias[i] *= y[i] * (1 - y[i]);
-            hbias[i] += lr * L_hbias[i] / N;
+            hbias[i] += lr * L_hbias[i];
         }
 
         // W
         for (int i = 0; i < n_hidden; i++) {
             for (int j = 0; j < n_visible; j++) {
-                W[i][j] += lr * (L_hbias[i] * tilde_x[j] + L_vbias[j] * y[i]) / N;
+                W[i][j] += lr * (L_hbias[i] * tilde_x[j] + L_vbias[j] * y[i]);
             }
         }
     }
@@ -161,14 +181,13 @@ public class dA {
     public void reconstruct(double[] x, double[] z) {
         double[] y = new double[n_hidden];
 
-        getEncoded(x, y);
+        getEncoded(x, y, true, false);
         get_reconstructed_input(y, z);
     }
 
     private static void test_dA() {
         Random rng = new Random(123);
 
-        double learning_rate = 0.1;
         double corruption_level = 0.3;
         int training_epochs = 100;
 
@@ -176,6 +195,8 @@ public class dA {
         int test_N = 2;
         int n_visible = 20;
         int n_hidden = 5;
+
+        double learning_rate = 0.1 / ((double)train_N);
 
         double[][] train_X = {
             {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -190,7 +211,7 @@ public class dA {
             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0}
         };
 
-        dA da = new dA(train_N, n_visible, n_hidden, null, null, null, rng);
+        dA da = new dA(n_visible, n_hidden, null, null, null, rng);
 
         // train
         for (int epoch = 0; epoch < training_epochs; epoch++) {
@@ -210,7 +231,7 @@ public class dA {
         // test
         for (int i = 0; i < test_N; i++) {
             double[] encoded_X = new double[n_hidden];
-            da.getEncoded(test_X[i], encoded_X);
+            da.getEncoded(test_X[i], encoded_X, false, false);
             
             printArray(test_X[i]);
             printArray(encoded_X);

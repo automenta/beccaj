@@ -42,6 +42,8 @@ public class Cog {
     private DenseMatrix64F activityStepUpOut;
     private DenseMatrix64F preCogCableActivities;
     private boolean preEnoughCable;
+    private DenseMatrix64F goalsStepDownOut;
+    private DenseMatrix64F preStepDownGoals;
 
     public Cog(int maxCables, int maxBundles, int maxChainsPerBundle, int level) {
         
@@ -102,14 +104,20 @@ public class Cog {
     public DenseMatrix64F getActivityStepUpOut() {
         return activityStepUpOut;
     }
-    
+
+    public DenseMatrix64F getGoalsStepDownOut() {
+        return goalsStepDownOut;
+    }
+        
     
     
     //""" bundle_goals percolate downward """
     public DenseMatrix64F stepDown(DenseMatrix64F goals) {
-        DenseMatrix64F zgoals = ziptie.stepDown(goals);
-        DenseMatrix64F dgoals = daisychain.stepDown(zgoals);
-        return dgoals;
+        if (goals == null)
+            goals = preStepDownGoals;
+        final DenseMatrix64F zgoals = ziptie.stepDown(goals);
+        goalsStepDownOut = daisychain.stepDown(zgoals);
+        return goalsStepDownOut;
     }
     
     //""" How many bundles have been created in this cog? """
@@ -148,6 +156,9 @@ public class Cog {
     void preStepUp(DenseMatrix64F cogCableActivities, boolean enoughCables) {
         this.preCogCableActivities = cogCableActivities;
         this.preEnoughCable = enoughCables;
+    }
+    void preStepDown(DenseMatrix64F goals) {
+        this.preStepDownGoals = goals;
     }
 
     

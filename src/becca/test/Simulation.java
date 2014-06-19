@@ -20,8 +20,8 @@ public class Simulation {
     public final Agent agent;
     private AgentPanel ap;
     private JFrame jf;
-    private int time;
-    boolean display = false;
+    private int time = 1;
+    boolean display = true;
     /*
     Run BECCA with world.  
 
@@ -57,6 +57,8 @@ public class Simulation {
 
             @Override
             public double[] getSensor() {
+                if (agent instanceof BeccaAgent)
+                    return ((BeccaAgent)agent).getPercept();
                 return agent.getSensor();
             }
 
