@@ -1,7 +1,6 @@
-package becca.core;
+package becca.core_mtj;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.ejml.data.DenseMatrix64F;
@@ -13,20 +12,19 @@ import static java.lang.Double.NaN;
 import java.util.ArrayDeque;
        
 /**
- * A general reinforcement learning agent
+ * BECCA Agent that uses the Hub component directly
  *
  * Takes in a time series of sensory input vectors and a scalar reward and puts
  * out a time series of action commands.
  */
-public class BeccaAgent implements Agent, Serializable {
-
+public class HubAgent implements Agent, Serializable {
     
-    public ArrayList<Block> blocks = new ArrayList();
     private int time; //current time step
 
     private ArrayDeque<Double> recentSurpriseHistory;
-    private int RECENT_SURPRISE_HISTORY_SIZE = BeccaParams.agentRecentSurpriseHistorySize;
-
+    
+    
+    
     private int numSensors;
     private int numActions;
     private int timeSinceRewardLog;
@@ -41,6 +39,8 @@ public class BeccaAgent implements Agent, Serializable {
     private double typicalSurprise;
     double blockInitializationThreshold;
     
+    
+    
     /*
          Configure the BeccaAgent
 
@@ -50,11 +50,11 @@ public class BeccaAgent implements Agent, Serializable {
          communicate with each other. 
     */
     
-    public BeccaAgent() {
+    public HubAgent() {
         
     }
     
-    public BeccaAgent(final int na, final int ns) {
+    public HubAgent(final int na, final int ns) {
         init(new World() {
 
             @Override
@@ -98,9 +98,8 @@ public class BeccaAgent implements Agent, Serializable {
         this.numActions = world.getNumActions();
         this.action = new double[numActions];
 
-        //first_block_name = ''.join(('block_', str(self.num_blocks - 1)))
-        blocks.add(new Block(numActions + numSensors));
-        this.hub = new Hub(blocks.get(0).maxCables);
+        //first_block_name = ''.join(('block_', str(self.num_blocks - 1)))        
+        this.hub = new Hub(numActions + numSensors);
 
         this.cumulativeReward = 0;
         this.timeSinceRewardLog = 0;
@@ -109,8 +108,8 @@ public class BeccaAgent implements Agent, Serializable {
         this.surpriseHistory = new LinkedList();
         this.blockInitializationThreshold = 0.5;
         
-        this.recentSurpriseHistory = new ArrayDeque(RECENT_SURPRISE_HISTORY_SIZE);
-        for (int i = 0; i < RECENT_SURPRISE_HISTORY_SIZE; i++)
+        this.recentSurpriseHistory = new ArrayDeque(BeccaParams.agentRecentSurpriseHistorySize);
+        for (int i = 0; i < BeccaParams.agentRecentSurpriseHistorySize; i++)
             recentSurpriseHistory.add(0.0);
 
         this.reward = 0;
@@ -133,47 +132,14 @@ public class BeccaAgent implements Agent, Serializable {
         System.arraycopy(action, 0, cableActivities.getData(), 0, numActions);
         System.arraycopy(sensor, 0, cableActivities.getData(), numActions, numSensors);
         
-        //# Propogate the new sensor inputs up through the blocks
-        DenseMatrix64F nextUp = cableActivities;
-        for (final Block b : blocks) {
-            nextUp = b.stepUp(nextUp);
-        }
         
-        //# Create a new block if the top block has had enough bundles assigned
-        Block topBlock = blocks.get(blocks.size()-1); //top block        
-        double blockBundlesFull = ((double)(topBlock.getBundlesCreated())) / ((double)(topBlock.maxBundles));
-        
-        if (blockBundlesFull > blockInitializationThreshold) {
-            Block b = new Block(numActions + numSensors, blocks.size());
-            blocks.add(b);
-            cableActivities = b.stepUp(cableActivities);
-            hub.addCables(b.maxCables);
-            //print "Added block", self.num_blocks - 1
-        }
-        
-        hub.step(blocks, reward);
+        hub.getCableActivities().set(cableActivities);
+        hub.step(null, reward);
 
-        //# Propogate the deliberation_goal_votes down through the blocks
+        DenseMatrix64F cableGoals = hub.getOutput();
+        
+        
         double agentSurprise = 0.0;
-        DenseMatrix64F cableGoals = new DenseMatrix64F(cableActivities.getNumCols() * cableActivities.getNumRows(), 1);
-
-        //blocks in reverse
-        for (int i = blocks.size()-1; i >=0; i--) {
-            Block b = blocks.get(i);
-            cableGoals = b.stepDown(cableGoals);
-            
-            /*
-            if np.nonzero(block.surprise)[0].size > 0:
-                agent_surprise = np.sum(block.surprise)            
-            */
-            DenseMatrix64F s = b.getSurprise();
-            double[] sd = s.getData();
-            int nonzeros = 0;
-            for (int g = 0; g < s.getNumElements(); g++)
-                nonzeros += sd[g] > 0 ? 1 : 0;            
-            if (nonzeros > 0)
-                agentSurprise = elementSum(s);
-        }
         
         if (recentSurpriseHistory.size() > 0)
             recentSurpriseHistory.removeFirst();    //remove first element
@@ -199,7 +165,21 @@ public class BeccaAgent implements Agent, Serializable {
 
         //Util.printArray(action);
         
- 
+        //test if action contains NaN or Inf
+        boolean invalidAction = false;
+        for (int ii = 0; ii < action.length; ii++) {
+            if ((!Double.isFinite(action[ii])) || (action[ii] == NaN)) {
+                invalidAction = true; 
+                break;
+            }
+        }
+        if (invalidAction) {
+            System.err.println("Invalid action");
+            printArray(action);
+            System.out.println(this);
+            System.exit(1);            
+        }
+        
         
         //backup?
         /*
@@ -210,6 +190,9 @@ public class BeccaAgent implements Agent, Serializable {
         //# Log reward
         this.cumulativeReward += reward;
         this.timeSinceRewardLog += 1;
+        
+        //decay actions
+        scale(BeccaParams.blockActivityDecayRate, cableGoals);
         
         return 0;
 
@@ -303,7 +286,6 @@ public class BeccaAgent implements Agent, Serializable {
     public String toString() {
         StringBuffer x = new StringBuffer();
         x.append("BeccaAgent (sensors=" + this.numSensors + ", actions=" + this.numActions + ") @ time=" + this.time + ":\n");
-        x.append("  " + this.blocks + "\n");
         x.append("  " + this.hub);
         
         //x.append("Reward history: " +this.rewardHistory + "\n");

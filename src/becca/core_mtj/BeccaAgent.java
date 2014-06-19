@@ -1,4 +1,4 @@
-package becca.core;
+package becca.core_mtj;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -169,7 +169,7 @@ public class BeccaAgent implements Agent, Serializable {
             DenseMatrix64F s = b.getSurprise();
             double[] sd = s.getData();
             int nonzeros = 0;
-            for (int g = 0; g < s.getNumElements(); g++)
+            for (int g = 0; g < sd.length; g++)
                 nonzeros += sd[g] > 0 ? 1 : 0;            
             if (nonzeros > 0)
                 agentSurprise = elementSum(s);
@@ -199,7 +199,21 @@ public class BeccaAgent implements Agent, Serializable {
 
         //Util.printArray(action);
         
- 
+        //test if action contains NaN or Inf
+        boolean invalidAction = false;
+        for (int ii = 0; ii < action.length; ii++) {
+            if ((!Double.isFinite(action[ii])) || (action[ii] == NaN)) {
+                invalidAction = true; 
+                break;
+            }
+        }
+        if (invalidAction) {
+            System.err.println("Invalid action");
+            printArray(action);
+            System.out.println(this);
+            System.exit(1);            
+        }
+        
         
         //backup?
         /*

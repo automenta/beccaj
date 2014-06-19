@@ -181,14 +181,7 @@ public class QLearningGrid1D implements Runnable {
         //mazeValueFunction = new MazeValueFunction(problem, qlearning, toStateAction, qlearning.greedy());
         Zephyr.advertise(clock, this);
         
-        new DynamicChart() {
-
-            @Override
-            public double getReward() {
-                return problem.getReward();
-            }
-            
-        };
+ 
     }
 
     @Override

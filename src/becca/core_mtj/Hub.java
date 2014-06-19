@@ -1,4 +1,4 @@
-package becca.core;
+package becca.core_mtj;
 
 
 /*
@@ -15,10 +15,12 @@ package becca.core;
  4) declares that goal in the appropriate block.
  */
 import java.util.ArrayList;
-import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
+import static becca.core_mtj.Util.maxRow;
+import static becca.core_mtj.Util.minRow;
 import java.util.LinkedList;
+import no.uib.cipr.matrix.DenseMatrix;
 
 public class Hub {
 
@@ -35,18 +37,17 @@ public class Hub {
     private double oldReward;
     public final LinkedList<Double> rewardTrace;
 
-    private DenseMatrix64F count;
-    private DenseMatrix64F expectedReward;
-    private DenseMatrix64F cableActivities;
-    private final LinkedList<DenseMatrix64F> pre;
-    private final LinkedList<DenseMatrix64F> post;
-    private DenseMatrix64F chainActivities;
-    private DenseMatrix64F estimatedRewardValue;
+    private DenseMatrix count;
+    private DenseMatrix expectedReward;
+    private DenseMatrix cableActivities;
+    private final LinkedList<DenseMatrix> pre;
+    private final LinkedList<DenseMatrix> post;
+    private DenseMatrix chainActivities;
+    private DenseMatrix estimatedRewardValue;
     private final double[] rewardTraceArray;
     final private ArrayList<Integer> potentialWinners = new ArrayList();
-    private DenseMatrix64F rewardUncertainty;
-    private DenseMatrix64F activatedHubCableGoal;
-    private final double[] rewardDecayFactor;
+    private DenseMatrix rewardUncertainty;
+    private DenseMatrix activatedHubCableGoal;
 
     public Hub(int initialNumCables) {
         this.numCables = initialNumCables;
@@ -64,7 +65,7 @@ public class Hub {
         this.rewardMax = -Util.BIG;
         this.oldReward = 0.0;
 
-        this.count = new DenseMatrix64F(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
+        this.count = new DenseMatrix(this.numCables, this.numCables); // np.zeros((this.num_cables, this.num_cables))
         //this.count = new DenseMatrix(this.numCables, this.numCables);
 
         this.rewardTrace = new LinkedList();
@@ -73,13 +74,12 @@ public class Hub {
         }
         rewardTraceArray = new double[rewardTrace.size()];
 
-        this.expectedReward = new DenseMatrix64F(this.numCables, this.numCables);
-        fill(expectedReward, INITIAL_REWARD);
+        this.expectedReward = new DenseMatrix(this.numCables, this.numCables);             fill(expectedReward, INITIAL_REWARD);
 
-        this.cableActivities = new DenseMatrix64F(numCables, 1);
-        this.chainActivities = new DenseMatrix64F(numCables, numCables);
-        this.estimatedRewardValue = new DenseMatrix64F(numCables, numCables);
-        this.rewardUncertainty = new DenseMatrix64F(numCables, numCables);
+        this.cableActivities = new DenseMatrix(numCables, 1);
+        this.chainActivities = new DenseMatrix(numCables, numCables);
+        this.estimatedRewardValue = new DenseMatrix(numCables, numCables);
+        this.rewardUncertainty = new DenseMatrix(numCables, numCables);
 
         /*# pre represents the feature and sensor activities at a given
          # time step.
@@ -89,16 +89,10 @@ public class Hub {
         for (int i = 0; i < this.TRACE_LENGTH; i++) {
             /*this.pre = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH) 
              this.post = [np.zeros((this.num_cables, 1))] * (this.TRACE_LENGTH)*/
-            pre.add(new DenseMatrix64F(this.numCables, 1));
-            post.add(new DenseMatrix64F(this.numCables, 1));
+            pre.add(new DenseMatrix(this.numCables, 1));
+            post.add(new DenseMatrix(this.numCables, 1));
         }
 
-        rewardDecayFactor = new double[TRACE_LENGTH];
-        for (int i = 0; i < TRACE_LENGTH; i++) {
-            rewardDecayFactor[i] = Math.pow((1.0 - REWARD_DECAY_RATE), i);
-        }        
-        /*System.out.println("reward decay factor=" + REWARD_DECAY_RATE + " for " + TRACE_LENGTH + " length");
-        printArray(rewardDecayFactor);*/
     }
 
     @Override
@@ -175,8 +169,8 @@ public class Hub {
          # post is the selected goal that followed.
          */
         //this.chain_activities = this.pre[0] * this.post[0].T
-        DenseMatrix64F firstPre = pre.peekFirst();
-        DenseMatrix64F firstPost = post.peekFirst();
+        DenseMatrix firstPre = pre.peekFirst();
+        DenseMatrix firstPost = post.peekFirst();
 
         assert (firstPre.getNumRows() == count.getNumRows());
         assert (firstPre.getNumRows() == firstPost.getNumRows());
@@ -196,12 +190,12 @@ public class Hub {
 
         //# Calculate the rate at which to update the reward estimate
         //update_rate_raw = (this.chain_activities * ((1 - this.UPDATE_RATE) / (this.count + tools.EPSILON) + this.UPDATE_RATE))
-        final DenseMatrix64F updateRateRawFactor = count.copy();
+        final DenseMatrix updateRateRawFactor = count.copy();
         add(updateRateRawFactor, EPSILON);
         matrixPower(updateRateRawFactor, -1.0);
         scale((1.0 - UPDATE_RATE), updateRateRawFactor);
         add(updateRateRawFactor, UPDATE_RATE);
-        final DenseMatrix64F updateRate = new DenseMatrix64F(chainActivities.getNumRows(), updateRateRawFactor.getNumCols());
+        final DenseMatrix updateRate = new DenseMatrix(chainActivities.getNumRows(), updateRateRawFactor.getNumCols());
         elementMult(chainActivities, updateRateRawFactor, updateRate);
 
         //update_rate = np.minimum(0.5, update_rate_raw)
@@ -220,27 +214,30 @@ public class Hub {
          # TODO: substitute np.arange in this statement
          decay_exponents = (1. - this.REWARD_DECAY_RATE) ** (np.cumsum(np.ones(this.TRACE_LENGTH)) - 1.)
          */
-        //calculated in constructor
+        double[] decayExponents = new double[TRACE_LENGTH];
+        for (int i = 0; i < TRACE_LENGTH; i++) {
+            decayExponents[i] = Math.pow((1.0 - REWARD_DECAY_RATE), i);
+        }
 
         //decayed_array = reward_array.ravel() * decay_exponents        
         //reward = np.sum(decayed_array.ravel())
         double reward = 0;
         for (int i = 0; i < rewardTraceArray.length; i++) {
-            rewardTraceArray[i] *= rewardDecayFactor[i];
+            rewardTraceArray[i] *= decayExponents[i];
             reward += rewardTraceArray[i];
         }
 
         //System.out.println("ER: " + elementSum(expectedReward) );        
         //reward_difference = reward - this.expected_reward
-        DenseMatrix64F rewardDifference = expectedReward.copy();
+        DenseMatrix rewardDifference = expectedReward.copy();
         scale(-1, rewardDifference);
         add(rewardDifference, reward);
 
         //System.out.println("ER: " + elementSum(expectedReward) + " RD:" + elementSum(rewardDifference) + " " + reward);
         //this.expected_reward += reward_difference * update_rate
-        //DenseMatrix64F erDelta = new DenseMatrix64F(rewardDifference.getNumRows(), updateRate.getNumCols());
+        //DenseMatrix erDelta = new DenseMatrix(rewardDifference.getNumRows(), updateRate.getNumCols());
         //mult(rewardDifference, updateRate, erDelta);
-        DenseMatrix64F erDelta = multMatrixMatrix(rewardDifference, updateRate);
+        DenseMatrix erDelta = multMatrixMatrix(rewardDifference, updateRate);
         addEquals(expectedReward, erDelta);
 
         //System.out.println("ERDelta: " + elementSum(erDelta));
@@ -255,7 +252,7 @@ public class Hub {
          # encouraging exploration.
          reward_uncertainty = (np.random.normal(size=this.count.shape) * this.EXPLORATION / (this.count + 1.))
          */
-        DenseMatrix64F uncertainNumerator = normRandMatrix(count.getNumRows(), count.getNumCols(), EXPLORATION, 0.0);
+        DenseMatrix uncertainNumerator = normRandMatrix(count.getNumRows(), count.getNumCols(), EXPLORATION, 0.0);
         rewardUncertainty.set(count);
         add(rewardUncertainty, 1.0);
         matrixDivBy(rewardUncertainty, uncertainNumerator);
@@ -269,7 +266,7 @@ public class Hub {
          # First find the estimated reward associated with each chain.
          chain_votes = (this.cable_activities * this.estimated_reward_value + tools.EPSILON)
          */
-        DenseMatrix64F chainVotes = matrixVector(estimatedRewardValue, cableActivities);
+        DenseMatrix chainVotes = matrixVector(estimatedRewardValue, cableActivities);
         add(chainVotes, EPSILON);
 
         /*
@@ -278,14 +275,14 @@ public class Hub {
          # And the minimum estimated reward associated with each potential goal
          lo_end = np.min(chain_votes, axis=0)
          */
-        DenseMatrix64F hiEnd = maxRow(chainVotes);
-        DenseMatrix64F loEnd = minRow(chainVotes);
+        DenseMatrix hiEnd = maxRow(chainVotes);
+        DenseMatrix loEnd = minRow(chainVotes);
 
         /*
          # Sum the maxes and mins to find the goal with the highest mid-range  
          goal_votes = hi_end + lo_end
          */
-        DenseMatrix64F goalVotes = loEnd; //loEnd.copy();
+        DenseMatrix goalVotes = loEnd; //loEnd.copy();
         addEquals(goalVotes, hiEnd);
 
         //potential_winners = np.where(goal_votes == np.max(goal_votes))[0] 
@@ -293,7 +290,7 @@ public class Hub {
         potentialWinners.clear();
         potentialWinners.ensureCapacity(goalVotes.getNumElements());
         double[] gvd = goalVotes.getData();
-        for (int i = 0; i < goalVotes.getNumElements(); i++) {
+        for (int i = 0; i < gvd.length; i++) {
             if (gvd[i] == maxGoalVote) {
                 potentialWinners.add(i);
             }
@@ -344,7 +341,7 @@ public class Hub {
 
         if (blocks != null) {
             for (Block b : blocks) {
-                DenseMatrix64F h = b.getHubCableGoals();
+                DenseMatrix h = b.getHubCableGoals();
                 activatedHubCableGoal = h;
                 int block_size = h.getNumElements();
                 if (cableIndex >= block_size) {
@@ -357,32 +354,32 @@ public class Hub {
             }
         } else {
             if (activatedHubCableGoal == null)
-                activatedHubCableGoal = new DenseMatrix64F(numCables, 1);
+                activatedHubCableGoal = new DenseMatrix(numCables, 1);
             activateGoal(activatedHubCableGoal, cableIndex, goalCable);            
         }
 
         //System.err.println("No goal chosen");
     }
 
-    public DenseMatrix64F getOutput() {
+    public DenseMatrix getOutput() {
         return activatedHubCableGoal;
     }
     
-    protected void activateGoal(DenseMatrix64F h, int cableIndex, int goalCable) {
+    protected void activateGoal(DenseMatrix h, int cableIndex, int goalCable) {
                     //# Activate the goal
         //block.hub_cable_goals[cable_index] = 1.
         assert (h.getNumCols() == 1);
         h.set(cableIndex, 0, 1.0);
 
         //new_post  = np.zeros(self.post[0].shape)
-        DenseMatrix64F newPost = new DenseMatrix64F(post.peekFirst().getNumRows(), post.peekFirst().getNumCols());
+        DenseMatrix newPost = new DenseMatrix(post.peekFirst().getNumRows(), post.peekFirst().getNumCols());
         assert (newPost.getNumCols() == 1);
         newPost.set(goalCable, 0, 1);
 
                     //# Remove deliberate goals and actions from pre
         //new_pre = np.maximum(self.cable_activities.copy() - self.post[-1].copy(), 0.)
-        DenseMatrix64F newPre = cableActivities.copy();
-        DenseMatrix64F newPreDiff = post.peekLast().copy();
+        DenseMatrix newPre = cableActivities.copy();
+        DenseMatrix newPreDiff = post.peekLast().copy();
         subEquals(newPre, newPreDiff);
         matrixMaximum(newPre, 0);
 
@@ -402,15 +399,15 @@ public class Hub {
         //self._display()
     }
 
-    public DenseMatrix64F getCount() {
+    public DenseMatrix getCount() {
         return count;
     }
 
-    public DenseMatrix64F getCableActivities() {
+    public DenseMatrix getCableActivities() {
         return cableActivities;
     }
 
-    public DenseMatrix64F getChainActivities() {
+    public DenseMatrix getChainActivities() {
         return chainActivities;
     }
 
@@ -471,19 +468,19 @@ public class Hub {
         return rewardTraceArray;
     }
 
-    public DenseMatrix64F getExpectedReward() {
+    public DenseMatrix getExpectedReward() {
         return expectedReward;
     }
 
-    public DenseMatrix64F getEstimatedRewardValue() {
+    public DenseMatrix getEstimatedRewardValue() {
         return estimatedRewardValue;
     }
 
-    public LinkedList<DenseMatrix64F> getPre() {
+    public LinkedList<DenseMatrix> getPre() {
         return pre;
     }
 
-    public LinkedList<DenseMatrix64F> getPost() {
+    public LinkedList<DenseMatrix> getPost() {
         return post;
     }
 

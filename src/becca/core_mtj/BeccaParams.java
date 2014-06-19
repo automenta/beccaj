@@ -1,7 +1,6 @@
-package becca.core;
+package becca.core_mtj;
 
 public class BeccaParams {
-    
     static int stmSize = 32; //short-term memory size, in cycles (time)
     
     //Agent ---------------------------------------------------    
@@ -26,7 +25,7 @@ public class BeccaParams {
     static double hubInitialReward = 0.0;
     static double hubUpdateRate = Math.pow(10, -3);
     
-    static double hubRewardDecayRate = decayRate(stmSize); //Recalculate in terms of how many cycles before reward at that history is insignificant (< epsilon).  this cycle time should be approximately equal to hubTraceLength, or can be exactly that
+    static double hubRewardDecayRate = .6; //Recalculate in terms of how many cycles before reward at that history is insignificant (< epsilon).  this cycle time should be approximately equal to hubTraceLength, or can be exactly that
     
     static double hubForgettingRate = Math.pow(10, -3);
     static double hubExploration = .1;
@@ -51,11 +50,6 @@ public class BeccaParams {
     static double cogziptieAgglomerationEnergyRate = 1E-4;
     static double cogziptieActivationWeightingExponent = 5;
     
-   
-    public static double decayRate(int cycles) {
-        double epsilon = 0.0001; // value for which the result would be insignificant
-        return 1.0 - Math.pow(epsilon, (1.0/((double)cycles)));
-    }
     
     
 }

@@ -1,6 +1,6 @@
 package becca.core;
 
-import com.github.fommil.netlib.BLAS;
+import static becca.core.Util.m;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Random;
@@ -12,14 +12,6 @@ import org.ejml.ops.CommonOps;
 
 public class Util extends CommonOps {
 
-    //-Dcom.github.fommil.netlib.BLAS=com.github.fommil.netlib.NativeRefBLAS
-    static {
-        System.setProperty("com.github.fommil.netlib.BLAS", "com.github.fommil.netlib.NativeRefBLAS");
-        BLAS.getInstance();
-    }
-    //https://raw.githubusercontent.com/fommil/matrix-toolkits-java/master/src/main/java/no/uib/cipr/matrix/Matrix.java
-    //https://raw.githubusercontent.com/fommil/matrix-toolkits-java/master/src/main/java/no/uib/cipr/matrix/Matrices.java
-    //https://github.com/fommil/matrix-toolkits-java/tree/master/src/test/java/no/uib/cipr/matrix
 
     public final static double EPSILON = 2.0 * Precision.EPSILON;   // // sys.float_info.epsilon = 2.220446049250313e-16
     public final static double BIG = Math.pow(10, 20);
@@ -41,7 +33,7 @@ public class Util extends CommonOps {
         final double[] cd = c.getData();
         final double[] ad = a.getData();
         final double[] bd = b.getData();
-        for (int i = 0; i < cd.length; i++) {
+        for (int i = 0; i < a.elements; i++) {
             cd[i] = ad[i] * bd[i];
         }
 
@@ -62,10 +54,10 @@ public class Util extends CommonOps {
         //weighted_sum_values = np.sum(values * weights, axis=0)                 
         DenseMatrix64F valueWeightProduct = multMatrixMatrix(values, weights);
 
-        final DenseMatrix64F weightedSumValues = sumCols(valueWeightProduct, null);
+        final DenseMatrix64F weightedSumValues = sumColsT(valueWeightProduct, null);
 
         //sum_of_weights = np.sum(weights, axis=0)         
-        final DenseMatrix64F sumOfWeights = sumCols(weights, null);
+        final DenseMatrix64F sumOfWeights = sumColsT(weights, null);
 
         //return (weighted_sum_values / (sum_of_weights + EPSILON))[:,np.newaxis]
         final double[] wsd = weightedSumValues.getData();
@@ -90,32 +82,45 @@ public class Util extends CommonOps {
     public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector) {
         return matrixVector(matrix, vector, true);
     }
+    
 
     public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector, final boolean multiply) {
         //ex: (8, 32) * (1, 32) -> (8, 32)
 
+        //TODO iterate in order when possible
+        
         final DenseMatrix64F result = new DenseMatrix64F(matrix.getNumRows(), matrix.getNumCols());
         final double[] vdata = vector.getData();
+        final double[] mdata = matrix.getData();
+        final double[] rdata = result.getData();
 
         if ((vector.getNumRows() == 1) && (matrix.getNumCols() == vector.getNumCols())) {
 
-            for (int j = 0; j < matrix.getNumCols(); j++) {
+            for (int j = 0; j < matrix.numCols; j++) {
                 final double vdi = vdata[j];
-                for (int i = 0; i < matrix.getNumRows(); i++) {
-                    final double mij = matrix.unsafe_get(i, j);
-                    final double r = multiply ? mij * vdi : mij / vdi;
-                    result.unsafe_set(i, j, r);
+                int index = j;
+                for (int i = 0; i < matrix.numRows; i++) {
+                    //final int index = matrix.getIndex(i, j);
+                    
+                    final double mij = mdata[index];
+                    final double r = multiply ? mij * vdi : mij / vdi;                               rdata[index] = r;
+                    
+                    index += matrix.numCols;
                 }
             }
         } else {
             assert (matrix.getNumRows() == vector.getNumRows());
 
+            int index = 0;
             for (int i = 0; i < matrix.getNumRows(); i++) {
                 final double vdi = vdata[i];
                 for (int j = 0; j < matrix.getNumCols(); j++) {
-                    final double mij = matrix.unsafe_get(i, j);
+                    //final int index = matrix.getIndex(i, j);
+
+                    final double mij = mdata[index];
                     final double r = multiply ? mij * vdi : mij / vdi;
-                    result.unsafe_set(i, j, r);
+                    rdata[index] = r;
+                    index++;
                 }
             }
 
@@ -163,7 +168,7 @@ public class Util extends CommonOps {
         //# Find means for which all weights are zero. These are undefined.
         //# Set them equal to zero.
         //sum_weights = np.sum(weights, axis=0)
-        final DenseMatrix64F sumWeights = sumCols(weights, null);
+        final DenseMatrix64F sumWeights = sumColsT(weights, null);
 
         //zero_indices = np.where(np.abs(sum_weights) < EPSILON)
         //mean[zero_indices] = 0.        
@@ -246,12 +251,44 @@ public class Util extends CommonOps {
         DenseMatrix64F n = m.copy();
         mapOneToInf(n.getData(), null);
 
-        DenseMatrix64F r = transpose(sumCols(n, null), null);
+        DenseMatrix64F r = sumColsT(n, null, true);
 
         mapInfToOne(r.getData(), null);
         return r;
     }
 
+    //faster implementation equivalent to: transpose(sumCols(n, null), null);
+    public static DenseMatrix64F sumColsT( final DenseMatrix64F input , final DenseMatrix64F output ) {
+        return sumColsT(input, output, false);
+    }
+    
+    public static DenseMatrix64F sumColsT( final DenseMatrix64F input , DenseMatrix64F output, final boolean transpose ) {
+        
+        if( output == null ) {
+            if (transpose)
+                output = new DenseMatrix64F(input.numCols, 1);
+            else
+                output = new DenseMatrix64F(1, input.numCols);
+            
+        } else if( output.elements != input.numCols )
+            throw new IllegalArgumentException("Output does not have enough elements to store the results");
+
+        final double[] od = output.getData();
+        final int indexJump = input.numCols*input.numRows;
+        for( int cols = 0; cols < input.numCols; cols++ ) {
+            double total = 0;
+
+            int index = cols;
+            int end = index + indexJump;
+            for( ; index < end; index += input.numCols ) {
+                total += input.data[index];
+            }
+
+            od[cols] = total;
+        }
+        return output;
+    }
+    
     static double[] boundedSum(final int axis, final double[]  
         ... a) {
         /* 
@@ -295,17 +332,20 @@ public class Util extends CommonOps {
         //exracts the elements where indexProjection!=0
         // emulates: cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).ravel().astype(bool)]
 
-        indexProjection = transpose(indexProjection, null); //both row=oriented
+        //indexProjection = transpose(indexProjection, null); //both row=oriented
 
-        double[] activities = new double[indexProjection.getNumRows()];
+        assert(cableActivities.getNumCols() == 1);
+        assert(indexProjection.elements == cableActivities.getNumRows());
+        
+        final double[] activities = new double[indexProjection.getNumRows()];
+        final double[] ca = cableActivities.getData();
+        final double[] ipd = indexProjection.getData();
         int activityNum = 0;
         for (int i = 0; i < indexProjection.getNumRows(); i++) {
-            double v = indexProjection.get(i, 0);
-            if (v != 0) {
-                activities[activityNum++] = cableActivities.get(i, 0);
-            }
+            if (ipd[i] != 0)
+                activities[activityNum++] = ca[i];
         }
-
+        
         DenseMatrix64F result = DenseMatrix64F.wrap(activityNum, 1, activities);
 
         /*if (activityNum > 0) {
@@ -405,25 +445,26 @@ public class Util extends CommonOps {
     public static void matrixDivBy(final DenseMatrix64F x, final DenseMatrix64F numerator) {
         final double[] d = x.getData();
         final double[] n = numerator.getData();
-        for (int j = 0; j < d.length; j++) {
+        for (int j = 0; j < x.elements; j++) {
             d[j] = n[j] / d[j];
         }
     }
 
     public static void matrixPower(final DenseMatrix64F m, final double exponent) {
         final double[] d = m.getData();
-        for (int i = 0; i < d.length; i++) {
-            if (exponent == -1) {
+        if (exponent == -1) {
+            for (int i = 0; i < m.elements; i++)
                 d[i] = 1.0 / d[i]; //should be faster than Math.pow
-            } else {
+        }
+        else {
+            for (int i = 0; i < m.elements; i++)
                 d[i] = Math.pow(d[i], exponent);
-            }
         }
     }
 
     public static void matrixPowerExp(final DenseMatrix64F m, final double base) {
         final double[] d = m.getData();
-        for (int i = 0; i < d.length; i++) {
+        for (int i = 0; i < m.elements; i++) {
             d[i] = Math.pow(base, d[i]);
         }
     }
@@ -434,11 +475,11 @@ public class Util extends CommonOps {
         for (int i = 0; i < x.getNumCols(); i++) {
             for (int j = 0; j < x.getNumRows(); j++) {
                 if (i == 0) {
-                    projection.unsafe_set(j, 0, x.get(j, 0));
+                    projection.set(j, 0, x.get(j, 0));
                 } else {
-                    double cg = x.unsafe_get(j, i);
+                    double cg = x.get(j, i);
                     if (cg < pd[j]) {
-                        projection.unsafe_set(j, 0, cg);
+                        projection.set(j, 0, cg);
                     }
                 }
             }
@@ -454,11 +495,11 @@ public class Util extends CommonOps {
         for (int i = 0; i < x.getNumCols(); i++) {
             for (int j = 0; j < x.getNumRows(); j++) {
                 if (i == 0) {
-                    projection.unsafe_set(j, 0, x.get(j, 0));
+                    projection.set(j, 0, x.get(j, 0));
                 } else {
-                    double cg = x.unsafe_get(j, i);
+                    double cg = x.get(j, i);
                     if (cg < pd[j]) {
-                        projection.unsafe_set(j, 0, cg);
+                        projection.set(j, 0, cg);
                     }
                 }
             }
@@ -467,14 +508,15 @@ public class Util extends CommonOps {
     }
 
     static DenseMatrix64F maxRow(final DenseMatrix64F x) {
+        //TODO iterate in contiguous parts
         final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
         final double[] pd = projection.getData();
         for (int i = 0; i < x.getNumRows(); i++) {
             for (int j = 0; j < x.getNumCols(); j++) {
                 if (i == 0) {
-                    pd[j] = x.unsafe_get(0, j);
+                    pd[j] = x.get(0, j);
                 } else {
-                    final double cg = x.unsafe_get(i, j);
+                    final double cg = x.get(i, j);
                     if (cg > pd[j]) {
                         pd[j] = cg;
                     }
@@ -487,14 +529,16 @@ public class Util extends CommonOps {
     //TODO unify these two funcs ^v
 
     static DenseMatrix64F minRow(final DenseMatrix64F x) {
+        //TODO iterate in contiguous parts
+        
         final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
         final double[] pd = projection.getData();
         for (int i = 0; i < x.getNumRows(); i++) {
             for (int j = 0; j < x.getNumCols(); j++) {
                 if (i == 0) {
-                    pd[j] = x.unsafe_get(0, j);
+                    pd[j] = x.get(0, j);
                 } else {
-                    final double cg = x.unsafe_get(i, j);
+                    final double cg = x.get(i, j);
                     if (cg < pd[j]) {
                         pd[j] = cg;
                     }
@@ -525,7 +569,7 @@ public class Util extends CommonOps {
         for (int i = 0; i < numRows; i++) {
             final double C = cd[i];
             for (int j = 0; j < numCols; j++) {
-                r.unsafe_set(i, j, C);
+                r.set(i, j, C);
             }
         }
         return r;
@@ -534,10 +578,13 @@ public class Util extends CommonOps {
     static DenseMatrix64F broadcastCols(final DenseMatrix64F row, final int numRows) {
         //TODO see if can be created by arraycopy repeatedly, depends on row ordering        
         int numCols = row.getNumCols();
+        final double[] rd = row.getData();
+        
         final DenseMatrix64F r = new DenseMatrix64F(numRows, numCols);
-        for (int i = 0; i < numRows; i++) {
-            for (int j = 0; j < numCols; j++) {
-                r.set(i, j, row.get(0, j));
+        for (int j = 0; j < numCols; j++) {
+            final double R = rd[j];
+            for (int i = 0; i < numRows; i++) { 
+                r.set(i, j, R);
             }
         }
         return r;

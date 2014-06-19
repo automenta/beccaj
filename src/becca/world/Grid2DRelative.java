@@ -27,15 +27,19 @@ public class Grid2DRelative implements World {
     private int time;
 
     private final double noise;
-    private int focusPositionX;
-    private int focusPositionY;
+    private double focusPositionX;
+    private double focusPositionY;
 
+    private int nextFocusPositionX;
+    private int nextFocusPositionY;
+    
     private double positionX;
     private double positionY;
     private Image2DPanel image;
     private final double POSITION_VELOCITY;
     private double[] sensor;
-    private boolean showDisplay;
+    private boolean showDisplay = true;
+    int displayPeriod = 16;
 
     public class Image2DPanel extends JPanel {
         private final BufferedImage bi;
@@ -67,8 +71,8 @@ public class Grid2DRelative implements World {
             //g2.setPaint(Color.RED);
             //g2.fillRect(focusPositionX-1, focusPositionY-1, 2, 2);
 
-            g2.setPaint(Color.BLUE);
-            g2.fillRect((int)Math.round(positionX)-1, (int)Math.round(positionY)-1, 2, 2);
+            g2.setPaint(new Color(0, 0, 1.0f, 0.85f));
+            g2.fillRect((int)Math.round(positionX), (int)Math.round(positionY), 1, 1);
         }
         @Override
         public void paint(Graphics g) {
@@ -107,8 +111,8 @@ public class Grid2DRelative implements World {
     }
 
     protected void randomFocus() {
-        this.focusPositionX = (int) (Math.random() * width);
-        this.focusPositionY = (int) (Math.random() * height);
+        this.nextFocusPositionX = (int) (Math.random() * width);
+        this.nextFocusPositionY = (int) (Math.random() * height);
     }
 
     @Override
@@ -141,6 +145,10 @@ public class Grid2DRelative implements World {
 
         this.sensor = sensor;
         this.action = action;
+        
+        double speed = 0.001;
+        focusPositionX = speed * ((double)nextFocusPositionX) + (1.0 - speed) * focusPositionX;
+        focusPositionY = speed * ((double)nextFocusPositionY) + (1.0 - speed) * focusPositionY;
 
         //# At random intervals, jump to a random position in the world
         if (Math.random() < JUMP_FRACTION) {
@@ -225,7 +233,8 @@ public class Grid2DRelative implements World {
         }
 
         if (showDisplay) {
-            image.updateImage();
+            if (time % displayPeriod == 0)
+                image.updateImage();
         }
         
         return reward;

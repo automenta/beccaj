@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package becca.core;
+package becca.core_mtj;
 
 import java.util.ArrayList;
 import org.ejml.data.BlockMatrix64F;
@@ -12,7 +12,7 @@ import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
 
 import static becca.core.Util.*;
-import static java.lang.Double.NaN;
+import static becca.core_mtj.Util.boundedSum;
 
 /**
     Blocks are the building block of which the agent is composed
@@ -178,7 +178,7 @@ public class Block  {
             //self.bundle_activities = np.concatenate((self.bundle_activities,cog_bundle_activities))
             double[] cbaData = cogBundleActivities.getData();
             bundleActivitiez.add(cbaData);
-            numBundleActivitiez += cogBundleActivities.elements;
+            numBundleActivitiez += cbaData.length;
             
             cogIndex++;
         }
@@ -252,11 +252,11 @@ public class Block  {
             
             
             int comparedI = 0, comparedIS = 0;
-            for (int i = 0; i < cogCableIndices.elements; i++) {
+            for (int i = 0; i < ccid.length; i++) {
                 
                 if (ccid[i]>0) {
                     
-                    for (int j = 0; j < cableGoalsByCog.numCols; j++) {
+                    for (int j = 0; j < cableGoalsByCog.getNumCols(); j++) {
                         
                         //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
                         
@@ -279,8 +279,7 @@ public class Block  {
                 
                     //for (int j = 0; j < surprise.getNumRows(); j++) {
 
-                    
-                    if ((cs.getNumRows() > comparedIS) && (cs.elements > comparedIS)) {
+                    if (cs.getNumRows() > comparedIS) {
                         surprise.set(i, 0, 
                                 Math.max(surprise.get(i, 0), cs.get(comparedIS++, 0)));
                     }
@@ -302,26 +301,6 @@ public class Block  {
         //System.out.println(transpose(hubCableGoals,null));
         //System.out.println();
         
-        
-        
-       //test if action contains NaN or Inf        
-        final double[] action = hubCableGoals.getData();
-        boolean invalidAction = false;
-        for (int ii = 0; ii < action.length; ii++) {
-            if ((!Double.isFinite(action[ii])) || (action[ii] == NaN)) {
-                //System.out.println("WTF is " + action[ii]);
-                //invalidAction = true; 
-                
-                action[ii] = 0;
-            }
-        }
-        if (invalidAction) {
-            System.err.println("Invalid action");
-            printArray(action);
-            //System.out.println(this);
-            //System.exit(1);            
-        }
-                
         return this.hubCableGoals;
     }
 

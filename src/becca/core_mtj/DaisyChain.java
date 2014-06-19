@@ -1,8 +1,11 @@
-package becca.core;
+package becca.core_mtj;
 
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
+import static becca.core_mtj.Util.boundedSum;
+import static becca.core_mtj.Util.broadcastCols;
+import static becca.core_mtj.Util.broadcastRows;
 
 /**
     An incremental model-based reinforcement learning algorithm
@@ -142,7 +145,7 @@ public class DaisyChain {
         //""" Train the daisychain using the current cable_activities """
             
         //self.num_cables = np.maximum(self.num_cables, cable_activities.size)        
-        numCables = Math.max(numCables, cableActivities.elements);
+        numCables = Math.max(numCables, cableActivities.getNumElements());
         
         //# Pad the incoming cable_activities array out to its full size 
         //cable_activities = tools.pad(cable_activities, (self.max_num_cables, 0))
@@ -168,7 +171,7 @@ public class DaisyChain {
         //set the main diagonal (of size pre) of chainActivities to zero
         //chain_activities[np.nonzero(np.eye(self.pre.size))] = 0.
         if (!allowSelfTransitions) {
-            DenseMatrix64F eye = identity(pre.elements);
+            DenseMatrix64F eye = identity(pre.getNumElements());
             scale(-1, eye);
             add(eye, 1);
             elementMult(chainActivities, eye);
@@ -210,7 +213,7 @@ public class DaisyChain {
         //ALTERNATE CALCULATION of updateRatePost:
         final DenseMatrix64F updateRatePost = preCount.copy();
         final double[] updateRatePostD = updateRatePost.getData();
-        for (int i = 0; i < updateRatePost.elements; i++) {
+        for (int i = 0; i < updateRatePostD.length; i++) {
             final double u = updateRatePostD[i];
             final double v = 
                     Math.min(
@@ -287,7 +290,7 @@ public class DaisyChain {
         //# Reshape chain activities into a single column
         //return chain_activities.ravel()[:,np.newaxis]
         //check the order: http://docs.scipy.org/doc/numpy/reference/generated/numpy.ravel.html?highlight=ravel
-        return DenseMatrix64F.wrap(chainActivities.elements, 1, chainActivities.getData());
+        return DenseMatrix64F.wrap(chainActivities.getNumElements(), 1, chainActivities.getData());
     }
     
     public DenseMatrix64F stepDown(DenseMatrix64F chainGoals) {
@@ -297,7 +300,7 @@ public class DaisyChain {
         //# Reshape chain_goals back into a square array 
         //chain_goals = np.reshape(chain_goals, (self.post.size, -1))
         chainGoals = DenseMatrix64F.wrap(
-                post.elements, chainGoals.elements / post.elements,
+                post.getNumElements(), chainGoals.getNumElements() / post.getNumElements(),
                 chainGoals.getData()
         );
                         

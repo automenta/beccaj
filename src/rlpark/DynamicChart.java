@@ -13,9 +13,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Timer;
 import java.util.TimerTask;
-import javafx.stage.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import org.ejml.data.DenseMatrix64F;
@@ -27,7 +27,9 @@ import org.ejml.ops.MatrixComponent;
  */
 abstract public class DynamicChart {
 
-    public DynamicChart(String name) {
+    public DynamicChart(/*String name*/) {
+        super();
+        
         // Create a chart:  
         Chart2D chart = new Chart2D();
         chart.setMinimumSize(new Dimension(400, 200));
@@ -50,7 +52,7 @@ abstract public class DynamicChart {
     // Make it visible:
         // Create a frame. 
         JFrame frame = new JFrame("MinimalDynamicChart");
-        frame.setTitle(name);
+        //frame.setTitle(name);
         // add the chart to the frame: 
         frame.getContentPane().add(p);
         frame.setSize(700, 800);

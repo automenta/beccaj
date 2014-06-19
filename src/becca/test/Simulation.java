@@ -8,8 +8,8 @@ package becca.test;
 
 import becca.core.BeccaAgent;
 import javax.swing.JFrame;
-import rlpark.DynamicChart;
 import becca.gui.AgentPanel;
+import rlpark.DynamicChart;
 
 /**
  *
@@ -21,7 +21,7 @@ public class Simulation {
     private AgentPanel ap;
     private JFrame jf;
     private int time;
-    
+    boolean display = true;
     /*
     Run BECCA with world.  
 
@@ -41,7 +41,7 @@ public class Simulation {
             jf = AgentPanel.window(ap, true);
         }
 
-        new DynamicChart(a.getClass().getName()) {
+        new DynamicChart(/*a.getClass().getName()*/) {
 
             @Override
             public double getReward() {
@@ -72,7 +72,7 @@ public class Simulation {
     private double reward, rewardTotal;
     
     long cycleDelayMS = 0;
-    long displayPeriodMS = 25;
+    long displayPeriodMS = 2500;
     long lastDisplay = -1;
     
     public Simulation(Class<? extends Agent> agentClass, World world) throws Exception {
@@ -81,8 +81,8 @@ public class Simulation {
         agent.init(world);
 
         
-        
-        //displayAgent(agent);
+        if (display)
+            displayAgent(agent);
         
         /*if restore:
             agent = agent.restore()*/
