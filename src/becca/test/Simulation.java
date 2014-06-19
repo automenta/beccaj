@@ -21,7 +21,7 @@ public class Simulation {
     private AgentPanel ap;
     private JFrame jf;
     private int time;
-    boolean display = true;
+    boolean display = false;
     /*
     Run BECCA with world.  
 
@@ -74,6 +74,7 @@ public class Simulation {
     long cycleDelayMS = 0;
     long displayPeriodMS = 2500;
     long lastDisplay = -1;
+    long lastCycleTime;
     
     public Simulation(Class<? extends Agent> agentClass, World world) throws Exception {
         
@@ -98,6 +99,7 @@ public class Simulation {
         */
         
         time = 0;
+        lastCycleTime = System.nanoTime();
         
         while (world.isActive()) {
             /*    
@@ -126,7 +128,16 @@ public class Simulation {
                 } catch (InterruptedException ex) {
                 }
             }
-            if (time % 1000==0) System.out.println(time);
+            int numCyclesPerDisplay = 1000;
+            if (time % numCyclesPerDisplay==0) {
+                long n = System.nanoTime();
+                
+                double cycleTime = ((((double)n) - ((double)lastCycleTime))/1000000000.0);
+                double fps = numCyclesPerDisplay/cycleTime;
+                System.out.println(time + " (" + fps + " cycles/sec)" + " " + cycleTime + "s");
+                lastCycleTime = n;
+
+            }
             
             time++;
         }

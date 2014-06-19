@@ -80,16 +80,33 @@ public class Util extends CommonOps {
     }
 
     public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector) {
-        return matrixVector(matrix, vector, true);
+        return matrixVector(matrix, vector, true, null);
     }
     
-
-    public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector, final boolean multiply) {
+    public static DenseMatrix64F ensureSize(DenseMatrix64F result, final int rows, final int cols) {
+        if (result == null) {
+            result = new DenseMatrix64F(rows, cols);
+        }
+        else {
+            if ((result.numRows != rows) || (result.numCols != cols)) {
+                result.reshape(rows, cols, false);
+            }
+        }
+        return result;
+    }
+            
+    public static DenseMatrix64F multM(final DenseMatrix64F a, final DenseMatrix64F b, DenseMatrix64F result) {
+        result = ensureSize(result, a.getNumRows(), b.getNumCols());
+        mult(a, b, result);
+        return result;
+    }
+    
+    public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector, final boolean multiply, DenseMatrix64F result) {
         //ex: (8, 32) * (1, 32) -> (8, 32)
 
+        result = ensureSize(result, matrix.getNumRows(), matrix.getNumCols());
+
         //TODO iterate in order when possible
-        
-        final DenseMatrix64F result = new DenseMatrix64F(matrix.getNumRows(), matrix.getNumCols());
         final double[] vdata = vector.getData();
         final double[] mdata = matrix.getData();
         final double[] rdata = result.getData();
@@ -600,7 +617,7 @@ public class Util extends CommonOps {
         }
 
         @Override
-        protected int next(int nbits) {
+        protected int next(final int nbits) {
             // N.B. Not thread-safe!
             long x = this.seed;
             x ^= (x << 21);
@@ -615,9 +632,14 @@ public class Util extends CommonOps {
     private static final Random random = new XORShiftRandom();
 
     public static DenseMatrix64F normRandMatrix(int numRows, int numCols, double scale, double min) {
-        //TODO use normal distribution
         final DenseMatrix64F r = new DenseMatrix64F(numRows, numCols);
-        normRand(r, scale, min);
+        if (BeccaParams.RandomGaussian) {
+            matrixRandomGaussian(r, scale, min);
+        
+        }
+        else {
+            matrixRandomUniform(r, scale, min);
+        }
         return r;
     }
 
@@ -628,13 +650,17 @@ public class Util extends CommonOps {
         }
     }
 
-    public static void normRand(DenseMatrix64F r, double scale, double min) {
+    public static void matrixRandomGaussian(DenseMatrix64F r, double scale, double min) {
         final double[] d = r.getData();
-        for (int i = 0; i < d.length; i++) {
+        for (int i = 0; i < r.elements; i++)
             d[i] = random.nextGaussian() * scale + min;
-        }
-
     }
+
+    public static void matrixRandomUniform(DenseMatrix64F r, double scale, double min) {
+        final double[] d = r.getData();
+        for (int i = 0; i < r.elements; i++)
+            d[i] = random.nextDouble() * scale + min;
+    }    
 
     public static void setSinusoidal(DenseMatrix64F m, int col, double t, double baseFreq, double phase) {
         setSinusoidal(m, col, t, baseFreq, phase, 0.5, 0.5);

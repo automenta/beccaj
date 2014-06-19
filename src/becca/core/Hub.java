@@ -199,7 +199,7 @@ public class Hub {
         final DenseMatrix64F updateRateRawFactor = count.copy();
         add(updateRateRawFactor, EPSILON);
         matrixPower(updateRateRawFactor, -1.0);
-        scale((1.0 - UPDATE_RATE), updateRateRawFactor);
+        scale(1.0 - UPDATE_RATE, updateRateRawFactor);
         add(updateRateRawFactor, UPDATE_RATE);
         final DenseMatrix64F updateRate = new DenseMatrix64F(chainActivities.getNumRows(), updateRateRawFactor.getNumCols());
         elementMult(chainActivities, updateRateRawFactor, updateRate);

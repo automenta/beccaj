@@ -7,7 +7,7 @@
 package becca.test;
 
 import becca.core.DaisyChain;
-import static becca.core.Util.normRand;
+import static becca.core.Util.matrixRandomGaussian;
 import becca.gui.MatrixPanel;
 import javax.swing.BoxLayout;
 import org.ejml.data.DenseMatrix64F;
@@ -103,7 +103,7 @@ abstract public class TestDaisyChain {
     }
     
     protected void setRandom(double t) {
-        normRand(cableActivities, 1.0, 0.0);        
+        matrixRandomGaussian(cableActivities, 1.0, 0.0);        
     }
     
     

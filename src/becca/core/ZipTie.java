@@ -5,6 +5,7 @@ import org.ejml.data.DenseMatrix64F;
 import static becca.core.Util.*;
 import java.util.ArrayList;
 import java.util.List;
+import org.ejml.data.RowD1Matrix64F;
 
 
 
@@ -44,16 +45,23 @@ public class ZipTie {
 
     private List<Integer> cableIndices = new ArrayList();
     private List<int[]> newCandidates = new ArrayList();
+    
+    
+    private DenseMatrix64F activatedBundleMap;
+    private DenseMatrix64F inputInhibitionMap;
+    private DenseMatrix64F coactivities;
+    private DenseMatrix64F aggMinus;
+    private DenseMatrix64F aggPlus;
 
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle) {
         this(inBlock, maxCables, maxBundles, maxCablesPerBundle, BeccaParams.ziptieMeanExponent);
     }
 
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent) {
-        this(inBlock, maxCables, maxBundles, maxCablesPerBundle, meanExponent, BeccaParams.ziptieJoiningThreshold, BeccaParams.ziptieSpeedUp);
+        this(inBlock, maxCables, maxBundles, maxCablesPerBundle, meanExponent, BeccaParams.ziptieSpeedUp);
     }
     
-    public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent, double joiningThreshold, double speedup) {
+    public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent, double speedup) {
         
         this.maxCables = maxCables;
         this.maxBundles = maxBundles;
@@ -111,7 +119,6 @@ public class ZipTie {
     }
     
 
-
     public DenseMatrix64F stepUp(DenseMatrix64F cableActivitiesIn) {
         // Update co-activity estimates and calculate bundle activity """
 
@@ -148,7 +155,7 @@ public class ZipTie {
         activated_bundle_map = (initial_bundle_activities * 
                                 bundle_contribution_map)
         */
-        DenseMatrix64F activatedBundleMap = matrixVector(bundleContributionMap, initialBundleActivities);
+        activatedBundleMap = matrixVector(bundleContributionMap, initialBundleActivities, true, activatedBundleMap);
         
         /*
         # Add just a little noise to break ties
@@ -172,7 +179,7 @@ public class ZipTie {
         input_inhibition_map = np.power(activated_bundle_map / max_activation, 
                                         self.ACTIVATION_WEIGHTING_EXPONENT)
         */                
-        DenseMatrix64F inputInhibitionMap = matrixVector(activatedBundleMap, maxActivation, false);
+        inputInhibitionMap = matrixVector(activatedBundleMap, maxActivation, false, null);
         matrixPower(inputInhibitionMap, ACTIVATION_WEIGHTING_EXPONENT);
 
         //# Find the effective strength of each cable to each bundle after inhibition.
@@ -313,8 +320,7 @@ public class ZipTie {
         DenseMatrix64F nonBundleActivitiesT = transpose(nonBundleActivities, null);
         
         //coactivities = np.dot(self.bundle_activities, self.nonbundle_activities.T)               
-        DenseMatrix64F coactivities = new DenseMatrix64F(bundleActivities.getNumRows(), nonBundleActivitiesT.getNumCols());
-        mult(bundleActivities, nonBundleActivitiesT, coactivities);                
+        coactivities = multM(bundleActivities, nonBundleActivitiesT, coactivities);                
         
         
 
@@ -327,7 +333,7 @@ public class ZipTie {
         
         
         DenseMatrix64F cableActivitiesT = transpose(cableActivities, null);
-        DenseMatrix64F aggMinus = matrixVector(agglomerationEnergy, cableActivitiesT);
+        aggMinus = matrixVector(agglomerationEnergy, cableActivitiesT, true, aggMinus);
         scale(AGGLOMERATION_ENERGY_RATE, aggMinus);     
         subEquals(agglomerationEnergy, aggMinus);
         
@@ -335,7 +341,8 @@ public class ZipTie {
         self.agglomeration_energy += (coactivities * 
                                       (1. - self.agglomeration_energy) *
                                       self.AGGLOMERATION_ENERGY_RATE)  */
-        DenseMatrix64F aggPlus = agglomerationEnergy.copy();
+        aggPlus = ensureSize(aggPlus, agglomerationEnergy.numRows, agglomerationEnergy.numCols);
+        aggPlus.set(agglomerationEnergy);
         scale(-1, aggPlus);
         add(aggPlus, 1);        
         elementMult(aggPlus, coactivities);

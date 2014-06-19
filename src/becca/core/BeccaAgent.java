@@ -31,9 +31,9 @@ public class BeccaAgent implements Agent, Serializable {
     private int numActions;
     private int timeSinceRewardLog;
     private double cumulativeReward;
-    private LinkedList<Double> rewardHistory;
+    //private LinkedList<Double> rewardHistory;
     private LinkedList<Double> surpriseHistory;
-    private LinkedList<Object> rewardSteps;
+    //private LinkedList<Object> rewardSteps;
     public Hub hub;
     public double[] sensor;
     public double[] action;
@@ -104,9 +104,9 @@ public class BeccaAgent implements Agent, Serializable {
 
         this.cumulativeReward = 0;
         this.timeSinceRewardLog = 0;
-        this.rewardHistory = new LinkedList();
-        this.rewardSteps = new LinkedList();
-        this.surpriseHistory = new LinkedList();
+        //this.rewardHistory = new LinkedList();
+        //this.rewardSteps = new LinkedList();
+        //this.surpriseHistory = new LinkedList();
         this.blockInitializationThreshold = 0.5;
         
         this.recentSurpriseHistory = new ArrayDeque(RECENT_SURPRISE_HISTORY_SIZE);
@@ -185,8 +185,8 @@ public class BeccaAgent implements Agent, Serializable {
         double[] rsh = new double[recentSurpriseHistory.size()]; int i = 0; for (Double d : recentSurpriseHistory) rsh[i++] = d;
         this.typicalSurprise = m.evaluate(rsh);
         
-        double modSurprise = agentSurprise - typicalSurprise;
-        surpriseHistory.add(modSurprise);
+        //double modSurprise = agentSurprise - typicalSurprise;
+        //surpriseHistory.add(modSurprise);
         
         /*
         # Strip the actions off the deliberation_goal_votes to make 

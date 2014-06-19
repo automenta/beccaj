@@ -179,7 +179,7 @@ public class Grid1DSimple implements World {
         Class<? extends Agent> a = BeccaAgent.class;
         //Class<? extends Agent> a = QLAgent.class;
         
-        new Simulation(a, new Grid1DSimple(5, 11990000, 0.05, 0.01));
+        new Simulation(a, new Grid1DSimple(16, 11990000, 0.05, 0.01));
         
     }
 }

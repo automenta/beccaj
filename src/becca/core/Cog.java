@@ -39,6 +39,9 @@ public class Cog {
     public final DaisyChain daisychain;
     public final ZipTie ziptie;
     private DenseMatrix64F surprise;
+    private DenseMatrix64F activityStepUpOut;
+    private DenseMatrix64F preCogCableActivities;
+    private boolean preEnoughCable;
 
     public Cog(int maxCables, int maxBundles, int maxChainsPerBundle, int level) {
         
@@ -60,7 +63,11 @@ public class Cog {
     }
 
     //""" cable_activities percolate upward through daisychain and ziptie """
-    public DenseMatrix64F stepUp(DenseMatrix64F activities, boolean enoughCables) {
+    public DenseMatrix64F stepUp(DenseMatrix64F activities, boolean enoughCables) {                
+        if (activities == null) {
+            activities = preCogCableActivities;
+            enoughCables = preEnoughCable;
+        }
 
         /*
         # TODO: fix this so that cogs can gracefully handle more cables 
@@ -77,20 +84,26 @@ public class Cog {
         
         DenseMatrix64F dactivities = daisychain.stepUp(activities);
         surprise = daisychain.getSurprise();
-        DenseMatrix64F zactivities;
+        
         
         if (enoughCables) {
-            zactivities = ziptie.stepUp(dactivities);
+            activityStepUpOut = ziptie.stepUp(dactivities);
         }
         else {
-            zactivities = new DenseMatrix64F(0, 1);
+            activityStepUpOut = new DenseMatrix64F(0, 1);
         }
         
         if (activities.getNumRows() < maxBundles)
-            zactivities = pad(activities, maxBundles, 1, 0.0);
-        
-        return zactivities;
+            activityStepUpOut = pad(activities, maxBundles, 1, 0.0);
+                
+        return activityStepUpOut;
     }
+
+    public DenseMatrix64F getActivityStepUpOut() {
+        return activityStepUpOut;
+    }
+    
+    
     
     //""" bundle_goals percolate downward """
     public DenseMatrix64F stepDown(DenseMatrix64F goals) {
@@ -129,6 +142,12 @@ public class Cog {
 
     public DenseMatrix64F getSurprise() {
         return surprise;
+    }
+
+    /** used to preload parameters in case it is parallel executed */
+    void preStepUp(DenseMatrix64F cogCableActivities, boolean enoughCables) {
+        this.preCogCableActivities = cogCableActivities;
+        this.preEnoughCable = enoughCables;
     }
 
     

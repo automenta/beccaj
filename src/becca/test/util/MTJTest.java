@@ -42,9 +42,10 @@ public class MTJTest extends Util {
         DenseMatrix am = becca.core_mtj.Util.normRandMatrix(size, size, 1.0, 0.0);
         DenseMatrix bm = becca.core_mtj.Util.normRandMatrix(size, size, 1.0, 0.0);
         DenseMatrix cm = new DenseMatrix(size, size);
-        DenseVector vm = new DenseVector(size);
-        DenseVector um = new DenseVector(size);
-        
+        /*DenseVector vm = new DenseVector(size);
+        DenseVector um = new DenseVector(size);*/
+        DenseMatrix vm = new DenseMatrix(size, 1);
+        DenseMatrix um = new DenseMatrix(size, 1);
         
         double totalTime = 0;
         for (int i = 0; i < runs; i++) {
@@ -59,6 +60,7 @@ public class MTJTest extends Util {
                 //am.multAdd(1.0, bm, cm); //SLOW
             }
             else if (op == '|') {
+                //am.mult(vm, um);
                 am.mult(vm, um);
             }
             

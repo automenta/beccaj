@@ -34,6 +34,7 @@ import static java.lang.Double.NaN;
     to convert cable activities into bundle activities and back again.
     
     */
+//TODO get changes from: https://github.com/brohrer/becca/commit/4b0c6270b3974478213831652fb3895c58734daf
 public class Block  {
     public final int maxCables;
     private final int maxBundlesPerCog;
@@ -54,6 +55,7 @@ public class Block  {
     private DenseMatrix64F surprise;
     private DenseMatrix64F bundleActivities;
     private DenseMatrix64F hubCableGoals;
+    private boolean parallelCogs = true;
 
     public Block(int minCables) {    
         this(minCables, 0);
@@ -96,6 +98,12 @@ public class Block  {
         this.maxVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
         this.minVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1))
 
+        /*
+        self.bundle_activities = np.zeros((self.max_bundles, 1))
+         self.raw_cable_activities = np.zeros((self.max_cables, 1))
+         self.previous_cable_activities = np.zeros((self.max_cables, 1))        
+        */
+        
     }
 
     
@@ -161,8 +169,12 @@ public class Block  {
         ArrayList<double[]> bundleActivitiez = new ArrayList(cogs.size());
         int numBundleActivitiez = 0;
         
+
+
+        
+        
         int cogIndex = 0;
-        for (Cog c : cogs) {
+        for (final Cog c : cogs) {
             /* # Pick out the cog's cable_activities, process them, 
                # and assign the results to block's bundle_activities*/
             
@@ -172,16 +184,31 @@ public class Block  {
             /*# Cogs are only allowed to start forming bundles once 
               # the number of cables exceeds the fill_fraction_threshold*/
             boolean enoughCables = ziptie.getCableFractionInBundle(cogIndex) > fillFractionThreshold;
-                       
-            DenseMatrix64F cogBundleActivities = c.stepUp(cogCableActivities, enoughCables);
-                    
+            
+            c.preStepUp(cogCableActivities, enoughCables);
+        }
+
+        if (parallelCogs) {
+            cogs.parallelStream().forEach(c -> c.stepUp(null, false));
+        }
+        else {
+            for (final Cog c : cogs) {
+                c.stepUp(null, false);
+            }
+        }        
+        
+        cogIndex = 0;
+        
+        for (final Cog c : cogs) {                                                   
             //self.bundle_activities = np.concatenate((self.bundle_activities,cog_bundle_activities))
+            DenseMatrix64F cogBundleActivities = c.getActivityStepUpOut();
             double[] cbaData = cogBundleActivities.getData();
             bundleActivitiez.add(cbaData);
             numBundleActivitiez += cogBundleActivities.elements;
             
             cogIndex++;
         }
+        
         this.bundleActivities = new DenseMatrix64F(numBundleActivitiez, 1);
         int p = 0;
         for (int i = 0; i < bundleActivitiez.size(); i++) {

@@ -39,7 +39,7 @@ public class Grid2DRelative implements World {
     private final double POSITION_VELOCITY;
     private double[] sensor;
     private boolean showDisplay = true;
-    int displayPeriod = 16;
+    int displayPeriod = 64;
 
     public class Image2DPanel extends JPanel {
         private final BufferedImage bi;

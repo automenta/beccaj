@@ -84,6 +84,7 @@ public class DaisyChain {
     private DenseMatrix64F surprise;
     private DenseMatrix64F reaction;
     private final boolean allowSelfTransitions;
+    private DenseMatrix64F chainActivities;
 
 
     
@@ -151,13 +152,15 @@ public class DaisyChain {
         
         /* self.pre = self.post.copy()
            self.post = cable_activities.copy() */
-        pre = post.copy();
-        post = cableActivities.copy();
+        
+        pre.set(post);  //pre = post.copy();
+        post.set(cableActivities); //post = cableActivities.copy();
+        
                 
         DenseMatrix64F postT = transpose(post, null);
 
         //chain_activities = self.pre * self.post.T
-        DenseMatrix64F chainActivities = new DenseMatrix64F(pre.getNumRows(), postT.getNumCols());
+        chainActivities = ensureSize(chainActivities, pre.getNumRows(), postT.getNumCols());
         assert(pre.getNumCols() == 1);
         assert(postT.getNumRows() == 1);
         mult(pre, postT, chainActivities);
