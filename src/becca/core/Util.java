@@ -40,7 +40,8 @@ public class Util extends CommonOps {
         return c;
     }
 
-    public static DenseMatrix64F getWeightedAverage(DenseMatrix64F values, DenseMatrix64F weights) {
+    
+    public static DenseMatrix64F getWeightedAverage(DenseMatrix64F values, DenseMatrix64F weights, DenseMatrix64F target) {
         //""" Perform a weighted average of values, using weights """
 
         assert (values.getNumRows() == weights.getNumRows());
@@ -54,7 +55,7 @@ public class Util extends CommonOps {
         //weighted_sum_values = np.sum(values * weights, axis=0)                 
         DenseMatrix64F valueWeightProduct = multMatrixMatrix(values, weights);
 
-        final DenseMatrix64F weightedSumValues = sumColsT(valueWeightProduct, null);
+        final DenseMatrix64F weightedSumValues = target = sumColsT(valueWeightProduct, target);
 
         //sum_of_weights = np.sum(weights, axis=0)         
         final DenseMatrix64F sumOfWeights = sumColsT(weights, null);
@@ -68,7 +69,8 @@ public class Util extends CommonOps {
         for (int i = 0; i < wsd.length; i++) {
             wsd[i] /= (sowd[i] + EPSILON);
         }
-        return weightedSumValues;
+        //return weightedSumValues;
+        return target;
     }
 
     public static void printMatrixDimensions(ReshapeMatrix64F... m) {
@@ -170,7 +172,7 @@ public class Util extends CommonOps {
         matrixPower(valuesToPower, exponent);
 
         //mean_values_to_power = weighted_average(values_to_power, weights)
-        final DenseMatrix64F meanValuesToPower = getWeightedAverage(valuesToPower, weights);
+        final DenseMatrix64F meanValuesToPower = getWeightedAverage(valuesToPower, weights, null);
 
         //shifted_mean = (mean_values_to_power + EPSILON) ** (1./exponent)
         final DenseMatrix64F shiftedMean = meanValuesToPower;

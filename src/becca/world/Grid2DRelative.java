@@ -245,7 +245,7 @@ public class Grid2DRelative implements World {
         Class<? extends Agent> a = DABeccaAgent.class;
         //Class<? extends Agent> a = QLAgent.class;
 
-        new Simulation(a, new Grid2DRelative(64, 32, 11990000, 0.02, 0.01));
+        new Simulation(a, new Grid2DRelative(24, 8, 11990000, 0.02, 0.01));
 
     }
 }

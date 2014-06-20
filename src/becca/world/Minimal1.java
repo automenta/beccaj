@@ -64,6 +64,7 @@ public class Minimal1 implements World {
                 } catch (Exception ex) {                }
             }        
         }).start();
+        /*
         new Thread(new Runnable() {
             @Override
             public void run() { 
@@ -72,6 +73,6 @@ public class Minimal1 implements World {
                 } catch (Exception ex) {                }
             }        
         }).start();
-        
+        */
     }
 }

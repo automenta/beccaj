@@ -27,7 +27,11 @@ import org.ejml.ops.MatrixComponent;
  */
 abstract public class DynamicChart {
 
-    public DynamicChart(/*String name*/) {
+    public DynamicChart() {
+        this(1500);
+    }
+    
+    public DynamicChart(long delayMS) {
         super();
         
         // Create a chart:  
@@ -117,7 +121,7 @@ abstract public class DynamicChart {
 
         };
         // Every 20 milliseconds a new value is collected.
-        timer.schedule(task, 1000, 1500);
+        timer.schedule(task, 1000, delayMS);
     }
 
     abstract public double[] getSensor();

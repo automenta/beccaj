@@ -7,9 +7,7 @@
 package becca.core;
 
 import java.util.ArrayList;
-import org.ejml.data.BlockMatrix64F;
 import org.ejml.data.DenseMatrix64F;
-import org.ejml.ops.CommonOps;
 
 import static becca.core.Util.*;
 import static java.lang.Double.NaN;
@@ -52,7 +50,7 @@ public class Block  {
     private final double rangeDecayRate;
     private DenseMatrix64F maxVals;
     private DenseMatrix64F minVals;
-    private DenseMatrix64F surprise;
+    private final DenseMatrix64F surprise;
     private DenseMatrix64F bundleActivities;
     private DenseMatrix64F hubCableGoals;
     private boolean parallelCogs = BeccaParams.cogParallel;
@@ -103,8 +101,11 @@ public class Block  {
         this.activityDecayRate = BeccaParams.blockActivityDecayRate;
         this.rangeDecayRate = BeccaParams.blockRangeDecayRate; //# Constants for adaptively rescaling the cable activities        
         
+        this.surprise = new DenseMatrix64F(this.maxCables, 1);
+        
         this.maxVals = new DenseMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
         this.minVals = new DenseMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1))
+        this.bundleActivities = new DenseMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1))
         this.clusterTrainingActivities = new DenseMatrix64F(this.maxCables, 1);  // n        
         this.stepMultiplier = (int)Math.pow(2, level);
         this.stepCounterOffset = 1000000;
@@ -192,12 +193,9 @@ public class Block  {
         
         //# Process the upward pass of each of the cogs in the block        
 
-        ArrayList<double[]> bundleActivitiez = new ArrayList(cogs.size());
+        
         int numBundleActivitiez = 0;
-        
-
-
-        
+        fill(this.bundleActivities, 0);
         
         int cogIndex = 0;
         for (final Cog c : cogs) {
@@ -230,20 +228,11 @@ public class Block  {
             //self.bundle_activities = np.concatenate((self.bundle_activities,cog_bundle_activities))
             DenseMatrix64F cogBundleActivities = c.getActivityStepUpOut();
             double[] cbaData = cogBundleActivities.getData();
-            bundleActivitiez.add(cbaData);
+            System.arraycopy(cbaData, 0, this.bundleActivities.getData(), numBundleActivitiez, cogBundleActivities.elements);
             numBundleActivitiez += cogBundleActivities.elements;
             
             cogIndex++;
         }
-        
-        this.bundleActivities = new DenseMatrix64F(numBundleActivitiez, 1);
-        int p = 0;
-        for (int i = 0; i < bundleActivitiez.size(); i++) {
-            double[] c = bundleActivitiez.get(i);
-            System.arraycopy(c, 0, bundleActivities.getData(), p, c.length);
-            p+=c.length;
-        }
-        //concat finished
         
         
         goalDecay();
@@ -274,7 +263,7 @@ public class Block  {
         DenseMatrix64F cableGoals = new DenseMatrix64F(maxCables, 1);
         
         //self.surprise = np.zeros((self.max_cables, 1))
-        surprise = new DenseMatrix64F(maxCables, 1);
+        fill(surprise, 0);
 
 
         //# Process the downward pass of each of the cogs in the level

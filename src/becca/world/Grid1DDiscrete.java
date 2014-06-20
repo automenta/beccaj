@@ -12,35 +12,29 @@ import becca.test.World;
     In this task, the agent's goal is to activate the same pattern as
     it sees in its sensor field.
 */
-public class Grid1DSimple implements World {
+public class Grid1DDiscrete implements World {
     private final int size;
     
     private final double VISUALIZE_PERIOD;
     private final double REWARD_MAGNITUDE;
-    private final double JUMP_FRACTION;
     private final double ENERGY_COST_FACTOR;
     private final double MATCH_REWARD_FACTOR;
 
     private double focusPosition;
-    private double focusVelocity;
         
     private double[] action;
 
     private final int totalTime;    
     private int time;
     
-    private final double noise;
 
-    public Grid1DSimple(int size, int totalTime, double noise, double focusVelocity) {
+    public Grid1DDiscrete(int size, int totalTime) {
         this.time = 1;
         this.size = size;
         this.VISUALIZE_PERIOD = Math.pow(10, 4);
         this.ENERGY_COST_FACTOR = 0.5;
         this.MATCH_REWARD_FACTOR = size*1.1;
         this.REWARD_MAGNITUDE = 1;
-        this.JUMP_FRACTION = 0.0;
-        this.noise = noise;
-        this.focusVelocity = focusVelocity;
         
         this.focusPosition = size/2;
         this.totalTime = totalTime;
@@ -62,15 +56,12 @@ public class Grid1DSimple implements World {
         this.action = action;
         
         //# At random intervals, jump to a random position in the world
-        if (Math.random() < JUMP_FRACTION) {
-            focusPosition = size * Math.random();
-        }
-        else {            
-            focusPosition += focusVelocity;
-        }
+                  
+        focusPosition++;
+        
         
         //# Ensure that the world state falls between 0 and 9
-        if (focusPosition > size) focusPosition = focusPosition - size;
+        if (focusPosition > size) focusPosition = 0;
         if (focusPosition < 0) focusPosition = size + focusPosition;
         
         /*        
@@ -98,20 +89,12 @@ public class Grid1DSimple implements World {
         
         
         
-        double min=0, max=0;
         for (int i = 0; i < size; i++) {
             final double exp = 3.0; //sharpen
-            sensor[i] = Math.pow(1.0 / (1.0 + Math.abs( ((double)i)-focusPosition)),exp) + (Math.random()*noise);
-            if (sensor[i] < 0)
-                sensor[i] = 0;
-            if (i == 0) {
-                min = max = sensor[i];
-            }
-            else {
-                if (sensor[i] < min) min = sensor[i];
-                if (sensor[i] > max) max = sensor[i];
-            }
-            
+            if (i == focusPosition)
+                sensor[i] = 1.0;
+            else
+                sensor[i] = 0.0;            
         }
         /*
         //normalize
@@ -174,12 +157,5 @@ public class Grid1DSimple implements World {
     #agent.reward_max = 100.
     pass
      */
-    
-    public static void main(String[] args) throws Exception {
-        Class<? extends Agent> a = BeccaAgent.class;
-        //Class<? extends Agent> a = QLAgent.class;
-        
-        new Simulation(a, new Grid1DSimple(16, 11990000, 0.05, 0.01));
-        
-    }
+
 }

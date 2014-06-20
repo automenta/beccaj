@@ -38,7 +38,6 @@ public class Cog {
     public final int maxChainsPerBundle;
     public final DaisyChain daisychain;
     public final ZipTie ziptie;
-    private DenseMatrix64F surprise;
     private DenseMatrix64F activityStepUpOut;
     private DenseMatrix64F preCogCableActivities;
     private boolean preEnoughCable;
@@ -85,12 +84,10 @@ public class Cog {
             System.err.println("Cog: Number of max cables exceeded in " + this);
         }
         
-        DenseMatrix64F dactivities = daisychain.stepUp(activities);
-        surprise = daisychain.getSurprise();
-        
+        final DenseMatrix64F dactivities = daisychain.stepUp(activities).copy();
         
         if (enoughCables) {
-            activityStepUpOut = ziptie.stepUp(dactivities);
+            activityStepUpOut = ziptie.stepUp(dactivities).copy();
         }
         else {
             activityStepUpOut = new DenseMatrix64F(0, 1);
@@ -153,7 +150,7 @@ public class Cog {
     }
 
     public DenseMatrix64F getSurprise() {
-        return surprise;
+        return daisychain.getSurprise();
     }
 
     /** used to preload parameters in case it is parallel executed */

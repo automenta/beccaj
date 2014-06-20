@@ -3,6 +3,7 @@ package becca.core;
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
+import java.util.Arrays;
 
 /**
     An incremental model-based reinforcement learning algorithm
@@ -81,11 +82,12 @@ public class DaisyChain {
     private DenseMatrix64F post;
     private final DenseMatrix64F postUncertainty;
     private int numCables;
-    private DenseMatrix64F surprise;
+    private final DenseMatrix64F surprise;
     private DenseMatrix64F reaction;
     private final boolean allowSelfTransitions;
     private DenseMatrix64F chainActivities;
     private DenseMatrix64F nullGoals;
+    private double agingTimeconstant = Math.pow(10, 6);
 
 
     
@@ -111,7 +113,8 @@ public class DaisyChain {
         
         //#this.deliberation_vote = np.zeros((max_num_cables, 1))
         
-        this.surprise = new DenseMatrix64F(maxCables, 1); //np.ones((max_num_cables, 1))
+        this.surprise = new DenseMatrix64F(1, maxCables); //np.ones((max_num_cables, 1))
+        this.reaction = new DenseMatrix64F(1, maxCables); //np.ones((max_num_cables, 1))
         fill(surprise, 1.0);
         
     }
@@ -121,17 +124,20 @@ public class DaisyChain {
         def get_surprise(self):
             return self.surprise[:self.num_cables]
         */
-               
+
+        /*
         if (surprise.getNumRows() > numCables) {
-            if (numCables == 0)
-                return new DenseMatrix64F(0, 1);
-            //try {
-                return extract(surprise, 0, numCables, 0, 1);
-            /*}
-            catch (Exception e) {
-                System.err.println("DaisyChain getSurprise() trying to extract " + numCables + " columns from " + m(surprise));
-                System.exit(1);
-            }*/
+            if (numCables == 0) {
+                surprise.reshape(0,1);
+                //return new DenseMatrix64F(0, 1);
+            }
+            else {
+                surprise.reshape(numCables, 1);
+                //return extract(surprise, 0, numCables, 0, 1);
+            }
+        }*/
+        if (numCables < surprise.elements) {
+            Arrays.fill(surprise.getData(), numCables, surprise.elements, 0);
         }
         return surprise;
     }
@@ -181,20 +187,16 @@ public class DaisyChain {
         //self.count += chain_activities
         addEquals(count, chainActivities);
         
+        
         //self.count -= 1 / (self.AGING_TIME_CONSTANT * self.count + tools.EPSILON)
-        /*DenseMatrix64F countDelta = count.copy();
-        scale(AGING_TIME_CONSTANT, countDelta);
-        add(countDelta, EPSILON);        
-        matrixPower(countDelta, -1);        
-        subEquals(count, countDelta);*/
-        
-        //ALTERNATE CALCULIATON
-        scale(1.0 - countDecayRate, count);
-        
-        
-        
         //self.count = np.maximum(self.count, 0)
-        matrixMaximum(count, 0);
+        for (int i = 0; i < count.elements; i++) {
+            double cd = count.getData()[i];
+            cd -= 1 / (agingTimeconstant * cd + EPSILON);            
+            if (cd < 0) cd = 0.0;
+            count.getData()[i] = cd;
+        }   
+        
                 
         /*        
         update_rate_raw_post = (self.pre * ((1 - self.CHAIN_UPDATE_RATE) /
@@ -215,12 +217,16 @@ public class DaisyChain {
         final DenseMatrix64F updateRatePost = preCount.copy();
         final double[] updateRatePostD = updateRatePost.getData();
         for (int i = 0; i < updateRatePost.elements; i++) {
-            final double u = updateRatePostD[i];
+            final double u = preCount.getData()[i];
             final double v = 
                     Math.min(
                             (1-chainUpdateRate) * 
                             (1 + chainUpdateRate* (u + EPSILON)) /
-                            (u + EPSILON), 0.5);                        
+                            (u + EPSILON), 0.5);      
+                  /*update_rate_raw_post = (self.pre * ((1 - self.CHAIN_UPDATE_RATE) /
+                                   (self.pre_count + tools.EPSILON) +
+                                    self.CHAIN_UPDATE_RATE))     */
+            
             updateRatePostD[i] = v;
         }
         
@@ -231,31 +237,30 @@ public class DaisyChain {
         
         
         //self.pre_count -= 1 / (self.AGING_TIME_CONSTANT * self.pre_count + tools.EPSILON)
-        //DenseMatrix64F preCountDelta = preCount.copy();
-        /*scale(AGING_TIME_CONSTANT, preCountDelta);
-        add(preCountDelta, EPSILON);
-        matrixPower(preCountDelta, -1);
-        subEquals(preCount, preCountDelta);*/
-        
-        //ALTERNATE CALCULATION
-        scale(1.0 - countDecayRate, preCount);
+        //self.pre_count = np.maximum(self.pre_count, 0)        
+        for (int i = 0; i < preCount.elements; i++) {
+            double pcd = preCount.getData()[i];
+            pcd -= 1 / (agingTimeconstant * pcd + EPSILON);            
+            if (pcd < 0) pcd = 0.0;
+            preCount.getData()[i] = pcd;
+        }
+
                        
-        //self.pre_count = np.maximum(self.pre_count, 0)
-        matrixMaximum(preCount, 0);
         
         
         //post_difference = np.abs(self.pre * self.post.T - self.expected_cable_activities)        
         DenseMatrix64F postDifference = new DenseMatrix64F(pre.getNumRows(), postT.getNumCols());
         mult(pre, postT, postDifference);
         
-        DenseMatrix64F ecDelta = postDifference.copy(); //used below
 
         subEquals(postDifference, expectedCableActivities);
+
+        DenseMatrix64F ecDelta = postDifference.copy(); //used below
+        
         matrixAbs(postDifference);
         
         
         //self.expected_cable_activities += update_rate_post * (self.pre * self.post.T - self.expected_cable_activities)        
-        subEquals(ecDelta, expectedCableActivities);        
         matrixVector(ecDelta, updateRatePost);        
         addEquals(expectedCableActivities, ecDelta);
         
@@ -270,7 +275,7 @@ public class DaisyChain {
         //# Reaction is the expected post, turned into a deliberation_vote
         //self.reaction = tools.weighted_average(self.expected_cable_activities, self.pre)        
             //daisychain stepup reaction param (8, 8) (8, 1)
-        reaction = getWeightedAverage(expectedCableActivities, pre);
+        getWeightedAverage(expectedCableActivities, pre, reaction);
         
 
         //# Surprise is the difference between the expected post and the actual one
@@ -286,7 +291,7 @@ public class DaisyChain {
 
         matrixDivBy(sb, broadcastRows(pre, sb.getNumRows()));        
         
-        surprise = getWeightedAverage(sa, sb);
+        getWeightedAverage(sa, sb, surprise);
         
         /*if (elementSum(surprise) > 0) {
             System.out.println(postT);
@@ -300,7 +305,10 @@ public class DaisyChain {
         //# Reshape chain activities into a single column
         //return chain_activities.ravel()[:,np.newaxis]
         //check the order: http://docs.scipy.org/doc/numpy/reference/generated/numpy.ravel.html?highlight=ravel
-        return DenseMatrix64F.wrap(chainActivities.elements, 1, chainActivities.getData());
+        
+        DenseMatrix64F x = new DenseMatrix64F(chainActivities.elements, 1);
+        x.setData(chainActivities.data);
+        return x;
     }
     
     public DenseMatrix64F stepDown(DenseMatrix64F chainGoals) {
@@ -408,5 +416,7 @@ public class DaisyChain {
     public DenseMatrix64F getExpectedCableActivities() {
         return expectedCableActivities;
     }
+
+
     
 }

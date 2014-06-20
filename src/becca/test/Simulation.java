@@ -21,7 +21,16 @@ public class Simulation {
     private AgentPanel ap;
     private JFrame jf;
     private int time = 1;
-    boolean display = true;
+    boolean displayAgentMatrices = true;
+    
+    private double reward, rewardTotal;
+    
+    long cycleDelayMS;
+    long displayPeriodMS = 40;
+    long lastDisplay = -1;
+    long lastCycleTime;
+    private boolean displayRewardChart;
+    
     /*
     Run BECCA with world.  
 
@@ -41,51 +50,60 @@ public class Simulation {
             jf = AgentPanel.window(ap, true);
         }
 
-        new DynamicChart(/*a.getClass().getName()*/) {
-
-            @Override
-            public double getReward() {
-                double r = rewardTotal;
-                rewardTotal = 0;
-                return r;
-            }
-
-            @Override
-            public double[] getAction() {
-                return agent.getAction();
-            }
-
-            @Override
-            public double[] getSensor() {
-                if (agent instanceof BeccaAgent)
-                    return ((BeccaAgent)agent).getPercept();
-                return agent.getSensor();
-            }
-
-            @Override
-            public double getTime() {
-                return time;
-            }
-            
-            
-        };
         
     }
-    private double reward, rewardTotal;
-    
-    long cycleDelayMS = 0;
-    long displayPeriodMS = 500;
-    long lastDisplay = -1;
-    long lastCycleTime;
-    
+
     public Simulation(Class<? extends Agent> agentClass, World world) throws Exception {
+        this(agentClass, world, 0);
+    }
+            
+    public void init(Agent a) {
+        
+    }
+    
+    public Simulation(Class<? extends Agent> agentClass, World world, long cycleDelayMS) throws Exception {
+        
+        this.cycleDelayMS = cycleDelayMS;
+    
         
         this.agent = agentClass.newInstance();
         agent.init(world);
 
+        init(agent);
         
-        if (display)
+        if (displayAgentMatrices) {
             displayAgent(agent);
+        }
+        if (displayRewardChart) {
+            new DynamicChart(displayPeriodMS) {
+
+                @Override
+                public double getReward() {
+                    double r = rewardTotal;
+                    rewardTotal = 0;
+                    return r;
+                }
+
+                @Override
+                public double[] getAction() {
+                    return agent.getAction();
+                }
+
+                @Override
+                public double[] getSensor() {
+                    if (agent instanceof BeccaAgent)
+                        return ((BeccaAgent)agent).getPercept();
+                    return agent.getSensor();
+                }
+
+                @Override
+                public double getTime() {
+                    return time;
+                }
+
+
+            };
+        }
         
         /*if restore:
             agent = agent.restore()*/
