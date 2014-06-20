@@ -42,11 +42,16 @@ public class DABeccaAgent extends BeccaAgent {
 
     }
 
+    public int getReducedSensors(int worldSensors) {
+        //return worldSensors / 8;
+        return 8;
+    }
+    
     @Override
     public void init(World world) {
 
         
-        int reducedSensors = numSensors = world.getNumSensors() / 4;
+        int reducedSensors = numSensors = getReducedSensors(world.getNumSensors());
         this.da = new dA(world.getNumSensors(), reducedSensors);
 
         if (reconstructedInput == null) {

@@ -255,14 +255,17 @@ public class Hub {
          # encouraging exploration.
          reward_uncertainty = (np.random.normal(size=this.count.shape) * this.EXPLORATION / (this.count + 1.))
          */
-        DenseMatrix64F uncertainNumerator = normRandMatrix(count.getNumRows(), count.getNumCols(), EXPLORATION, 0.0);
-        rewardUncertainty.set(count);
-        add(rewardUncertainty, 1.0);
-        matrixDivBy(rewardUncertainty, uncertainNumerator);
 
         //this.estimated_reward_value = this.expected_reward + reward_uncertainty
+        // = this.expected_reward + (np.random.normal(size=this.count.shape) * this.EXPLORATION / (this.count + 1.))
         this.estimatedRewardValue.set(expectedReward);
-        addEquals(estimatedRewardValue, rewardUncertainty);
+        final double[] ervd = this.estimatedRewardValue.getData();
+        final double[] countD = this.count.getData();
+        for (int i = 0; i < estimatedRewardValue.elements; i++) {
+            double ru = r(EXPLORATION, 0.0) / (countD[i] + 1.0);
+            ervd[i] += ru;
+        }
+        
 
         /*        
          # Select a goal cable.

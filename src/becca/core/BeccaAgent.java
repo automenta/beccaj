@@ -114,7 +114,7 @@ public class BeccaAgent implements Agent, Serializable {
         //this.rewardHistory = new LinkedList();
         //this.rewardSteps = new LinkedList();
         //this.surpriseHistory = new LinkedList();
-        this.blockInitializationThreshold = 0.5;
+        this.blockInitializationThreshold = BeccaParams.blockInitializationThreshold;
         
         this.recentSurpriseHistory = new ArrayDeque(RECENT_SURPRISE_HISTORY_SIZE);
         for (int i = 0; i < RECENT_SURPRISE_HISTORY_SIZE; i++)
@@ -207,6 +207,19 @@ public class BeccaAgent implements Agent, Serializable {
         //Util.printArray(action);
         
  
+        boolean invalidAction = false;
+        for (int ii = 0; ii < action.length; ii++) {
+            if ((!Double.isFinite(action[ii])) || (action[ii] == NaN)) {
+                invalidAction = true; 
+                break;
+            }
+        }
+        if (invalidAction) {
+            System.err.println("Invalid action");
+            printArray(action);
+            System.out.println(this);
+            System.exit(1);            
+        }
         
         //backup?
         /*

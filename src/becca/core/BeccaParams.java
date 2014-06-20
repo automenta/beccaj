@@ -2,7 +2,7 @@ package becca.core;
 
 public class BeccaParams {
     
-    static int stmSize = 32; //short-term memory size, in cycles (time)
+    static int stmSize = 16; //short-term memory size, in cycles (time)
 
     //gaussian is more computation expensive
     static boolean RandomGaussian = false;
@@ -17,6 +17,12 @@ public class BeccaParams {
     static double blockFillFractionThreshold = 0.1;
     static double blockRangeDecayRate =  Math.pow(10, -3);
     static double blockActivityDecayRate = 0.99; //real, 0 < x < 1, higher decays faster
+    static double blockInitializationThreshold = 0.5;
+    
+    
+    //Cog --------------------------
+    static boolean cogParallel = false;
+
     
     //DaisyChain ---------------------------------------------------        
     static double daisyCountDecayRate = decayRate(stmSize*2); //real, 0 < x < 1; higher = decays more quickly
@@ -36,7 +42,7 @@ public class BeccaParams {
     
     //ZipTie ----------------------------------------
     static double ziptieSpeedUp = 1.0;
-    static double ziptieMeanExponent = -4;
+    static double ziptieMeanExponent = -2;
     static double ziptieActivatedBundlemapNoise = 0.01;
     
     //      ZipTie, in Block --------------
@@ -44,15 +50,14 @@ public class BeccaParams {
     static double blockziptieNucleationEnergyRate = 1E-5;
     static double blockziptieAgglomerationThreshold = 0.1;
     static double blockziptieAgglomerationEnergyRate = 1E-3;
-    static double blockziptieActivationWeightingExponent = 5;
+    static double blockziptieActivationWeightingExponent = 512;
     
     //      ZipTie, in Cog -----------------
     static double cogziptieNucleationThreshold = 0.1;
     static double cogziptieNucleationEnergyRate = 1E-5;
     static double cogziptieAgglomerationThreshold = 0.1;
     static double cogziptieAgglomerationEnergyRate = 1E-4;
-    static double cogziptieActivationWeightingExponent = 5;
-    static boolean cogParallel = false;
+    static double cogziptieActivationWeightingExponent = 512;
     
    
     public static double decayRate(int cycles) {

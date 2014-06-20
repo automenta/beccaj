@@ -71,6 +71,7 @@ public class Cog {
             enoughCables = preEnoughCable;
         }
 
+
         /*
         # TODO: fix this so that cogs can gracefully handle more cables 
         # or else never be assigned them in the first place
@@ -117,6 +118,9 @@ public class Cog {
             goals = preStepDownGoals;
         final DenseMatrix64F zgoals = ziptie.stepDown(goals);
         goalsStepDownOut = daisychain.stepDown(zgoals);
+        
+
+        
         return goalsStepDownOut;
     }
     

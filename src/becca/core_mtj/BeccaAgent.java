@@ -107,7 +107,7 @@ public class BeccaAgent implements Agent, Serializable {
         this.rewardHistory = new LinkedList();
         this.rewardSteps = new LinkedList();
         this.surpriseHistory = new LinkedList();
-        this.blockInitializationThreshold = 0.5;
+        this.blockInitializationThreshold = BeccaParams.blockInitializationThreshold;
         
         this.recentSurpriseHistory = new ArrayDeque(RECENT_SURPRISE_HISTORY_SIZE);
         for (int i = 0; i < RECENT_SURPRISE_HISTORY_SIZE; i++)
@@ -149,6 +149,8 @@ public class BeccaAgent implements Agent, Serializable {
             cableActivities = b.stepUp(cableActivities);
             hub.addCables(b.maxCables);
             //print "Added block", self.num_blocks - 1
+            
+            System.out.println("Adding block #" + blocks.size());
         }
         
         hub.step(blocks, reward);

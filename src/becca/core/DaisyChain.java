@@ -85,6 +85,7 @@ public class DaisyChain {
     private DenseMatrix64F reaction;
     private final boolean allowSelfTransitions;
     private DenseMatrix64F chainActivities;
+    private DenseMatrix64F nullGoals;
 
 
     
@@ -318,18 +319,27 @@ public class DaisyChain {
                                 reaction.getData()));
         
         //return cable_goals[:self.num_cables]        
-        if (numCables == 0) 
-            return new DenseMatrix64F(cableGoals.getNumRows(), 0);
-        
-        //try {
+        if (numCables == 0) {
+            if (nullGoals == null)
+                nullGoals = new DenseMatrix64F(cableGoals.getNumRows(), 0);
+            else
+                if (nullGoals.numRows != cableGoals.numRows)
+                    nullGoals.numRows = cableGoals.numRows;
+            return nullGoals;
+        }
+        else {
+//            if (cableGoals.getData()!=null)
+//                if (cableGoals.getData().length>0) {
+//                    //reaction is causing the '1 . 0 0 0 0 '
+//                    System.out.println(upstreamGoals.getData()[0] + " " + reaction.getData()[0]);
+//                    System.out.println(expectedCableActivities);
+//                    System.out.println(pre);
+//
+//                    new Exception().printStackTrace();
+//                }
+            
             return extract(cableGoals, 0, numCables, 0, 1);
-        /*}
-        catch (Exception e) {
-            System.err.println("DaisyChain stepDown() trying to extract " + numCables + " columns from " + m(cableGoals));
-            System.exit(1);
-            return null;
-        }*/
-        
+        }
     }
     
     /*    

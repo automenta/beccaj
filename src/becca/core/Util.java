@@ -306,8 +306,7 @@ public class Util extends CommonOps {
         return output;
     }
     
-    static double[] boundedSum(final int axis, final double[]  
-        ... a) {
+    static double[] boundedSum(final int axis, final double[]... a) {
         /* 
             Sum elements nonlinearly, such that the total is less than 1 
 
@@ -638,11 +637,22 @@ public class Util extends CommonOps {
 
     private static final Random random = new XORShiftRandom();
 
+
+    public static double r(final double scale, final double min) {
+       final double r;
+       if (BeccaParams.RandomGaussian) { 
+           r = random.nextGaussian();
+       }
+       else {
+           r = random.nextDouble();
+       }
+       return r * scale + min;
+    }
+    
     public static DenseMatrix64F normRandMatrix(int numRows, int numCols, double scale, double min) {
         final DenseMatrix64F r = new DenseMatrix64F(numRows, numCols);
         if (BeccaParams.RandomGaussian) {
-            matrixRandomGaussian(r, scale, min);
-        
+            matrixRandomGaussian(r, scale, min);        
         }
         else {
             matrixRandomUniform(r, scale, min);

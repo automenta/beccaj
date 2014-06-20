@@ -1,13 +1,14 @@
 package becca.core_mtj;
 
 public class BeccaParams {
-    static int stmSize = 32; //short-term memory size, in cycles (time)
+    static final int stmSize = 32; //short-term memory size, in cycles (time)
     
     //Agent ---------------------------------------------------    
     static int agentRecentSurpriseHistorySize = stmSize;
     
     //Block ---------------------------------------------------        
     
+    static double blockInitializationThreshold = 0.5;
     static int blockMaxCablesPerCog = 8;
     static int blockMaxBundlesPerCog = 4;    
     static double blockFillFractionThreshold = 0.7;

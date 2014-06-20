@@ -50,13 +50,19 @@ public class Block  {
     private final double fillFractionThreshold;
     private final double activityDecayRate;
     private final double rangeDecayRate;
-    private BlockMatrix64F maxVals;
-    private BlockMatrix64F minVals;
+    private DenseMatrix64F maxVals;
+    private DenseMatrix64F minVals;
     private DenseMatrix64F surprise;
     private DenseMatrix64F bundleActivities;
     private DenseMatrix64F hubCableGoals;
     private boolean parallelCogs = BeccaParams.cogParallel;
-
+    int stepCounter = 0;
+    private final DenseMatrix64F rawCableActivities;
+    private final DenseMatrix64F prevCableActivities;
+    private final int stepMultiplier;
+    private final int stepCounterOffset;
+    private final DenseMatrix64F clusterTrainingActivities;
+    
     public Block(int minCables) {    
         this(minCables, 0);
     }
@@ -89,15 +95,19 @@ public class Block  {
         }
         
         this.cableActivities = new DenseMatrix64F(this.maxCables,1); //np.zeros((self.max_cables, 1))
+        this.rawCableActivities = new DenseMatrix64F(this.maxCables,1); //np.zeros((self.max_cables, 1))
+        this.prevCableActivities = new DenseMatrix64F(this.maxCables,1); //np.zeros((self.max_cables, 1))
         this.hubCableGoals = new DenseMatrix64F(this.maxCables, 1); //np.zeros((self.max_cables, 1))
         
         this.fillFractionThreshold = BeccaParams.blockFillFractionThreshold;
         this.activityDecayRate = BeccaParams.blockActivityDecayRate;
         this.rangeDecayRate = BeccaParams.blockRangeDecayRate; //# Constants for adaptively rescaling the cable activities        
         
-        this.maxVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
-        this.minVals = new BlockMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1))
-
+        this.maxVals = new DenseMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1)) 
+        this.minVals = new DenseMatrix64F(this.maxCables, 1); // np.zeros((self.max_cables, 1))
+        this.clusterTrainingActivities = new DenseMatrix64F(this.maxCables, 1);  // n        
+        this.stepMultiplier = (int)Math.pow(2, level);
+        this.stepCounterOffset = 1000000;
         /*
         self.bundle_activities = np.zeros((self.max_bundles, 1))
          self.raw_cable_activities = np.zeros((self.max_cables, 1))
@@ -113,44 +123,60 @@ public class Block  {
 //        # Condition the cable activities to fall between 0 and 1
         
         if (newCableActivities.getNumRows() < maxCables) {           
-              newCableActivities = Util.pad(newCableActivities, maxCables, 1, 0);
+              newCableActivities = pad(newCableActivities, maxCables, 1, 0);
         }
         
-        double[] ncaD = newCableActivities.getData();
+        
+        /*self.raw_cable_activities *= 1. - (self.ACTIVITY_DECAY_RATE /
+                                           float(self.step_multiplier))
+        self.raw_cable_activities += new_cable_activities
+        self.step_counter += 1
+        if self.step_counter < self.step_multiplier:
+            return self.bundle_activities*/
+        scale( 1.0 - (activityDecayRate / ((double)stepMultiplier)),  rawCableActivities);
+        addEquals(rawCableActivities, newCableActivities);
+        if (this.stepCounter + stepCounterOffset < stepMultiplier)
+            return bundleActivities;
+                    
+        double[] rcad = rawCableActivities.getData();
         double[] minD = minVals.getData();
         double[] maxD = maxVals.getData();
         for (int i = 0; i < maxCables; i++) {
-            minD[i] = Math.min(minD[i], ncaD[i]);
-            maxD[i] = Math.max(maxD[i], ncaD[i]);
+            minD[i] = Math.min(minD[i], rcad[i]);
+            maxD[i] = Math.max(maxD[i], rcad[i]);
         }
         
-        final BlockMatrix64F spread = maxVals.copy();
-        CommonOps.subEquals(spread, minVals);
+        final DenseMatrix64F spread = maxVals.copy();
+        subEquals(spread, minVals);
         
-//        new_cable_activities = ((new_cable_activities - self.min_vals) / 
+//        self.cable_activities = ((self.raw_cable_activities - self.min_vals) / 
 //                   (self.max_vals - self.min_vals + tools.EPSILON))
-        for (int i = 0; i < maxCables; i++) {
-            final double n = ncaD[i];
+        double[] caD = this.cableActivities.getData();
+        for (int i = 0; i < cableActivities.elements; i++) {            
             final double min = minD[i];
             final double max = maxD[i];
             
-            final double v = (n-min)/(max-min+Util.EPSILON);
-            
-            ncaD[i] = v;
-        
+            caD[i] = (rcad[i]-min)/(max-min+EPSILON);        
         }
         
-        BlockMatrix64F spreadDecay = spread.copy();
+        DenseMatrix64F spreadDecay = spread.copy();
         scale(rangeDecayRate, spreadDecay);
         addEquals(minVals, spreadDecay);
         subEquals(maxVals, spreadDecay);
 
-        DenseMatrix64F decayedActivities = cableActivities.copy();
-        scale(1.0 - activityDecayRate, decayedActivities);
-                
-        assert(newCableActivities.getNumRows() == decayedActivities.getNumRows() );
-        cableActivities = DenseMatrix64F.wrap(newCableActivities.getNumRows(), 1,
-                            boundedSum(0, newCableActivities.getData(), decayedActivities.getData() ));        
+        /*cluster_training_activities = np.maximum(
+                self.previous_cable_activities, self.cable_activities)        
+        */
+        double[] ctad = clusterTrainingActivities.getData();
+        for (int i = 0; i < prevCableActivities.elements; i++) {
+            ctad[i] = Math.max(prevCableActivities.getData()[i], cableActivities.getData()[i]);
+        }
+        
+        //self.previous_cable_activities = self.cable_activities.copy() 
+        prevCableActivities.set(cableActivities);
+        
+        
+
         
 //        # Update cable_activities, incorporating sensing dynamics
 //        self.cable_activities = tools.bounded_sum([
@@ -162,7 +188,7 @@ public class Block  {
 //        
         
         
-        ziptie.stepUp(cableActivities);
+        ziptie.stepUp(clusterTrainingActivities);
         
         //# Process the upward pass of each of the cogs in the block        
 
@@ -185,7 +211,10 @@ public class Block  {
               # the number of cables exceeds the fill_fraction_threshold*/
             boolean enoughCables = ziptie.getCableFractionInBundle(cogIndex) > fillFractionThreshold;
             
+
+            
             c.preStepUp(cogCableActivities, enoughCables);
+            cogIndex++;
         }
 
         if (parallelCogs) {
@@ -197,8 +226,7 @@ public class Block  {
             }
         }        
         
-        cogIndex = 0;
-        
+        cogIndex = 0;        
         for (final Cog c : cogs) {                                                   
             //self.bundle_activities = np.concatenate((self.bundle_activities,cog_bundle_activities))
             DenseMatrix64F cogBundleActivities = c.getActivityStepUpOut();
@@ -221,6 +249,7 @@ public class Block  {
         
         goalDecay();
         
+        stepCounter++;
         
         return bundleActivities;
     }
@@ -281,6 +310,7 @@ public class Block  {
         for (int cogIndex = 0; cogIndex < cogs.size(); cogIndex++) {
             final Cog c = cogs.get(cogIndex);         
             final DenseMatrix64F cableGoalsByCog = c.getGoalsStepDownOut();
+            final double[] cableGoalsByCogD = cableGoalsByCog.getData();
             
             //cog_cable_indices = self.ziptie.get_index_projection(cog_index).astype(bool)
             DenseMatrix64F cogCableIndices = matrixBooleanize(ziptie.getIndexProjection(cogIndex));
@@ -308,7 +338,7 @@ public class Block  {
                         //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
                         if ((cableGoalsByCog.getNumRows() > comparedI) && (cableGoalsByCog.getNumCols() > 0))
                             cableGoals.set(i, j, 
-                                    Math.max(cableGoals.get(i, j), cableGoalsByCog.get(comparedI++, 0)));
+                                    Math.max(cableGoals.get(i, j), cableGoalsByCogD[comparedI++]));
                     }
                     
                     
@@ -354,7 +384,7 @@ public class Block  {
         for (int ii = 0; ii < action.length; ii++) {
             if ((!Double.isFinite(action[ii])) || (action[ii] == NaN)) {
                 //System.out.println("WTF is " + action[ii]);
-                //invalidAction = true; 
+                invalidAction = true; 
                 
                 action[ii] = 0;
             }
@@ -365,6 +395,7 @@ public class Block  {
             //System.out.println(this);
             //System.exit(1);            
         }
+
                 
         return this.hubCableGoals;
     }
