@@ -2,7 +2,7 @@ package becca.core;
 
 public class BeccaParams {
     
-    static int stmSize = 16; //short-term memory size, in cycles (time)
+    static int stmSize = 10; //short-term memory size, in cycles (time)
 
     //gaussian is more computation expensive
     static boolean RandomGaussian = false;
@@ -37,13 +37,13 @@ public class BeccaParams {
     
     static double hubRewardDecayRate = decayRate(stmSize); //Recalculate in terms of how many cycles before reward at that history is insignificant (< epsilon).  this cycle time should be approximately equal to hubTraceLength, or can be exactly that
     
-    static double hubForgettingRate = decayRate(stmSize*2);
+    static double hubForgettingRate = decayRate(stmSize*10);
     static double hubExploration = .1;
     
     //ZipTie ----------------------------------------
     static double ziptieSpeedUp = 1.0;
     static double ziptieMeanExponent = -2;
-    static double ziptieActivatedBundlemapNoise = 0.01;
+    static double ziptieActivatedBundlemapNoise = 0.05;
     
     //      ZipTie, in Block --------------
     static double blockziptieNucleationThreshold = 0.1;

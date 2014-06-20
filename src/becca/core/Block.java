@@ -311,6 +311,7 @@ public class Block  {
             final double[] ccid = cogCableIndices.getData();
                            
             
+            if (cableGoalsByCog.numCols == 0) continue;
             
             
             int comparedI = 0, comparedIS = 0;
@@ -318,16 +319,14 @@ public class Block  {
                 
                 if (ccid[i]>0) {
                     
-                    for (int j = 0; j < cableGoalsByCog.numCols; j++) {
                         
                         //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
                         
                         //TODO: DECIDE IF THIS IS CORRECT
                         //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
-                        if ((cableGoalsByCog.getNumRows() > comparedI) && (cableGoalsByCog.getNumCols() > 0))
-                            cableGoals.set(i, j, 
-                                    Math.max(cableGoals.get(i, j), cableGoalsByCogD[comparedI++]));
-                    }
+                        if (cableGoalsByCog.getNumRows() > i)
+                            cableGoals.set(i, 0, 
+                                    Math.max(cableGoals.get(i, 0), cableGoalsByCogD[i]));
                     
                     
                         //#self.reaction[cog_cable_indices] = np.maximum(
@@ -341,10 +340,9 @@ public class Block  {
                 
                     //for (int j = 0; j < surprise.getNumRows(); j++) {
 
-                    
-                    if ((cs.elements> comparedIS) && (cs.elements > comparedIS)) {
+                    if (cs.elements > i) {
                         surprise.set(i, 0, 
-                                Math.max(surprise.get(i, 0), csd[comparedIS++]));
+                                Math.max(surprise.get(i, 0), csd[i]));
                     }
 
                     //}

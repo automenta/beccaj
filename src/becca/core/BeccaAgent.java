@@ -136,14 +136,15 @@ public class BeccaAgent implements Agent, Serializable {
             cableActivitiesData[i][0] = action[i];
         for (int i = 0; i < numSensors; i++)
             cableActivitiesData[i][1] = sensor[i];*/        
-        DenseMatrix64F cableActivities = new DenseMatrix64F(numActions + numSensors, 1);
+        DenseMatrix64F cableActivities = new DenseMatrix64F(numActions + getPercept().length+1, 1);
         System.arraycopy(action, 0, cableActivities.getData(), 0, numActions);
-        System.arraycopy(getPercept(), 0, cableActivities.getData(), numActions, numSensors);
+        System.arraycopy(getPercept(), 0, cableActivities.getData(), numActions, getPercept().length);
+        cableActivities.getData()[numActions+getPercept().length] = reward; //reward in last element
+
                 
         //# Propogate the new sensor inputs up through the blocks
-        DenseMatrix64F nextUp = cableActivities;
         for (final Block b : blocks) {
-            nextUp = b.stepUp(nextUp);
+            cableActivities = b.stepUp(cableActivities);
         }
         
         //# Create a new block if the top block has had enough bundles assigned
@@ -204,7 +205,6 @@ public class BeccaAgent implements Agent, Serializable {
         */
         System.arraycopy(cableGoals.getData(), 0, action, 0, numActions);
 
-        //Util.printArray(action);
         
  
         boolean invalidAction = false;

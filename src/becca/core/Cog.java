@@ -84,10 +84,10 @@ public class Cog {
             System.err.println("Cog: Number of max cables exceeded in " + this);
         }
         
-        final DenseMatrix64F dactivities = daisychain.stepUp(activities).copy();
+        final DenseMatrix64F dactivities = daisychain.stepUp(activities);//.copy();
         
         if (enoughCables) {
-            activityStepUpOut = ziptie.stepUp(dactivities).copy();
+            activityStepUpOut = ziptie.stepUp(dactivities);//.copy();
         }
         else {
             activityStepUpOut = new DenseMatrix64F(0, 1);

@@ -149,7 +149,8 @@ public class TestHubWithBlock {
     }    
     
     public static void main(String[] args) {
-        new TestHubWithBlock(2, 32);
+        //new TestHubWithBlock(2, 32);
+        new TestHubWithBlock(1, 32);
     }
     
 }

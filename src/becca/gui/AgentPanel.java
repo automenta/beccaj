@@ -54,10 +54,15 @@ public class AgentPanel extends MatrixPanel {
         addMatrix("sensors", sensorMatrix);
         addMatrix("actions", actionMatrix);
             
+        addMatrix("hub.output", agent.hub.getOutput());       
         addMatrix("hub.count", agent.hub.getCount());                
         addMatrix("hub.cableActivities", agent.hub.getCableActivities());
         addMatrix("hub.chainActivities", agent.hub.getChainActivities());
-
+        addMatrix("hub.expectedReward", agent.hub.getExpectedReward());
+        addMatrix("hub.estimatedRewardValue", agent.hub.getEstimatedRewardValue());
+        
+                
+        
         int n = 0;
         for (Block b : agent.blocks) {
             String bPrefix = "b" + (b.level) + ".";
