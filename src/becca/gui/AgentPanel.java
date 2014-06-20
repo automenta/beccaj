@@ -87,9 +87,15 @@ public class AgentPanel extends MatrixPanel {
     
                 if (showDaisyChains) {
                     DaisyChain d = c.daisychain;
-                    String dPrefix = "daisychain.";
-                    addMatrix(bPrefix + dPrefix + "surprise", d.getSurprise());
-                    addMatrix(bPrefix + dPrefix + "reaction", d.getReaction());
+                    String dPrefix = bPrefix + cPrefix + "daisychain.";
+                    addMatrix(dPrefix + "surprise", d.getSurprise());
+                    addMatrix(dPrefix + "reaction", d.getReaction());
+                    addMatrix(dPrefix + "expectedCableActivations", d.getExpectedCableActivities());
+          
+                    addMatrix(dPrefix + "pre", d.getPre());
+                    addMatrix(dPrefix + "preCount", d.getPreCount());
+                    addMatrix(dPrefix + "post", d.getPost());
+                    addMatrix(dPrefix + "postUncertainty", d.getPostUncertainty());
                 }
                 
             }

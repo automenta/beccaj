@@ -16,7 +16,7 @@ public class BeccaParams {
     static int blockMaxBundlesPerCog = 4;    
     static double blockFillFractionThreshold = 0.1;
     static double blockRangeDecayRate =  Math.pow(10, -3);
-    static double blockActivityDecayRate = 0.99; //real, 0 < x < 1, higher decays faster
+    static double blockActivityDecayRate = 1.0; //0.99; //real, 0 < x < 1, higher decays faster
     static double blockInitializationThreshold = 0.5;
     
     
@@ -27,7 +27,7 @@ public class BeccaParams {
     //DaisyChain ---------------------------------------------------        
     static double daisyCountDecayRate = decayRate(stmSize*2); //real, 0 < x < 1; higher = decays more quickly
     static double daisyChainUpdateRate = decayRate(stmSize*2); //originally: 0.01
-    static boolean daisyAllowSelfTransitions = true; //originally: true
+    static boolean daisyAllowSelfTransitions = false; //originally: true
     
     
     //Hub -----------------------------------
@@ -50,14 +50,14 @@ public class BeccaParams {
     static double blockziptieNucleationEnergyRate = 1E-5;
     static double blockziptieAgglomerationThreshold = 0.1;
     static double blockziptieAgglomerationEnergyRate = 1E-3;
-    static double blockziptieActivationWeightingExponent = 512;
+    static double blockziptieActivationWeightingExponent = 8;
     
     //      ZipTie, in Cog -----------------
     static double cogziptieNucleationThreshold = 0.1;
     static double cogziptieNucleationEnergyRate = 1E-5;
     static double cogziptieAgglomerationThreshold = 0.1;
     static double cogziptieAgglomerationEnergyRate = 1E-4;
-    static double cogziptieActivationWeightingExponent = 512;
+    static double cogziptieActivationWeightingExponent = 8;
     
    
     public static double decayRate(int cycles) {

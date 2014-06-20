@@ -14,6 +14,7 @@ public class TestDaisyChainStepDown extends TestDaisyChain {
         
     }
 
+    int clock = 0;
     public void update(double t) {
         double jitter = Math.random() * JITTER_FACTOR;
         t+=jitter;
@@ -29,7 +30,10 @@ public class TestDaisyChainStepDown extends TestDaisyChain {
         
         DenseMatrix64F chainActivities = d.stepUp(cableActivities);
         DenseMatrix64F cableGoalsOut = d.stepDown(cableGoalsIn);
+        
+        //if (clock % 1024 == 0)
         p.update(chainActivities, cableGoalsOut);
+        clock++;
     }
 
     public static void main(String[] args) {

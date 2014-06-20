@@ -89,8 +89,9 @@ abstract public class TestDaisyChain {
 
                     update((System.currentTimeMillis() - startTime)/1000.0); 
 
+                    
                     try {
-                        Thread.sleep(50);
+                        Thread.sleep(10);
                     } catch (InterruptedException ex) { }
                     
                 }

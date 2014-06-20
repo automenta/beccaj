@@ -277,7 +277,7 @@ public class DaisyChain {
         //self.surprise = tools.weighted_average(
         //                  np.abs(self.post.T - self.expected_cable_activities),
         //                  self.pre / (self.post_uncertainty + tools.EPSILON))
-        DenseMatrix64F sa = broadcastCols(postT, expectedCableActivities.getNumCols());
+        DenseMatrix64F sa = broadcastCols(postT, expectedCableActivities.getNumRows());
         subEquals(sa, expectedCableActivities);
         matrixAbs(sa);
 
@@ -287,6 +287,15 @@ public class DaisyChain {
         matrixDivBy(sb, broadcastRows(pre, sb.getNumRows()));        
         
         surprise = getWeightedAverage(sa, sb);
+        
+        /*if (elementSum(surprise) > 0) {
+            System.out.println(postT);
+            System.out.println(broadcastCols(postT, expectedCableActivities.getNumRows()));
+            System.out.println(expectedCableActivities);
+            System.out.print(elementSum(surprise) + " = ");
+            printArray(surprise.getData());
+            System.out.println("---");
+        }*/
         
         //# Reshape chain activities into a single column
         //return chain_activities.ravel()[:,np.newaxis]

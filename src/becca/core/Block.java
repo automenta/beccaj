@@ -212,7 +212,6 @@ public class Block  {
             boolean enoughCables = ziptie.getCableFractionInBundle(cogIndex) > fillFractionThreshold;
             
 
-            
             c.preStepUp(cogCableActivities, enoughCables);
             cogIndex++;
         }
