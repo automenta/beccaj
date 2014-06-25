@@ -303,7 +303,7 @@ public class Hub {
         }
 
         if ((goalVotes.getNumElements() == 0) || (potentialWinners.size() == 0)) {
-            /*System.err.println("No goals");
+            System.err.println("No goals");
              System.err.println("Chain Votes: " + chainVotes);
              System.err.println("Estimated Reward Value: " + estimatedRewardValue);
              System.err.println("Reward Uncertainty: " + rewardUncertainty);
@@ -315,7 +315,7 @@ public class Hub {
              System.err.println("Reward Difference: " + rewardDifference);
              System.err.println("Expected Reward: " + expectedReward);
             
-             System.err.println("ERDelta: " + erDelta);*/
+             System.err.println("ERDelta: " + erDelta);
 
             //System.exit(1);
             return;
@@ -333,7 +333,8 @@ public class Hub {
          */
         final int winner;
         if (potentialWinners.isEmpty()) {
-            winner = 0;
+            //winner = 0;
+            return;
         } else {
             int pwi = (int) (Math.random() * potentialWinners.size());
             winner = potentialWinners.get(pwi);

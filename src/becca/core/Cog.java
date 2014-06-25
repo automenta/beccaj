@@ -38,11 +38,12 @@ public class Cog {
     public final int maxChainsPerBundle;
     public final DaisyChain daisychain;
     public final ZipTie ziptie;
-    private DenseMatrix64F activityStepUpOut;
+    private DenseMatrix64F bundleActivities;
     private DenseMatrix64F preCogCableActivities;
     private boolean preEnoughCable;
-    private DenseMatrix64F goalsStepDownOut;
+    private DenseMatrix64F cableGoals;
     private DenseMatrix64F preStepDownGoals;
+    private final DenseMatrix64F emptyActivity;
 
     public Cog(int maxCables, int maxBundles, int maxChainsPerBundle, int level) {
         
@@ -55,6 +56,7 @@ public class Cog {
         this.maxChainsPerBundle = maxChainsPerBundle;
         
         this.daisychain = new DaisyChain(maxCables);        
+        this.emptyActivity = new DenseMatrix64F(maxBundles, 1);
         
         if (maxBundles > 0)
             this.ziptie = new ZipTie(false, (int)Math.pow(maxCables, 2), maxBundles, maxChainsPerBundle);
@@ -64,9 +66,9 @@ public class Cog {
     }
 
     //""" cable_activities percolate upward through daisychain and ziptie """
-    public DenseMatrix64F stepUp(DenseMatrix64F activities, boolean enoughCables) {                
-        if (activities == null) {
-            activities = preCogCableActivities;
+    public DenseMatrix64F stepUp(DenseMatrix64F cableActivities, boolean enoughCables) {                
+        if (cableActivities == null) {
+            cableActivities = preCogCableActivities;
             enoughCables = preEnoughCable;
         }
 
@@ -79,46 +81,45 @@ public class Cog {
             print '-----  Number of max cables exceeded in', self.name, \
                     '  -----'
         */
-        if (activities.getNumRows() > maxCables) {
-            activities.reshape(maxCables,1);
+        if (cableActivities.getNumRows() > maxCables) {
+            cableActivities.reshape(maxCables,1);
             System.err.println("Cog: Number of max cables exceeded in " + this);
         }
         
-        final DenseMatrix64F dactivities = daisychain.stepUp(activities);//.copy();
+        final DenseMatrix64F chainActivities = daisychain.stepUp(cableActivities).copy();
         
         if (enoughCables) {
-            activityStepUpOut = ziptie.stepUp(dactivities);//.copy();
+            bundleActivities = ziptie.stepUp(chainActivities);//.copy();
         }
         else {
-            activityStepUpOut = new DenseMatrix64F(0, 1);
+            bundleActivities = emptyActivity;
         }
         
-        if (activities.getNumRows() < maxBundles)
-            activityStepUpOut = pad(activities, maxBundles, 1, 0.0);
+        if (cableActivities.getNumRows() < maxBundles)
+            bundleActivities = pad(bundleActivities, maxBundles, 1, 0.0);
                 
-        return activityStepUpOut;
+        return bundleActivities;
     }
 
-    public DenseMatrix64F getActivityStepUpOut() {
-        return activityStepUpOut;
+    public DenseMatrix64F getBundleActivities() {
+        return bundleActivities;
     }
 
-    public DenseMatrix64F getGoalsStepDownOut() {
-        return goalsStepDownOut;
+    public DenseMatrix64F getCableGoals() {
+        return cableGoals;
     }
         
     
     
     //""" bundle_goals percolate downward """
-    public DenseMatrix64F stepDown(DenseMatrix64F goals) {
-        if (goals == null)
-            goals = preStepDownGoals;
-        final DenseMatrix64F zgoals = ziptie.stepDown(goals);
-        goalsStepDownOut = daisychain.stepDown(zgoals);
+    public DenseMatrix64F stepDown(DenseMatrix64F bundleGoals) {
+        if (bundleGoals == null)
+            bundleGoals = preStepDownGoals;
         
-
+        final DenseMatrix64F chainGoals = ziptie.stepDown(bundleGoals);
+        cableGoals = daisychain.stepDown(chainGoals);
         
-        return goalsStepDownOut;
+        return cableGoals;
     }
     
     //""" How many bundles have been created in this cog? """

@@ -194,8 +194,6 @@ public class Block  {
         //# Process the upward pass of each of the cogs in the block        
 
         
-        int numBundleActivitiez = 0;
-        fill(this.bundleActivities, 0);
         
         int cogIndex = 0;
         for (final Cog c : cogs) {
@@ -209,10 +207,12 @@ public class Block  {
               # the number of cables exceeds the fill_fraction_threshold*/
             boolean enoughCables = ziptie.getCableFractionInBundle(cogIndex) > fillFractionThreshold;
             
+            //System.out.print(enoughCables + " ");
 
             c.preStepUp(cogCableActivities, enoughCables);
             cogIndex++;
         }
+        
 
         if (parallelCogs) {
             cogs.parallelStream().forEach(c -> c.stepUp(null, false));
@@ -223,17 +223,19 @@ public class Block  {
             }
         }        
         
+        fill(this.bundleActivities, 0);
+        
+        int numBundleActivitiez = 0;
         cogIndex = 0;        
         for (final Cog c : cogs) {                                                   
             //self.bundle_activities = np.concatenate((self.bundle_activities,cog_bundle_activities))
-            DenseMatrix64F cogBundleActivities = c.getActivityStepUpOut();
+            DenseMatrix64F cogBundleActivities = c.getBundleActivities();
             double[] cbaData = cogBundleActivities.getData();
             System.arraycopy(cbaData, 0, this.bundleActivities.getData(), numBundleActivitiez, cogBundleActivities.elements);
             numBundleActivitiez += cogBundleActivities.elements;
             
             cogIndex++;
         }
-        
         
         goalDecay();
         
@@ -258,12 +260,12 @@ public class Block  {
         //""" Find cable_activity_goals, given a set of bundle_goals """
         
         //bundle_goals = tools.pad(bundle_goals, (self.max_bundles, 1))        
+        
         bundleGoals = pad(bundleGoals, maxBundles, 1, 0.0);
         
-        DenseMatrix64F cableGoals = new DenseMatrix64F(maxCables, 1);
         
-        //self.surprise = np.zeros((self.max_cables, 1))
-        fill(surprise, 0);
+        
+
 
 
         //# Process the downward pass of each of the cogs in the level
@@ -293,72 +295,99 @@ public class Block  {
                 c.stepDown(null);
             }
         }        
-            
+        
+        
+        
+        final DenseMatrix64F cableGoals = new DenseMatrix64F(maxCables, 1);
 
+        //self.surprise = np.zeros((self.max_cables, 1))
+        fill(surprise, 0);            
+
+        int i = 0;
         for (int cogIndex = 0; cogIndex < cogs.size(); cogIndex++) {
             final Cog c = cogs.get(cogIndex);         
-            final DenseMatrix64F cableGoalsByCog = c.getGoalsStepDownOut();
+            final DenseMatrix64F cableGoalsByCog = c.getCableGoals();
             final double[] cableGoalsByCogD = cableGoalsByCog.getData();
             
             //cog_cable_indices = self.ziptie.get_index_projection(cog_index).astype(bool)
             DenseMatrix64F cogCableIndices = matrixBooleanize(ziptie.getIndexProjection(cogIndex));
             assert(cogCableIndices.getNumRows() == 1);
+            
+            //cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).astype(bool)]            
+            //DenseMatrix64F cogCableActivities = Util.extractBooleanized(cableActivities, ziptie.getIndexProjection(cogIndex));            
                        
             //paddingReaction = pad(c.getReaction(), cogCableIndices.getNumRows(), 0, 0.0);
-            final DenseMatrix64F cs = c.getSurprise(); //transpose(c.getSurprise(), null);
+            final DenseMatrix64F cogSurprise = c.getSurprise(); //transpose(c.getSurprise(), null);
             
-            final double[] csd = cs.getData();
+
+        
+            final double[] csd = cogSurprise.getData();
             final double[] ccid = cogCableIndices.getData();
-                           
+            final double[] cgd = cableGoals.getData();
+            final double[] sd = this.surprise.getData();
             
-            if (cableGoalsByCog.numCols == 0) continue;
+            //printArray(cogCableIndices.getData());
             
+            assert(cogCableIndices.elements == cableGoals.elements);
+            assert(cogCableIndices.elements == surprise.elements);
             
-            int comparedI = 0, comparedIS = 0;
-            for (int i = 0; i < cogCableIndices.elements; i++) {
-                
-                if (ccid[i]>0) {
-                    
-                        
-                        //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
-                        
-                        //TODO: DECIDE IF THIS IS CORRECT
-                        //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
-                        if (cableGoalsByCog.getNumRows() > i)
-                            cableGoals.set(i, 0, 
-                                    Math.max(cableGoals.get(i, 0), cableGoalsByCogD[i]));
-                    
-                    
-                        //#self.reaction[cog_cable_indices] = np.maximum(
-                        //#        tools.pad(cog.reaction, (cog_cable_indices[0].size, 0)),
-                        //#        self.reaction[cog_cable_indices]) 
-
-
-                        //TODO: DECIDE IF THIS IS CORRECT
-                        //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])
-                        //System.out.println(j + " " + i + " " + m(cs) + " " + m(surprise));                                               
-                
-                    //for (int j = 0; j < surprise.getNumRows(); j++) {
-
-                    if (cs.elements > i) {
-                        surprise.set(i, 0, 
-                                Math.max(surprise.get(i, 0), csd[i]));
-                    }
-
-                    //}
-                
+            assert(cableGoalsByCog.numCols < 2);
+            
+            for (int j = 0; j < cableGoalsByCog.elements; j++) {       
+                if (ccid[i+j] > 0) {
+                    cgd[i+j] = Math.max(cgd[i+j], cableGoalsByCogD[j]);
+                    sd[i+j] = Math.max(sd[i+j], csd[j]);
                 }
-
-                /*if (elementSum(cs) > 0)
-                    System.out.println(m(surprise) + " " + m(cs) + elementSum(cs) + " " + elementSum(surprise));*/
-            }
+            }     
+            i += cableGoalsByCog.getNumRows();
+            
+//            int comparedI = 0, comparedIS = 0;
+//            for (int i = 0; i < cogCableIndices.elements; i++) {
+//                
+//                if (ccid[i]>0) {
+//                    
+//                        
+//                        //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
+//                        
+//                        //TODO: DECIDE IF THIS IS CORRECT
+//                        //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
+//                        if (cableGoalsByCog.getNumRows() > i)
+//                            cableGoals.set(i, 0, 
+//                                    Math.max(cableGoals.get(i, 0), cableGoalsByCogD[i]));
+//                    
+//                    
+//                        //#self.reaction[cog_cable_indices] = np.maximum(
+//                        //#        tools.pad(cog.reaction, (cog_cable_indices[0].size, 0)),
+//                        //#        self.reaction[cog_cable_indices]) 
+//
+//
+//                        //TODO: DECIDE IF THIS IS CORRECT
+//                        //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])
+//                        //System.out.println(j + " " + i + " " + m(cs) + " " + m(surprise));                                               
+//                
+//                    //for (int j = 0; j < surprise.getNumRows(); j++) {
+//
+//                    if (cs.elements > i) {
+//                        surprise.set(i, 0, 
+//                                Math.max(surprise.get(i, 0), csd[i]));
+//                    }
+//
+//                    //}
+//                
+//                }
+//
+//                /*if (elementSum(cs) > 0)
+//                    System.out.println(m(surprise) + " " + m(cs) + elementSum(cs) + " " + elementSum(surprise));*/
+//            }
             
         }                
         
         //System.out.println(transpose(cableGoals,null));
         //System.out.println(transpose(hubCableGoals,null));
 
-        hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
+        /*hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );*/
+        
+        
         //System.out.println(transpose(hubCableGoals,null));
         //System.out.println();
         

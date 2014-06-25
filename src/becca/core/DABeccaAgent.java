@@ -39,6 +39,9 @@ public class DABeccaAgent extends BeccaAgent {
 
     public DABeccaAgent() {
         super();
+        
+        //set higher than 1.0 so it can never be reached
+        //blockInitializationThreshold = 2.0;
 
     }
 

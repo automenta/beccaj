@@ -377,7 +377,7 @@ public class Util extends CommonOps {
         return result;
     }
 
-    static NumberFormat nf = new DecimalFormat("0.0000000");
+    static NumberFormat nf = new DecimalFormat("0.0000");
 
     public static void printArray(double[] d) {
         for (double x : d) {

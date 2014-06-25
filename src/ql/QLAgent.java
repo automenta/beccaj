@@ -9,6 +9,7 @@ package ql;
 import becca.test.Agent;
 import becca.test.World;
 import java.util.Arrays;
+import ql.som.DAPerception;
 
 /**
  *
@@ -37,7 +38,7 @@ public class QLAgent implements Agent {
         sensor = new double[sensors];
         action = new double[actions];
         
-        brain = new Brain(new Perception() {
+        /*brain = new Brain(new Perception() {
 
             @Override
             public boolean isUnipolar() {
@@ -54,9 +55,9 @@ public class QLAgent implements Agent {
                 for (int i = 0; i < sensor.length; i++)
                     setNextValue(sensor[i]);        
             }
-        }, qaction/*, new int[] { 20,16 }*/ );
+        }, qaction );*/
         
-        /*brain = new Brain(new SDAPerception(sensor, 4) {
+        brain = new Brain(new DAPerception(sensor, 4) {
 
             @Override
             public boolean isUnipolar() {
@@ -68,7 +69,7 @@ public class QLAgent implements Agent {
                 return nextReward;
             }
             
-        }, qaction ); */
+        }, qaction ); 
         
                 
         brain.reset();

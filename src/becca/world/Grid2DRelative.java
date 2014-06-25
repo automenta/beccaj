@@ -127,7 +127,7 @@ public class Grid2DRelative implements World {
 
     @Override
     public int getNumActions() {
-        return 4+1;
+        return 4;
     }
 
     @Override
@@ -169,11 +169,11 @@ public class Grid2DRelative implements World {
         /*if (action[0] > 0.5) {
          //nothing
          }*/
-        if ((action[1+0] > 0.5) && !(action[1+1] > 0.5)) {
-            positionX-=POSITION_VELOCITY * action[1+0];
+        if ((action[0] > 0.5) && !(action[1] > 0.5)) {
+            positionX-=POSITION_VELOCITY * action[0];
         }
-        if ((action[1+1] > 0.5) && !(action[1+0] > 0.5)) {
-            positionX+=POSITION_VELOCITY * action[1+1];
+        if ((action[1] > 0.5) && !(action[0] > 0.5)) {
+            positionX+=POSITION_VELOCITY * action[1];
         }
         if (positionX < 0) {
             positionX = 0;
@@ -181,11 +181,11 @@ public class Grid2DRelative implements World {
         if (positionX >= width) {
             positionX = width - 1;
         }
-        if ((action[1+2] > 0.5) && !(action[1+3] > 0.5)) {
-            positionY-=POSITION_VELOCITY * action[1+2];
+        if ((action[2] > 0.5) && !(action[3] > 0.5)) {
+            positionY-=POSITION_VELOCITY * action[2];
         }
-        if ((action[1+3] > 0.5) && !(action[1+2] > 0.5)) {
-            positionY+=POSITION_VELOCITY * action[1+3];
+        if ((action[3] > 0.5) && !(action[2] > 0.5)) {
+            positionY+=POSITION_VELOCITY * action[3];
         }
         if (positionY < 0) {
             positionY = 0;
