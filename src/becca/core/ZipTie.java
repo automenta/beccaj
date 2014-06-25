@@ -303,6 +303,7 @@ public class ZipTie {
                 this.bundlesFull = true;
             
             //print self.name, 'ci', cable_index, 'added as a bundle nucleus'
+            //System.out.println(this + " " + cableIndex + " added as bundle nucleus");
             
             //self.nucleation_energy[cable_index, 0] = 0.
             nucleationEnergy.set(cableIndex, 0, 0.0);
@@ -455,7 +456,7 @@ public class ZipTie {
         return cableActivityGoals;
     }
 
-    public DenseMatrix64F getIndexProjection(int bundleIndex) {
+    public DenseMatrix64F getIndexProjection(final int bundleIndex) {
         //""" Project bundle indices down to their cable indices """
         
         //projection = self.bundle_map[bundle_index,:]

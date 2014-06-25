@@ -81,8 +81,8 @@ public class Cog {
                     '  -----'
         */
         if (cableActivities.getNumRows() > maxCables) {
-            cableActivities.reshape(maxCables,1);
-            System.err.println("Cog: Number of max cables exceeded in " + this);
+            cableActivities.reshape(maxCables,cableActivities.getNumCols());
+            //System.err.println("Cog: Number of max cables exceeded in " + this);
         }
         
         final DenseMatrix64F chainActivities = daisychain.stepUp(cableActivities);

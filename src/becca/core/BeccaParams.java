@@ -2,21 +2,34 @@ package becca.core;
 
 public class BeccaParams {
     
+    //General
     static int stmSize = 10; //short-term memory size, in cycles (time)
+    
+    static final boolean RandomGaussian = true;  //gaussian is more computation expensive
+    
+    static final int NoiseFactorySize = 8192; //pre-allocated random numbers, traversed cyclically.  set to zero to use pure random numbers instead.
+    
+    static final boolean ExactZero = false;
+    
+    static final double EpsilonScale = 16.0; //number of times floating point epsilon to use as a minimal threshold.  larger value increases epsilon value threshold, decreasing accuracy / resolution of minimum floating point values. "Precision.EPSILON = Largest double-precision floating-point number such that 1 + EPSILON is numerically equal to 1."        
 
-    //gaussian is more computation expensive
-    static boolean RandomGaussian = false;
     
     //Agent ---------------------------------------------------    
     static int agentRecentSurpriseHistorySize = stmSize;
     
     //Block ---------------------------------------------------        
     static boolean BlockGoalBoundedSum = false;
-    static int blockMaxCablesPerCog = 16;
-    static int blockMaxBundlesPerCog = 8;    
+    static int blockMaxCablesPerCog = 8;
+    static int blockMaxBundlesPerCog = 4;    
     static double blockFillFractionThreshold = 0;
     static double blockRangeDecayRate =  Math.pow(10, -3);
     static double blockActivityDecayRate = 1.0; //0.99; //real, 0 < x < 1, higher decays faster
+    
+    /**
+     * lower value makes it easier for the top block to spawn a new top block.
+     * when the proportion of bundles nuclated exceeds this threshold, 
+     * adds a new top block.
+     */
     static double blockInitializationThreshold = 0.5;
     
     
@@ -59,6 +72,7 @@ public class BeccaParams {
     static double cogziptieAgglomerationThreshold = 0.1;
     static double cogziptieAgglomerationEnergyRate = 1E-4;
     static int cogziptieActivationWeightingExponent = 8;
+    
     
     
    

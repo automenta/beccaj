@@ -14,11 +14,10 @@ import org.ejml.ops.CommonOps;
 public class Util extends CommonOps {
 
 
-    public final static double EPSILON = 2.0 * Precision.EPSILON;   // // sys.float_info.epsilon = 2.220446049250313e-16
+    public final static double EPSILON = BeccaParams.EpsilonScale * Precision.EPSILON;   // // sys.float_info.epsilon = 2.220446049250313e-16
     public final static double BIG = Math.pow(10, 20);
-    public final static int MAX_INT16 = 32767;     // np.iinfo(np.int16).max
 
-    static int log(int x, int base) {
+    static int log(final int x, final int base) {
         return (int) (Math.log(x) / Math.log(base));
     }
 
@@ -26,7 +25,7 @@ public class Util extends CommonOps {
         return "[" + m.getNumRows() + "," + m.getNumCols() + "]";
     }
 
-    public static DenseMatrix64F multMatrixMatrix(DenseMatrix64F a, DenseMatrix64F b) {
+    public static DenseMatrix64F multMatrixMatrix(final DenseMatrix64F a, final DenseMatrix64F b) {
         assert (a.getNumRows() == b.getNumRows());
         assert (a.getNumCols() == b.getNumCols());
 
@@ -365,7 +364,7 @@ public class Util extends CommonOps {
         final double[] ipd = indexProjection.getData();
         int activityNum = 0;
         for (int i = 0; i < indexProjection.getNumElements(); i++) {
-            if (ipd[i] != 0)                
+            if (!isZero(ipd[i]))                
                 activities[activityNum++] = ca[i];                
         }
         
@@ -411,6 +410,23 @@ public class Util extends CommonOps {
      }
      */
 
+    public static boolean isZero(final double v) {
+        if (BeccaParams.ExactZero) {
+            return v==0;
+        }
+        else {
+            if (v >= 0) {
+                if (v < EPSILON) 
+                    return true;
+            }
+            else if (v < 0) {
+                if (v > -EPSILON)
+                    return true;
+            }
+            return false;
+        }
+    }
+    
     /**
      * zeros the resulting matrix and puts 1 where the input matrix is non-zero
      */
@@ -419,7 +435,7 @@ public class Util extends CommonOps {
         final double[] xd = x.getData();
         final double[] yd = y.getData();
         for (int i = 0; i < yd.length; i++) {
-            if (xd[i] != 0) {
+            if (!isZero(xd[i])) {
                 yd[i] = 1;
             }
         }
@@ -432,7 +448,7 @@ public class Util extends CommonOps {
     public static DenseMatrix64F matrixBooleanize(final DenseMatrix64F x) {
         final double[] d = x.getData();
         for (int j = 0; j < d.length; j++) {
-            d[j] = (d[j] != 0 ? 1.0 : 0.0);
+            d[j] = (!isZero(d[j]) ? 1.0 : 0.0);
         }
         return x;
     }
@@ -626,8 +642,24 @@ public class Util extends CommonOps {
     public static class XORShiftRandom extends Random {
 
         private long seed = System.nanoTime();
+        
+        private final double[] noiseFactory;
+        int noisePos = 0;
+        boolean initialized = false;
 
         public XORShiftRandom() {
+            if (BeccaParams.NoiseFactorySize > 0) {
+                noiseFactory = new double[BeccaParams.NoiseFactorySize];
+                for (int i = 0; i < BeccaParams.NoiseFactorySize; i++) {
+                    if (BeccaParams.RandomGaussian) {
+                        noiseFactory[i] = super.nextGaussian();
+                    }
+                    else {
+                        noiseFactory[i] = super.nextDouble();
+                    }
+                }
+            }
+            initialized = true;
         }
 
         @Override
@@ -641,6 +673,27 @@ public class Util extends CommonOps {
             x &= ((1L << nbits) - 1);
             return (int) x;
         }
+
+        @Override
+        public double nextDouble() {
+            if ((BeccaParams.NoiseFactorySize == 0) || (!initialized)) {
+                return super.nextDouble();
+            }
+            else {
+                return noiseFactory[(noisePos++)%(BeccaParams.NoiseFactorySize-1)];
+            }            
+        }
+        
+        @Override
+        public double nextGaussian() {
+            if ((BeccaParams.NoiseFactorySize == 0) || (!initialized)) {
+                return super.nextGaussian();
+            }
+            else {
+                return noiseFactory[(noisePos++)%(BeccaParams.NoiseFactorySize-1)];
+            }            
+        }        
+        
     }
 
     private static final Random random = new XORShiftRandom();

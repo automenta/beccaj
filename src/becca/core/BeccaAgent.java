@@ -151,6 +151,7 @@ public class BeccaAgent implements Agent, Serializable {
         Block topBlock = blocks.get(blocks.size()-1); //top block        
         double blockBundlesFull = ((double)(topBlock.getBundlesCreated())) / ((double)(topBlock.maxBundles));
         
+        
         if (blockBundlesFull > blockInitializationThreshold) {
             Block b = new Block(numActions + numSensors, blocks.size());
             blocks.add(b);
