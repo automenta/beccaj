@@ -72,7 +72,6 @@ public class Cog {
             enoughCables = preEnoughCable;
         }
 
-
         /*
         # TODO: fix this so that cogs can gracefully handle more cables 
         # or else never be assigned them in the first place

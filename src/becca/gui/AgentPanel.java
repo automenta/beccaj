@@ -127,6 +127,7 @@ public class AgentPanel extends MatrixPanel {
     int count = 1;
     public void update() {
         System.arraycopy(agent.getPercept(), 0, sensorMatrix.data, 0, agent.getPercept().length);
+        System.arraycopy(agent.getAction(), 0, actionMatrix.data, 0, agent.getAction().length);
         //DenseMatrix64F.wrap(agent.getPercept().length, 1, agent.getPercept()        //DenseMatrix64F.wrap(agent.action.length, 1, agent.action)
 
         if (count++ % recreatePeriod == 0)

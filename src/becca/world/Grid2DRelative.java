@@ -1,6 +1,6 @@
 package becca.world;
 
-import becca.core.DABeccaAgent;
+import becca.core.BeccaAgent;
 import becca.gui.AgentPanel;
 import becca.test.Agent;
 import becca.test.Simulation;
@@ -245,7 +245,7 @@ public class Grid2DRelative implements World {
         Class<? extends Agent> a = DABeccaAgent.class;
         //Class<? extends Agent> a = QLAgent.class;
 
-        new Simulation(a, new Grid2DRelative(24, 8, 11990000, 0.02, 0.01));
+        new Simulation(a, new Grid2DRelative(8, 4, 11990000, 0.02, 0.01));
 
     }
 }

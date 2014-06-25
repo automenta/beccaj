@@ -39,15 +39,13 @@ public class DABeccaAgent extends BeccaAgent {
 
     public DABeccaAgent() {
         super();
-        
-        //set higher than 1.0 so it can never be reached
-        //blockInitializationThreshold = 2.0;
+
 
     }
 
     public int getReducedSensors(int worldSensors) {
         //return worldSensors / 8;
-        return 8;
+        return 24;
     }
     
     @Override

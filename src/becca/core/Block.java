@@ -203,6 +203,8 @@ public class Block  {
             //cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).astype(bool)]
             DenseMatrix64F cogCableActivities = Util.extractBooleanized(cableActivities, ziptie.getIndexProjection(cogIndex));
             
+            
+
             /*# Cogs are only allowed to start forming bundles once 
               # the number of cables exceeds the fill_fraction_threshold*/
             boolean enoughCables = ziptie.getCableFractionInBundle(cogIndex) > fillFractionThreshold;
@@ -303,7 +305,6 @@ public class Block  {
         //self.surprise = np.zeros((self.max_cables, 1))
         fill(surprise, 0);            
 
-        int i = 0;
         for (int cogIndex = 0; cogIndex < cogs.size(); cogIndex++) {
             final Cog c = cogs.get(cogIndex);         
             final DenseMatrix64F cableGoalsByCog = c.getCableGoals();
@@ -311,6 +312,8 @@ public class Block  {
             
             //cog_cable_indices = self.ziptie.get_index_projection(cog_index).astype(bool)
             DenseMatrix64F cogCableIndices = matrixBooleanize(ziptie.getIndexProjection(cogIndex));
+
+            
             assert(cogCableIndices.getNumRows() == 1);
             
             //cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).astype(bool)]            
@@ -332,60 +335,19 @@ public class Block  {
             assert(cogCableIndices.elements == surprise.elements);
             
             assert(cableGoalsByCog.numCols < 2);
-            
             for (int j = 0; j < cableGoalsByCog.elements; j++) {       
-                if (ccid[i+j] > 0) {
-                    cgd[i+j] = Math.max(cgd[i+j], cableGoalsByCogD[j]);
-                    sd[i+j] = Math.max(sd[i+j], csd[j]);
+                if (ccid[j] > 0) {
+                    cgd[j] = Math.max(cgd[j], cableGoalsByCogD[j]);
+                    sd[j] = Math.max(sd[j], csd[j]);
                 }
             }     
-            i += cableGoalsByCog.getNumRows();
-            
-//            int comparedI = 0, comparedIS = 0;
-//            for (int i = 0; i < cogCableIndices.elements; i++) {
-//                
-//                if (ccid[i]>0) {
-//                    
-//                        
-//                        //System.out.println(i + " " + j + " " + m(cableGoals) + " " + m(cableGoalsByCog)+ " " + m(cogBundleGoals));
-//                        
-//                        //TODO: DECIDE IF THIS IS CORRECT
-//                        //cable_goals[cog_cable_indices] = np.maximum(cable_goals_by_cog, cable_goals[cog_cable_indices])            
-//                        if (cableGoalsByCog.getNumRows() > i)
-//                            cableGoals.set(i, 0, 
-//                                    Math.max(cableGoals.get(i, 0), cableGoalsByCogD[i]));
-//                    
-//                    
-//                        //#self.reaction[cog_cable_indices] = np.maximum(
-//                        //#        tools.pad(cog.reaction, (cog_cable_indices[0].size, 0)),
-//                        //#        self.reaction[cog_cable_indices]) 
-//
-//
-//                        //TODO: DECIDE IF THIS IS CORRECT
-//                        //self.surprise[cog_cable_indices] = np.maximum(cog.surprise, self.surprise[cog_cable_indices])
-//                        //System.out.println(j + " " + i + " " + m(cs) + " " + m(surprise));                                               
-//                
-//                    //for (int j = 0; j < surprise.getNumRows(); j++) {
-//
-//                    if (cs.elements > i) {
-//                        surprise.set(i, 0, 
-//                                Math.max(surprise.get(i, 0), csd[i]));
-//                    }
-//
-//                    //}
-//                
-//                }
-//
-//                /*if (elementSum(cs) > 0)
-//                    System.out.println(m(surprise) + " " + m(cs) + elementSum(cs) + " " + elementSum(surprise));*/
-//            }
             
         }                
         
         //System.out.println(transpose(cableGoals,null));
         //System.out.println(transpose(hubCableGoals,null));
 
-        /*hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );*/
+        hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
         
         
         //System.out.println(transpose(hubCableGoals,null));

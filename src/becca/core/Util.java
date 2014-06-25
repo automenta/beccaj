@@ -347,7 +347,9 @@ public class Util extends CommonOps {
     }
 
     static DenseMatrix64F extractBooleanized(DenseMatrix64F cableActivities, DenseMatrix64F indexProjection) {
-        //exracts the elements where indexProjection!=0
+
+                
+//exracts the elements where indexProjection!=0
         // emulates: cog_cable_activities = self.cable_activities[self.ziptie.get_index_projection(cog_index).ravel().astype(bool)]
 
         //indexProjection = transpose(indexProjection, null); //both row=oriented
@@ -355,13 +357,15 @@ public class Util extends CommonOps {
         assert(cableActivities.getNumCols() == 1);
         assert(indexProjection.elements == cableActivities.getNumRows());
         
-        final double[] activities = new double[indexProjection.getNumRows()];
+
+        
+        final double[] activities = new double[indexProjection.getNumElements()];
         final double[] ca = cableActivities.getData();
         final double[] ipd = indexProjection.getData();
         int activityNum = 0;
-        for (int i = 0; i < indexProjection.getNumRows(); i++) {
-            if (ipd[i] != 0)
-                activities[activityNum++] = ca[i];
+        for (int i = 0; i < indexProjection.getNumElements(); i++) {
+            if (ipd[i] != 0)                
+                activities[activityNum++] = ca[i];                
         }
         
         DenseMatrix64F result = DenseMatrix64F.wrap(activityNum, 1, activities);

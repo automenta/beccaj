@@ -136,9 +136,9 @@ public class DaisyChain {
                 //return extract(surprise, 0, numCables, 0, 1);
             }
         }*/
-        if (numCables < surprise.elements) {
+        /*if (numCables < surprise.elements) {
             Arrays.fill(surprise.getData(), numCables, surprise.elements, 0);
-        }
+        }*/
         return surprise;
     }
     
@@ -159,6 +159,7 @@ public class DaisyChain {
         
         /* self.pre = self.post.copy()
            self.post = cable_activities.copy() */
+
         
         pre.set(post);  //pre = post.copy();
         post.set(cableActivities); //post = cableActivities.copy();
