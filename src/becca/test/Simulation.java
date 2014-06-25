@@ -21,12 +21,12 @@ public class Simulation {
     private AgentPanel ap;
     private JFrame jf;
     private int time = 1;
-    boolean displayAgentMatrices = true;
+    public static boolean DISPLAY = true;
     
     private double reward, rewardTotal;
     
     long cycleDelayMS;
-    long displayPeriodMS = 40;
+    long displayPeriodMS = 250;
     long lastDisplay = -1;
     long lastCycleTime;
     private boolean displayRewardChart;
@@ -71,7 +71,7 @@ public class Simulation {
 
         init(agent);
         
-        if (displayAgentMatrices) {
+        if (DISPLAY) {
             displayAgent(agent);
         }
         if (displayRewardChart) {

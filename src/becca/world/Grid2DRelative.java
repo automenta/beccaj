@@ -38,7 +38,6 @@ public class Grid2DRelative implements World {
     private Image2DPanel image;
     private final double POSITION_VELOCITY;
     private double[] sensor;
-    private boolean showDisplay = true;
     int displayPeriod = 64;
 
     public class Image2DPanel extends JPanel {
@@ -101,7 +100,7 @@ public class Grid2DRelative implements World {
         this.POSITION_VELOCITY = 0.1;
         this.noise = noise;
 
-        if (showDisplay) {
+        if (Simulation.DISPLAY) {
             image = new Image2DPanel();
             AgentPanel.window(image, true);
         }
@@ -232,7 +231,7 @@ public class Grid2DRelative implements World {
 
         }
 
-        if (showDisplay) {
+        if (Simulation.DISPLAY) {
             if (time % displayPeriod == 0)
                 image.updateImage();
         }
@@ -241,11 +240,11 @@ public class Grid2DRelative implements World {
     }
 
     public static void main(String[] args) throws Exception {
-        //Class<? extends Agent> a = BeccaAgent.class;
-        Class<? extends Agent> a = DABeccaAgent.class;
+        Class<? extends Agent> a = BeccaAgent.class;
+        //Class<? extends Agent> a = DABeccaAgent.class;
         //Class<? extends Agent> a = QLAgent.class;
 
-        new Simulation(a, new Grid2DRelative(8, 4, 11990000, 0.02, 0.01));
+        new Simulation(a, new Grid2DRelative(12, 6, 11990000, 0.02, 0.01));
 
     }
 }

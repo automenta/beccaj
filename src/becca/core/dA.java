@@ -1,9 +1,9 @@
 package becca.core;
 
 
-import deeplearning.dA.src.*;
 import static becca.core.Util.printArray;
 import java.util.Random;
+import org.apache.commons.math3.util.FastMath;
 
 public class dA {
 
@@ -37,7 +37,7 @@ public class dA {
     }
 
     public static double sigmoid(double x) {
-        return 1.0 / (1.0 + Math.pow(Math.E, -x));
+        return 1.0 / (1.0 + FastMath.pow(Math.E, -x));
     }
     
     public dA(int n_visible, int n_hidden) {

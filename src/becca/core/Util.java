@@ -4,6 +4,7 @@ import static becca.core.Util.m;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Random;
+import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Precision;
 import org.ejml.alg.dense.mult.SubmatrixOps;
 import org.ejml.data.DenseMatrix64F;
@@ -164,7 +165,7 @@ public class Util extends CommonOps {
      * the result is a 1-D matrix which can be transposed depending on the
      * context
      */
-    public static DenseMatrix64F getGeneralizedMean(final DenseMatrix64F values, final DenseMatrix64F weights, final double exponent) {
+    public static DenseMatrix64F getGeneralizedMean(final DenseMatrix64F values, final DenseMatrix64F weights, final int exponent) {
         final DenseMatrix64F shiftedValues = values.copy();
         add(shiftedValues, 1.0);
 
@@ -486,15 +487,16 @@ public class Util extends CommonOps {
                 d[i] = 1.0 / d[i]; //should be faster than Math.pow
         }
         else {
-            for (int i = 0; i < m.elements; i++)
-                d[i] = Math.pow(d[i], exponent);
+            //http://blog.juma.me.uk/2011/02/23/performance-of-fastmath-from-commons-math/
+            for (int i = 0; i < m.elements; i++)                
+                d[i] = FastMath.pow(d[i], exponent);
         }
     }
 
     public static void matrixPowerExp(final DenseMatrix64F m, final double base) {
         final double[] d = m.getData();
         for (int i = 0; i < m.elements; i++) {
-            d[i] = Math.pow(base, d[i]);
+            d[i] = FastMath.pow(base, d[i]);
         }
     }
 

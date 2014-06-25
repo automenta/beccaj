@@ -11,7 +11,7 @@ public class BeccaParams {
     static int agentRecentSurpriseHistorySize = stmSize;
     
     //Block ---------------------------------------------------        
-    
+    static boolean BlockGoalBoundedSum = false;
     static int blockMaxCablesPerCog = 16;
     static int blockMaxBundlesPerCog = 8;    
     static double blockFillFractionThreshold = 0;
@@ -28,6 +28,7 @@ public class BeccaParams {
     static double daisyCountDecayRate = decayRate(stmSize*2); //real, 0 < x < 1; higher = decays more quickly
     static double daisyChainUpdateRate = decayRate(stmSize*2); //originally: 0.01
     static boolean daisyAllowSelfTransitions = false; //originally: true
+    static double daisyAgingTimeConstant = Math.pow(10, 6);
     
     
     //Hub -----------------------------------
@@ -42,7 +43,7 @@ public class BeccaParams {
     
     //ZipTie ----------------------------------------
     static double ziptieSpeedUp = 1.0;
-    static double ziptieMeanExponent = -2;
+    static int ziptieMeanExponent = -2;
     static double ziptieActivatedBundlemapNoise = 0.05;
     
     //      ZipTie, in Block --------------
@@ -50,14 +51,15 @@ public class BeccaParams {
     static double blockziptieNucleationEnergyRate = 1E-5;
     static double blockziptieAgglomerationThreshold = 0.1;
     static double blockziptieAgglomerationEnergyRate = 1E-3;
-    static double blockziptieActivationWeightingExponent = 8;
+    static int blockziptieActivationWeightingExponent = 8;
     
     //      ZipTie, in Cog -----------------
     static double cogziptieNucleationThreshold = 0.1;
     static double cogziptieNucleationEnergyRate = 1E-5;
     static double cogziptieAgglomerationThreshold = 0.1;
     static double cogziptieAgglomerationEnergyRate = 1E-4;
-    static double cogziptieActivationWeightingExponent = 8;
+    static int cogziptieActivationWeightingExponent = 8;
+    
     
    
     public static double decayRate(int cycles) {

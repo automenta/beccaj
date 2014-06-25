@@ -30,7 +30,7 @@ public class ZipTie {
     private final double AGGLOMERATION_THRESHOLD;
     private final double NUCLEATION_ENERGY_RATE;
     private final double NUCLEATION_THRESHOLD;
-    private final double MEAN_EXPONENT;
+    private final int MEAN_EXPONENT;
     private final double ACTIVATION_WEIGHTING_EXPONENT;
     private double ACTIVATED_BUNDLE_MAP_NOISE;
     
@@ -57,11 +57,11 @@ public class ZipTie {
         this(inBlock, maxCables, maxBundles, maxCablesPerBundle, BeccaParams.ziptieMeanExponent);
     }
 
-    public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent) {
+    public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, int meanExponent) {
         this(inBlock, maxCables, maxBundles, maxCablesPerBundle, meanExponent, BeccaParams.ziptieSpeedUp);
     }
     
-    public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, double meanExponent, double speedup) {
+    public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle, int meanExponent, double speedup) {
         
         this.maxCables = maxCables;
         this.maxBundles = maxBundles;

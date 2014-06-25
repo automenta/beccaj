@@ -347,7 +347,8 @@ public class Block  {
         //System.out.println(transpose(cableGoals,null));
         //System.out.println(transpose(hubCableGoals,null));
 
-        hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
+        if (BeccaParams.BlockGoalBoundedSum)
+            hubCableGoals.setData( boundedSum(0, hubCableGoals.getData(), cableGoals.getData() ) );
         
         
         //System.out.println(transpose(hubCableGoals,null));

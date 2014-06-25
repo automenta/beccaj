@@ -23,8 +23,8 @@ import org.ejml.data.DenseMatrix64F;
 public class AgentPanel extends MatrixPanel {
     private final BeccaAgent agent;
 
-    boolean showZipTies = true;
-    boolean showDaisyChains = true;
+    boolean showZipTies = false;
+    boolean showDaisyChains = false;
     private final DenseMatrix64F sensorMatrix;
     private final DenseMatrix64F actionMatrix;
     

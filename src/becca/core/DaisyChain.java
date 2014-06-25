@@ -87,7 +87,7 @@ public class DaisyChain {
     private final boolean allowSelfTransitions;
     private DenseMatrix64F chainActivities;
     private DenseMatrix64F nullGoals;
-    private double agingTimeconstant = Math.pow(10, 6);
+    private double agingTimeconstant = BeccaParams.daisyAgingTimeConstant;
 
 
     
