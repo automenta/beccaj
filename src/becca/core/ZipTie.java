@@ -5,7 +5,6 @@ import org.ejml.data.DenseMatrix64F;
 import static becca.core.Util.*;
 import java.util.ArrayList;
 import java.util.List;
-import org.ejml.data.RowD1Matrix64F;
 
 
 
@@ -55,6 +54,10 @@ public class ZipTie {
     private DenseMatrix64F inhibitedCableActivities;
     private DenseMatrix64F finalActivatedBundleMap;
     private DenseMatrix64F combinedWeights;
+    private DenseMatrix64F mapGoals;
+    private DenseMatrix64F mapgoals;
+    private DenseMatrix64F cableActivityGoals;
+    private DenseMatrix64F fullBundles;
 
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle) {
         this(inBlock, maxCables, maxBundles, maxCablesPerBundle, BeccaParams.ziptieMeanExponent);
@@ -357,8 +360,8 @@ public class ZipTie {
         # For any bundles that are already full, don't change their coactivity                
         # TODO: make this more elegant than enforcing a hard maximum count
         full_bundles = np.zeros((self.max_num_bundles, 1))
-        */
-        DenseMatrix64F fullBundles = new DenseMatrix64F(maxBundles, 1);
+        */        
+        fullBundles = ensureSize(fullBundles, maxBundles, 1);
         
         /*
         cables_per_bundle = np.sum(self.bundle_map, axis=1)[:,np.newaxis]
@@ -381,7 +384,7 @@ public class ZipTie {
                 
         //TODO use alternate version of matrixVector that computes in-place without allocating
         //and eliminate need for transpose
-        agglomerationEnergy = matrixVector(agglomerationEnergy, fullBundles);       
+        agglomerationEnergy = matrixVector(agglomerationEnergy, fullBundles, agglomerationEnergy);      
                 
         /*
         new_candidates = np.where(self.agglomeration_energy >= self.JOINING_THRESHOLD)                
@@ -437,14 +440,13 @@ public class ZipTie {
         the estimated activity associated with each cable.
         """
         */
-        DenseMatrix64F cableActivityGoals;
         if (bundleGoals.getNumElements() > 0) {
             //bundle_goals = tools.pad(bundle_goals, (self.max_num_bundles, 0))
             bundleGoals = pad(bundleGoals, maxBundles, 0, 0.0);
             
             //cable_activity_goals = tools.bounded_sum(self.bundle_map * bundle_goals, axis=0)
             //self.bundle_map * bundle_goals
-            DenseMatrix64F mapgoals = matrixVector(bundleMap, bundleGoals);
+            mapgoals = matrixVector(bundleMap, bundleGoals, mapGoals);
             assert(mapgoals.getNumRows() == bundleMap.getNumRows());
             assert(mapgoals.getNumCols() == bundleMap.getNumCols());
                                     
@@ -452,7 +454,8 @@ public class ZipTie {
             //cableActivityGoals = sumCols(mapgoals, null);
         }
         else {
-            cableActivityGoals = new DenseMatrix64F(maxCables, 1);
+            cableActivityGoals = ensureSize(cableActivityGoals, maxCables, 1);
+            fill(cableActivityGoals, 0);
         }
         return cableActivityGoals;
     }

@@ -9,6 +9,7 @@ import becca.core_mtj.DenseMatrix;
 import com.nativelibs4java.opencl.CLContext;
 import com.nativelibs4java.opencl.CLException.MemObjectAllocationFailure;
 import com.nativelibs4java.opencl.JavaCL;
+import com.nativelibs4java.opencl.blas.CLKernels;
 import com.nativelibs4java.opencl.blas.ujmp.CLDenseFloatMatrix2D;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Matrices;
@@ -27,7 +28,12 @@ import org.ujmp.core.mapper.MatrixMapper;
  * @author me
  */
 public class MTJTest  {
+    /*static {
+        System.out.println(Arrays.asList(JavaCL.listPlatforms()));
+        System.out.println(Arrays.asList(JavaCL.listGPUPoweredPlatforms()));
+    }*/
     static final CLContext context = JavaCL.createBestContext();    
+    //static final CLContext context = JavaCL.createContextFromCurrentGL();
         
     public void testSolve() {
         Vector bv = Matrices.random(50000);
@@ -41,51 +47,48 @@ public class MTJTest  {
         System.out.println(xv);        
     }
     
+    
     public static void testMult(char op, int size) throws Exception {
         int runs = 32;
-                
-        
-        System.gc();
 
         double totalTime3 = 0;
         
         try {
-            org.ujmp.core.Matrix a = MatrixFactory.dense(ValueType.FLOAT, size, size);
-            CLDenseFloatMatrix2D b = new CLDenseFloatMatrix2D(size, size);
-            CLDenseFloatMatrix2D v = new CLDenseFloatMatrix2D(size, 1);
+            org.ujmp.core.Matrix a, b, v;
+            DoubleMatrix d;
 
-            a.zeros(ORIG);
-            a.plus(ORIG, true, 1.0);
-
-            b.zeros(ORIG);
-            b.plus(ORIG, true, 2.0);
-
-            v.zeros(ORIG);
-            v.plus(ORIG, true, 2.0);
+            a = MatrixFactory.dense(ValueType.FLOAT, size, size);
+            b = MatrixFactory.dense(ValueType.FLOAT, size, size);
+            v = MatrixFactory.dense(ValueType.FLOAT, size, 1);
+            a = a.times(0).plus(1);
+            b = b.times(0).plus(1);
+            v = v.times(0).plus(2);
 
 
             for (int i = 0; i < runs; i++) {
+                System.gc();
 
                 long start = System.nanoTime();
 
                 if (op == '*') {
                     org.ujmp.core.Matrix c = a.times(b);
-                    DoubleMatrix d = c.toDoubleMatrix(); 
+                    d = c.toDoubleMatrix(); 
                 }
                 else if (op == '+') {
                     org.ujmp.core.Matrix c = a.plus(b);
-                    DoubleMatrix d = c.toDoubleMatrix();
+                    d = c.toDoubleMatrix();
                     /*System.out.println(d.getClass() + " " + d.getRowCount() + " " + d.getColumnCount());*/
                 }
-                else if (op == '|') {
+                else { //if (op == '|') {
                     org.ujmp.core.Matrix c = a.times(v);
-                    DoubleMatrix d = c.toDoubleMatrix();
+                    d = c.toDoubleMatrix();
                 }
 
 
                 totalTime3 += System.nanoTime() - start;
             }
             totalTime3 = totalTime3 / runs / 1000000; //result in ms        
+            
         }
         catch (MemObjectAllocationFailure me) {
             System.err.println(me);
@@ -95,7 +98,7 @@ public class MTJTest  {
         
         boolean mtj = true; double totalTime = 0;
         boolean ejml = true; double totalTime2 = 0;  
-        if (size > 4096) {
+        if (size > 1024) {
             mtj = false;
             ejml = false;
         }
@@ -114,7 +117,7 @@ public class MTJTest  {
             DenseVector um = new DenseVector(size);*/
             DenseMatrix vm = new DenseMatrix(size, 1);
             DenseMatrix um = new DenseMatrix(size, 1);
-
+            
 
             for (int i = 0; i < runs; i++) {
                 System.gc();
@@ -135,7 +138,7 @@ public class MTJTest  {
                 totalTime += System.nanoTime() - start;
             }
             totalTime = totalTime / runs / 1000000; //result in ms
-
+            
         }
         
         if (ejml) {
@@ -173,6 +176,7 @@ public class MTJTest  {
         System.out.println("JavaCL Context: " + context);
         System.out.println("JavaCL Max Memory: " + context.getMaxMemAllocSize());
         
+        
         MatrixMapper.getInstance().setDenseFloatMatrix2DClassName(CLDenseFloatMatrix2D.class.getName());
         
 
@@ -187,10 +191,8 @@ public class MTJTest  {
         testMult('+', 1024);
         testMult('+', 1500);
         testMult('+', 2048);
+        testMult('+', 3048);
         testMult('+', 4096);
-        testMult('+', 8192);
-        testMult('+', 16384);
-        testMult('+', 32767);
 
         testMult('|', 16);
         testMult('|', 32);
@@ -203,8 +205,8 @@ public class MTJTest  {
         testMult('|', 1024);
         testMult('|', 1500);
         testMult('|', 2048);
+        testMult('|', 3000);
         testMult('|', 4096);
-        testMult('|', 8192);
         
         testMult('*', 16);
         testMult('*', 32);
@@ -216,7 +218,7 @@ public class MTJTest  {
         testMult('*', 1024);
         testMult('*', 1500);
         testMult('*', 2048);
+        testMult('*', 3048);        
         testMult('*', 4096);
-        testMult('*', 8192);
     }
 }

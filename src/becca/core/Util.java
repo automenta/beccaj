@@ -47,6 +47,8 @@ public class Util extends CommonOps {
     }    
  
 
+    static ThreadLocal<DenseMatrix64F> TvalueWeightProduct = new ThreadLocal();
+    static ThreadLocal<DenseMatrix64F> TsumOfWeights = new ThreadLocal();
     
     public static DenseMatrix64F getWeightedAverage(DenseMatrix64F values, DenseMatrix64F weights, DenseMatrix64F target) {
         //""" Perform a weighted average of values, using weights """
@@ -60,12 +62,18 @@ public class Util extends CommonOps {
         }
 
         //weighted_sum_values = np.sum(values * weights, axis=0)                 
-        DenseMatrix64F valueWeightProduct = multMatrixMatrix(values, weights);
-
+        
+        DenseMatrix64F valueWeightProduct = TvalueWeightProduct.get();
+        valueWeightProduct = multMatrixMatrix(values, weights,valueWeightProduct);
+        TvalueWeightProduct.set(valueWeightProduct);
+        
         final DenseMatrix64F weightedSumValues = target = sumColsT(valueWeightProduct, target);
 
-        //sum_of_weights = np.sum(weights, axis=0)         
-        final DenseMatrix64F sumOfWeights = sumColsT(weights, null);
+        //sum_of_weights = np.sum(weights, axis=0)   
+        DenseMatrix64F sumOfWeights = TsumOfWeights.get();        
+        sumOfWeights = ensureSize(sumOfWeights, weightedSumValues.getNumRows(), weightedSumValues.getNumCols());
+        sumOfWeights = sumColsT(weights, sumOfWeights);
+        TsumOfWeights.set(sumOfWeights);
 
         //return (weighted_sum_values / (sum_of_weights + EPSILON))[:,np.newaxis]
         final double[] wsd = weightedSumValues.getData();
@@ -359,6 +367,7 @@ public class Util extends CommonOps {
         SubmatrixOps.setSubMatrix(a, b, 0, 0, 0, 0, a.getNumRows(), a.getNumCols());
         return b;
     }
+    
 
     public static DenseMatrix64F boundedRowSum(DenseMatrix64F m) {
         DenseMatrix64F n = m.copy();
