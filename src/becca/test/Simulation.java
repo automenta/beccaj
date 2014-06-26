@@ -21,15 +21,16 @@ public class Simulation {
     private AgentPanel ap;
     private JFrame jf;
     private int time = 1;
-    public static boolean DISPLAY = true;
+
+    private boolean displayRewardChart = false;
+    public static boolean DISPLAY = false;
+    long displayPeriodMS = 2500;
     
     private double reward, rewardTotal;
     
     long cycleDelayMS;
-    long displayPeriodMS = 250;
     long lastDisplay = -1;
     long lastCycleTime;
-    private boolean displayRewardChart;
     
     /*
     Run BECCA with world.  
@@ -77,11 +78,15 @@ public class Simulation {
         if (displayRewardChart) {
             new DynamicChart(displayPeriodMS) {
 
+                double lastRewardTime = 0;
+                
                 @Override
                 public double getReward() {
                     double r = rewardTotal;
                     rewardTotal = 0;
-                    return r;
+                    double cycles = getTime() - lastRewardTime;
+                    lastRewardTime = getTime();
+                    return r / ((double)cycles);
                 }
 
                 @Override
@@ -120,6 +125,7 @@ public class Simulation {
         
         time = 0;
         lastCycleTime = System.nanoTime();
+        int cycles = 0;
         
         while (world.isActive()) {
             /*    
@@ -140,6 +146,14 @@ public class Simulation {
                 if (ap!=null) ap.update();
                 if (jf!=null) jf.setTitle("Reward: " + reward + ", @" + time);
                 lastDisplay = System.currentTimeMillis();
+
+                long n = System.nanoTime();
+                
+                double cycleTime = ((((double)n) - ((double)lastCycleTime))/1000000000.0);
+                double fps = cycles/cycleTime;
+                System.out.println(time + " (" + fps + " cycles/sec)" + " " + cycleTime + "s");
+                lastCycleTime = n;
+                cycles = 0;            
             }
             
             if (cycleDelayMS > 0) {
@@ -148,17 +162,8 @@ public class Simulation {
                 } catch (InterruptedException ex) {
                 }
             }
-            int numCyclesPerDisplay = 1000;
-            if (time % numCyclesPerDisplay==0) {
-                long n = System.nanoTime();
-                
-                double cycleTime = ((((double)n) - ((double)lastCycleTime))/1000000000.0);
-                double fps = numCyclesPerDisplay/cycleTime;
-                System.out.println(time + " (" + fps + " cycles/sec)" + " " + cycleTime + "s");
-                lastCycleTime = n;
-
-            }
             
+            cycles++;            
             time++;
         }
         

@@ -68,7 +68,7 @@ public abstract class CuriousPlayerPerception extends Perception {
 
 	public void setForeseePerc(Perception foreseePerc) {
 		this.foreseePerc = foreseePerc;
-		this.foreseePerc.setInputPerception(this);
+		//this.foreseePerc.setInputPerception(this);
 	}
 
 	public static double getPMax() {

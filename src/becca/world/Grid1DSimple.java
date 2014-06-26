@@ -1,7 +1,6 @@
 package becca.world;
 
 import becca.core.BeccaAgent;
-import becca.core.Util;
 import becca.test.Agent;
 import becca.test.Simulation;
 import becca.test.World;
@@ -178,6 +177,7 @@ public class Grid1DSimple implements World {
     public static void main(String[] args) throws Exception {
         Class<? extends Agent> a = BeccaAgent.class;
         //Class<? extends Agent> a = QLAgent.class;
+        //Class<? extends Agent> a = RandomAgent.class;
         
         new Simulation(a, new Grid1DSimple(16, 11990000, 0.05, 0.01));
         

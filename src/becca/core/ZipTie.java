@@ -52,6 +52,9 @@ public class ZipTie {
     private DenseMatrix64F coactivities;
     private DenseMatrix64F aggMinus;
     private DenseMatrix64F aggPlus;
+    private DenseMatrix64F inhibitedCableActivities;
+    private DenseMatrix64F finalActivatedBundleMap;
+    private DenseMatrix64F combinedWeights;
 
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle) {
         this(inBlock, maxCables, maxBundles, maxCablesPerBundle, BeccaParams.ziptieMeanExponent);
@@ -155,7 +158,7 @@ public class ZipTie {
         activated_bundle_map = (initial_bundle_activities * 
                                 bundle_contribution_map)
         */
-        activatedBundleMap = matrixVector(bundleContributionMap, initialBundleActivities, true, activatedBundleMap);
+        activatedBundleMap = matrixVector(bundleContributionMap, initialBundleActivities, activatedBundleMap);
         
         /*
         # Add just a little noise to break ties
@@ -179,13 +182,13 @@ public class ZipTie {
         input_inhibition_map = np.power(activated_bundle_map / max_activation, 
                                         self.ACTIVATION_WEIGHTING_EXPONENT)
         */                
-        inputInhibitionMap = matrixVector(activatedBundleMap, maxActivation, false, null);
+        inputInhibitionMap = matrixVectorDivide(activatedBundleMap, maxActivation, inputInhibitionMap);
         matrixPower(inputInhibitionMap, ACTIVATION_WEIGHTING_EXPONENT);
 
         //# Find the effective strength of each cable to each bundle after inhibition.
         //inhibited_cable_activities = (input_inhibition_map * self.cable_activities.T)
-        
-        DenseMatrix64F inhibitedCableActivities = inhibitedCableActivities = matrixVector(inputInhibitionMap, cableActivities/*Transpose*/);               
+                
+        inhibitedCableActivities = inhibitedCableActivities = matrixVector(inputInhibitionMap, cableActivities/*Transpose*/, inhibitedCableActivities);               
         /*DenseMatrix64F inhibitedCableActivitiesT = transpose(inhibitedCableActivities, null);*/
         
         /*final_bundle_activities = tools.generalized_mean(inhibited_cable_activities.T, self.bundle_map.T, self.MEAN_EXPONENT)*/        
@@ -208,7 +211,7 @@ public class ZipTie {
                 = (cable_activities * 
                     2 ** -np.sum(self.bundle_map, 
                     axis=0)[:,np.newaxis])     */
-            nonBundleActivities = sumColsT(bundleMap, null, true);
+            nonBundleActivities = sumColsT(bundleMap, nonBundleActivities, true);
 
             scale(-1, nonBundleActivities);
             matrixPowerExp(nonBundleActivities, 2);             
@@ -216,16 +219,15 @@ public class ZipTie {
         }
         else {
             /* self.nonbundle_activities = np.maximum(0., cable_activities - combined_weights)    */
-            DenseMatrix64F finalActivatedBundleMap = matrixVector(bundleMap, finalBundleActivities);
-            DenseMatrix64F combinedWeights = sumColsT(finalActivatedBundleMap, null, true);
+            finalActivatedBundleMap = matrixVector(bundleMap, finalBundleActivities, finalActivatedBundleMap);
+            combinedWeights = sumColsT(finalActivatedBundleMap, combinedWeights, true);
 
             assert(combinedWeights.getNumRows()==cableActivities.getNumRows());
             assert(combinedWeights.getNumCols()==1);
             
-            this.nonBundleActivities = cableActivities.copy();
-            
-            subEquals(this.nonBundleActivities, combinedWeights);
-            matrixMaximum(this.nonBundleActivities, 0);            
+            nonBundleActivities = ensureCopy(nonBundleActivities, cableActivities);            
+            subEquals(nonBundleActivities, combinedWeights);
+            matrixMaximum(nonBundleActivities, 0);            
         }
         this.cableActivities = cableActivitiesIn;
 
@@ -333,8 +335,7 @@ public class ZipTie {
         */
         
         
-        DenseMatrix64F cableActivitiesT = transpose(cableActivities, null);
-        aggMinus = matrixVector(agglomerationEnergy, cableActivitiesT, true, aggMinus);
+        aggMinus = matrixVectorT(agglomerationEnergy, cableActivities, true, aggMinus);
         scale(AGGLOMERATION_ENERGY_RATE, aggMinus);     
         subEquals(agglomerationEnergy, aggMinus);
         

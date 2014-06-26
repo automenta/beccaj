@@ -94,8 +94,7 @@ public class Cog {
             bundleActivities = emptyActivity;
         }
         
-        if (cableActivities.getNumRows() < maxBundles)
-            bundleActivities = pad(bundleActivities, maxBundles, 1, 0.0);
+       bundleActivities = pad(bundleActivities, maxBundles, 1, 0.0);
                 
         return bundleActivities;
     }

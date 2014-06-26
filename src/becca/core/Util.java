@@ -26,10 +26,16 @@ public class Util extends CommonOps {
     }
 
     public static DenseMatrix64F multMatrixMatrix(final DenseMatrix64F a, final DenseMatrix64F b) {
+        return multMatrixMatrix(a, b, null);
+    }
+            
+    public static DenseMatrix64F multMatrixMatrix(final DenseMatrix64F a, final DenseMatrix64F b, DenseMatrix64F c) {
+        
         assert (a.getNumRows() == b.getNumRows());
         assert (a.getNumCols() == b.getNumCols());
+        
+        c = ensureSize(c, a.getNumRows(), b.getNumCols());
 
-        final DenseMatrix64F c = new DenseMatrix64F(a.getNumRows(), a.getNumCols());
         final double[] cd = c.getData();
         final double[] ad = a.getData();
         final double[] bd = b.getData();
@@ -38,7 +44,8 @@ public class Util extends CommonOps {
         }
 
         return c;
-    }
+    }    
+ 
 
     
     public static DenseMatrix64F getWeightedAverage(DenseMatrix64F values, DenseMatrix64F weights, DenseMatrix64F target) {
@@ -82,9 +89,15 @@ public class Util extends CommonOps {
     }
 
     public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector) {
-        return matrixVector(matrix, vector, true, null);
+        return matrixVector(matrix, vector, null);
     }
     
+    public static DenseMatrix64F ensureCopy(DenseMatrix64F result, DenseMatrix64F source) {
+        result = ensureSize(result, source.getNumRows(), source.getNumCols());
+        System.arraycopy(source.getData(), 0, result.getData(), 0, source.elements);
+        return result;
+    }
+
     public static DenseMatrix64F ensureSize(DenseMatrix64F result, final int rows, final int cols) {
         if (result == null) {
             result = new DenseMatrix64F(rows, cols);
@@ -103,7 +116,78 @@ public class Util extends CommonOps {
         return result;
     }
     
-    public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector, final boolean multiply, DenseMatrix64F result) {
+    /** same as matrixVectorT except the vector parameter is assumed to be the transpose (cols=1 and not rows=1) */
+    public static DenseMatrix64F matrixVectorT(final DenseMatrix64F matrix, final DenseMatrix64F vector, final boolean multiply, DenseMatrix64F result) {
+        //ex: (8, 32) * (1, 32) -> (8, 32)
+
+        result = ensureSize(result, matrix.getNumRows(), matrix.getNumCols());
+
+        //TODO iterate in order when possible
+        final double[] vdata = vector.getData();
+        final double[] mdata = matrix.getData();
+        final double[] rdata = result.getData();
+
+        assert((vector.getNumCols() == 1) && (matrix.getNumCols() == vector.getNumRows()));
+                
+
+            for (int j = 0; j < matrix.numCols; j++) {
+                final double vdi = vdata[j];
+                int index = j;
+                for (int i = 0; i < matrix.numRows; i++) {
+                    //final int index = matrix.getIndex(i, j);
+                    
+                    final double mij = mdata[index];
+                    final double r = multiply ? mij * vdi : mij / vdi;                               rdata[index] = r;
+                    
+                    index += matrix.numCols;
+                }
+            }
+            return result;
+    }
+        
+    public static DenseMatrix64F matrixVector(final DenseMatrix64F matrix, final DenseMatrix64F vector, DenseMatrix64F result) {
+        //ex: (8, 32) * (1, 32) -> (8, 32)
+
+        result = ensureSize(result, matrix.getNumRows(), matrix.getNumCols());
+
+        //TODO iterate in order when possible
+        final double[] vdata = vector.getData();
+        final double[] mdata = matrix.getData();
+        final double[] rdata = result.getData();
+
+        final int mnc = matrix.numCols;
+        final int mnr = matrix.numRows;
+        
+        if ((vector.getNumRows() == 1) && (matrix.getNumCols() == vector.getNumCols())) {
+
+            for (int j = 0; j < mnc; j++) {
+                final double vdi = vdata[j];
+                int index = j;
+                for (int i = 0; i < mnr; i++) {
+                    rdata[index] = mdata[index] * vdi;
+                    index += mnc;
+                }
+            }
+        } else {
+            assert (matrix.getNumRows() == vector.getNumRows());
+
+            int index = 0;
+            for (int i = 0; i < matrix.getNumRows(); i++) {
+                final double vdi = vdata[i];
+                for (int j = 0; j < matrix.getNumCols(); j++) {
+                    //final int index = matrix.getIndex(i, j);
+
+                    final double mij = mdata[index];
+                    final double r = mij * vdi;
+                    rdata[index] = r;
+                    index++;
+                }
+            }
+
+        }
+        return result;
+    }
+    public static DenseMatrix64F matrixVectorDivide(final DenseMatrix64F matrix, final DenseMatrix64F vector, DenseMatrix64F result) {
         //ex: (8, 32) * (1, 32) -> (8, 32)
 
         result = ensureSize(result, matrix.getNumRows(), matrix.getNumCols());
@@ -122,7 +206,7 @@ public class Util extends CommonOps {
                     //final int index = matrix.getIndex(i, j);
                     
                     final double mij = mdata[index];
-                    final double r = multiply ? mij * vdi : mij / vdi;                               rdata[index] = r;
+                    final double r = mij / vdi;                               rdata[index] = r;
                     
                     index += matrix.numCols;
                 }
@@ -137,7 +221,7 @@ public class Util extends CommonOps {
                     //final int index = matrix.getIndex(i, j);
 
                     final double mij = mdata[index];
-                    final double r = multiply ? mij * vdi : mij / vdi;
+                    final double r = mij / vdi;
                     rdata[index] = r;
                     index++;
                 }
@@ -147,6 +231,7 @@ public class Util extends CommonOps {
         return result;
     }
 
+    
     public static double dot(DenseMatrix64F a, DenseMatrix64F b) {
         double[] ad = a.getData();
         double[] bd = b.getData();
@@ -252,6 +337,14 @@ public class Util extends CommonOps {
         if (cols <= 0) {
             cols = a.getNumCols() - cols;
         }
+        
+        if ((a.getNumRows() == rows) && (a.getNumCols() == cols)) {
+            return a;
+        }
+        else {
+            /*System.out.println("pad needed ->" + rows + "," + cols);
+            printMatrixDimensions(a);*/
+        }        
 
         if (rows < a.getNumRows()) {
             throw new RuntimeException("Padding with fewer rows: " + " " + a.getNumRows() + "->" + rows);
@@ -259,6 +352,7 @@ public class Util extends CommonOps {
         if (cols < a.getNumCols()) {
             throw new RuntimeException("Padding with fewer cols: " + " " + a.getNumCols() + "->" + cols);
         }
+        
 
         DenseMatrix64F b = new DenseMatrix64F(rows, cols);
         fill(b, defaultValue);
@@ -496,6 +590,19 @@ public class Util extends CommonOps {
         }
     }
 
+    public static void matrixPower(final DenseMatrix64F m, final int exponent) {
+        final double[] d = m.getData();
+        if (exponent == -1) {
+            for (int i = 0; i < m.elements; i++)
+                d[i] = 1.0 / d[i]; //should be faster than Math.pow
+        }
+        else {
+            //http://blog.juma.me.uk/2011/02/23/performance-of-fastmath-from-commons-math/
+            for (int i = 0; i < m.elements; i++)                
+                d[i] = FastMath.pow(d[i], exponent);                        
+        }
+    }    
+
     public static void matrixPower(final DenseMatrix64F m, final double exponent) {
         final double[] d = m.getData();
         if (exponent == -1) {
@@ -505,7 +612,7 @@ public class Util extends CommonOps {
         else {
             //http://blog.juma.me.uk/2011/02/23/performance-of-fastmath-from-commons-math/
             for (int i = 0; i < m.elements; i++)                
-                d[i] = FastMath.pow(d[i], exponent);
+                d[i] = FastMath.pow(d[i], exponent);                        
         }
     }
 

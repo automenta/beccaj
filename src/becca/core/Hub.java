@@ -47,6 +47,9 @@ public class Hub {
     private DenseMatrix64F rewardUncertainty;
     private DenseMatrix64F activatedHubCableGoal;
     private final double[] rewardDecayFactor;
+    private DenseMatrix64F chainVotes;
+    private DenseMatrix64F erDelta;
+    private DenseMatrix64F updateRate;
 
     public Hub(int initialNumCables) {
         this.numCables = initialNumCables;
@@ -127,7 +130,7 @@ public class Hub {
         }
     }
 
-    public void step(ArrayList<Block> blocks, double unscaledReward) {
+    public void step(final ArrayList<Block> blocks, final double unscaledReward) {
         /*
          """ Advance the hub one step:
          1. Comb tower of blocks, collecting cable activities from each
@@ -201,7 +204,8 @@ public class Hub {
         matrixPower(updateRateRawFactor, -1.0);
         scale(1.0 - UPDATE_RATE, updateRateRawFactor);
         add(updateRateRawFactor, UPDATE_RATE);
-        final DenseMatrix64F updateRate = new DenseMatrix64F(chainActivities.getNumRows(), updateRateRawFactor.getNumCols());
+        
+        updateRate = ensureSize(updateRate, chainActivities.getNumRows(), updateRateRawFactor.getNumCols());
         elementMult(chainActivities, updateRateRawFactor, updateRate);
 
         //update_rate = np.minimum(0.5, update_rate_raw)
@@ -235,12 +239,13 @@ public class Hub {
         DenseMatrix64F rewardDifference = expectedReward.copy();
         scale(-1, rewardDifference);
         add(rewardDifference, reward);
+        
 
         //System.out.println("ER: " + elementSum(expectedReward) + " RD:" + elementSum(rewardDifference) + " " + reward);
         //this.expected_reward += reward_difference * update_rate
         //DenseMatrix64F erDelta = new DenseMatrix64F(rewardDifference.getNumRows(), updateRate.getNumCols());
         //mult(rewardDifference, updateRate, erDelta);
-        DenseMatrix64F erDelta = multMatrixMatrix(rewardDifference, updateRate);
+        erDelta = multMatrixMatrix(rewardDifference, updateRate, erDelta);
         addEquals(expectedReward, erDelta);
 
         //System.out.println("ERDelta: " + elementSum(erDelta));
@@ -272,7 +277,7 @@ public class Hub {
          # First find the estimated reward associated with each chain.
          chain_votes = (this.cable_activities * this.estimated_reward_value + tools.EPSILON)
          */
-        DenseMatrix64F chainVotes = matrixVector(estimatedRewardValue, cableActivities);
+        chainVotes = matrixVector(estimatedRewardValue, cableActivities, chainVotes);
         add(chainVotes, EPSILON);
 
         /*

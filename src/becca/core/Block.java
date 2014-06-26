@@ -217,7 +217,8 @@ public class Block  {
         
 
         if (parallelCogs) {
-            cogs.parallelStream().forEach(c -> c.stepUp(null, false));
+            System.exit(1);
+            //cogs.parallelStream().forEach(c -> c.stepUp(null, false));
         }
         else {
             for (final Cog c : cogs) {
@@ -290,7 +291,8 @@ public class Block  {
         
         
         if (parallelCogs) {
-            cogs.parallelStream().forEach(c -> c.stepDown(null));
+            System.exit(1);
+            //cogs.parallelStream().forEach(c -> c.stepDown(null));
         }
         else {
             for (final Cog c : cogs) {                

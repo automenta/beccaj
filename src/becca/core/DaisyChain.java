@@ -3,7 +3,6 @@ package becca.core;
 import org.ejml.data.DenseMatrix64F;
 
 import static becca.core.Util.*;
-import java.util.Arrays;
 
 /**
     An incremental model-based reinforcement learning algorithm
@@ -88,6 +87,12 @@ public class DaisyChain {
     private DenseMatrix64F chainActivities;
     private DenseMatrix64F nullGoals;
     private double agingTimeconstant = BeccaParams.daisyAgingTimeConstant;
+    private DenseMatrix64F updateRatePost;
+    private DenseMatrix64F eye;
+    private DenseMatrix64F postDifference;
+    private DenseMatrix64F ecDeltaFactor, puDelta;
+    private DenseMatrix64F sb;
+    private DenseMatrix64F expectedCableDelta;
 
 
     
@@ -158,11 +163,9 @@ public class DaisyChain {
         
         
         /* self.pre = self.post.copy()
-           self.post = cable_activities.copy() */
-
-        
-        pre.set(post);  //pre = post.copy();
-        post.set(cableActivities); //post = cableActivities.copy();
+           self.post = cable_activities.copy() */       
+        pre.set(post);
+        post.set(cableActivities);
         
                 
         DenseMatrix64F postT = transpose(post, null);
@@ -179,9 +182,11 @@ public class DaisyChain {
         //set the main diagonal (of size pre) of chainActivities to zero
         //chain_activities[np.nonzero(np.eye(self.pre.size))] = 0.
         if (!allowSelfTransitions) {
-            DenseMatrix64F eye = identity(pre.elements);
-            scale(-1, eye);
-            add(eye, 1);
+            if ((eye == null) || (eye.getNumRows()!=pre.elements)) {
+                eye = identity(pre.elements);            
+                scale(-1, eye);
+                add(eye, 1);
+            }
             elementMult(chainActivities, eye);
         }
         
@@ -215,7 +220,7 @@ public class DaisyChain {
 //        matrixMinimum(updateRatePost, 0.5);
         
         //ALTERNATE CALCULATION of updateRatePost:
-        final DenseMatrix64F updateRatePost = preCount.copy();
+        updateRatePost = ensureCopy(updateRatePost, preCount);
         final double[] updateRatePostD = updateRatePost.getData();
         for (int i = 0; i < updateRatePost.elements; i++) {
             final double u = preCount.getData()[i];
@@ -250,25 +255,25 @@ public class DaisyChain {
         
         
         //post_difference = np.abs(self.pre * self.post.T - self.expected_cable_activities)        
-        DenseMatrix64F postDifference = new DenseMatrix64F(pre.getNumRows(), postT.getNumCols());
-        mult(pre, postT, postDifference);
-        
-
+        postDifference = ensureSize(postDifference, pre.getNumRows(), postT.getNumCols());
+        mult(pre, postT, postDifference);        
         subEquals(postDifference, expectedCableActivities);
 
-        DenseMatrix64F ecDelta = postDifference.copy(); //used below
-        
+
+        //ecDelta = self.pre * self.post.T - self.expected_cable_activities
+        ecDeltaFactor = ensureCopy(ecDeltaFactor, postDifference); //used below
         matrixAbs(postDifference);
         
         
-        //self.expected_cable_activities += update_rate_post * (self.pre * self.post.T - self.expected_cable_activities)        
-        matrixVector(ecDelta, updateRatePost);        
-        addEquals(expectedCableActivities, ecDelta);
+        //self.expected_cable_activities += update_rate_post * (self.pre * self.post.T - self.expected_cable_activities)                
+        expectedCableDelta = matrixVector(ecDeltaFactor, updateRatePost, expectedCableDelta);
+        addEquals(expectedCableActivities, expectedCableDelta);
         
 
         
         //self.post_uncertainty += (post_difference - self.post_uncertainty) * update_rate_post
-        DenseMatrix64F puDelta = postDifference.copy();
+        
+        puDelta = ensureCopy(puDelta, postDifference);
         subEquals(puDelta, postUncertainty);        
         matrixVector(puDelta, updateRatePost);
         addEquals(postUncertainty, puDelta);
@@ -287,7 +292,7 @@ public class DaisyChain {
         subEquals(sa, expectedCableActivities);
         matrixAbs(sa);
 
-        DenseMatrix64F sb = postUncertainty.copy();
+        sb = ensureCopy(sb, postUncertainty);
         add(sb, EPSILON);
 
         matrixDivBy(sb, broadcastRows(pre, sb.getNumRows()));        
@@ -305,11 +310,8 @@ public class DaisyChain {
         
         //# Reshape chain activities into a single column
         //return chain_activities.ravel()[:,np.newaxis]
-        //check the order: http://docs.scipy.org/doc/numpy/reference/generated/numpy.ravel.html?highlight=ravel
-        
-        DenseMatrix64F x = new DenseMatrix64F(chainActivities.elements, 1);
-        x.setData(chainActivities.data);
-        return x;
+        //check the order: http://docs.scipy.org/doc/numpy/reference/generated/numpy.ravel.html?highlight=ravel        
+        return DenseMatrix64F.wrap(chainActivities.elements, 1, chainActivities.getData() );
     }
     
     public DenseMatrix64F stepDown(DenseMatrix64F chainGoals) {

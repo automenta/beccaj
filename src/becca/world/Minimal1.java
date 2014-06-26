@@ -46,7 +46,7 @@ public class Minimal1 implements World {
     
     public static void main(String[] args) throws Exception {
         //Class<? extends Agent> a = HubAgent.class;
-        Class<? extends Agent> a = BeccaAgent.class;
+        final Class<? extends Agent> a = BeccaAgent.class;
         //Class<? extends Agent> a = QLAgent.class;
         
         Class<? extends Agent> r = RandomAgent.class;

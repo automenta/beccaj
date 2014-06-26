@@ -1,3 +1,5 @@
+package deeplearning.RBM.src;
+
 import java.util.Random;
 
 public class RBM {

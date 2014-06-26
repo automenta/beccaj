@@ -40,16 +40,16 @@ abstract public class DynamicChart {
 
     // Create an ITrace: 
         // Note that dynamic charts need limited amount of values!!! 
-        ITrace2D trace = new Trace2DLtd(1000);
+        final ITrace2D trace = new Trace2DLtd(1000);
         trace.setColor(Color.BLUE);
 
         // Add the trace to the chart. This has to be done before adding points (deadlock prevention): 
         chart.addTrace(trace);
 
-        JPanel p = new JPanel(new BorderLayout());
+        final JPanel p = new JPanel(new BorderLayout());
         p.add(chart, BorderLayout.CENTER);
 
-        JPanel s = new JPanel(new FlowLayout());
+        final JPanel s = new JPanel(new FlowLayout());
         s.setMinimumSize(new Dimension(400, 50));
         p.add(s, BorderLayout.SOUTH);
 
