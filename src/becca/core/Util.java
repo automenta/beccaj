@@ -47,8 +47,8 @@ public class Util extends CommonOps {
     }    
  
 
-    static ThreadLocal<DenseMatrix64F> TvalueWeightProduct = new ThreadLocal();
-    static ThreadLocal<DenseMatrix64F> TsumOfWeights = new ThreadLocal();
+    /*static ThreadLocal<DenseMatrix64F> TvalueWeightProduct = new ThreadLocal();
+    static ThreadLocal<DenseMatrix64F> TsumOfWeights = new ThreadLocal();*/
     
     public static DenseMatrix64F getWeightedAverage(DenseMatrix64F values, DenseMatrix64F weights, DenseMatrix64F target) {
         //""" Perform a weighted average of values, using weights """
@@ -62,27 +62,20 @@ public class Util extends CommonOps {
         }
 
         //weighted_sum_values = np.sum(values * weights, axis=0)                 
-        
-        DenseMatrix64F valueWeightProduct = TvalueWeightProduct.get();
-        valueWeightProduct = multMatrixMatrix(values, weights,valueWeightProduct);
-        TvalueWeightProduct.set(valueWeightProduct);
+        DenseMatrix64F valueWeightProduct = multMatrixMatrix(values, weights);
         
         final DenseMatrix64F weightedSumValues = target = sumColsT(valueWeightProduct, target);
 
         //sum_of_weights = np.sum(weights, axis=0)   
-        DenseMatrix64F sumOfWeights = TsumOfWeights.get();        
-        sumOfWeights = ensureSize(sumOfWeights, weightedSumValues.getNumRows(), weightedSumValues.getNumCols());
-        sumOfWeights = sumColsT(weights, sumOfWeights);
-        TsumOfWeights.set(sumOfWeights);
+
+        //DenseMatrix64F sumOfWeights = sumColsT(weights, null);
 
         //return (weighted_sum_values / (sum_of_weights + EPSILON))[:,np.newaxis]
         final double[] wsd = weightedSumValues.getData();
-        final double[] sowd = sumOfWeights.getData();
 
-        assert (weightedSumValues.getNumRows() == sumOfWeights.getNumRows());
-        assert (weightedSumValues.getNumCols() == sumOfWeights.getNumCols());
         for (int i = 0; i < wsd.length; i++) {
-            wsd[i] /= (sowd[i] + EPSILON);
+            //wsd[i] /= (sowd[i] + EPSILON);
+            wsd[i] /= sumColsT(weights, i) + EPSILON;
         }
         //return weightedSumValues;
         return target;
@@ -301,7 +294,7 @@ public class Util extends CommonOps {
     //A->B, B can be null in which case it operates just on A
     public static double[] mapOneToInf(final double[] a, double[] b) {
         //""" Map values from [0, 1] onto [0, inf) and map values from [-1, 0] onto (-inf, 0]
-        final double eps = 2.2204460492503131e-16; //eps = np.finfo(np.double).eps
+        final double eps = EPSILON; //eps = np.finfo(np.double).eps
         if (b == null) {
             b = a;
         }
@@ -395,6 +388,7 @@ public class Util extends CommonOps {
         } else if( output.elements != input.numCols )
             throw new IllegalArgumentException("Output does not have enough elements to store the results");
 
+        final double[] id = input.getData();
         final double[] od = output.getData();
         final int indexJump = input.numCols*input.numRows;
         for( int cols = 0; cols < input.numCols; cols++ ) {
@@ -402,8 +396,9 @@ public class Util extends CommonOps {
 
             int index = cols;
             int end = index + indexJump;
+            
             for( ; index < end; index += input.numCols ) {
-                total += input.data[index];
+                total += id[index];
             }
 
             od[cols] = total;
@@ -411,6 +406,22 @@ public class Util extends CommonOps {
         return output;
     }
     
+   public static double sumColsT( final DenseMatrix64F input, final int row ) {
+       
+        final double[] id = input.getData();
+        final int indexJump = input.numCols*input.numRows;
+        
+        double total = 0;
+
+        int index = row;
+        final int end = index + indexJump;
+        for( ; index < end; index += input.numCols ) {
+            total += id[index];
+        }
+            
+        return total;
+    }
+   
     static double[] boundedSum(final int axis, final double[]... a) {
         /* 
             Sum elements nonlinearly, such that the total is less than 1 
@@ -673,17 +684,25 @@ public class Util extends CommonOps {
     static DenseMatrix64F maxRow(final DenseMatrix64F x) {
         //TODO iterate in contiguous parts
         final DenseMatrix64F projection = new DenseMatrix64F(1, x.getNumCols());
+        final double[] xd = x.getData();
         final double[] pd = projection.getData();
         for (int i = 0; i < x.getNumRows(); i++) {
+
+            int index = x.getIndex(i, 0);
+            
             for (int j = 0; j < x.getNumCols(); j++) {
+                
+                final double X = xd[index];
+                
                 if (i == 0) {
-                    pd[j] = x.get(0, j);
+                    pd[j] = X;
                 } else {
-                    final double cg = x.get(i, j);
-                    if (cg > pd[j]) {
-                        pd[j] = cg;
+                    if (X > pd[j]) {
+                        pd[j] = X;
                     }
                 }
+                
+                index++;
             }
         }
         return projection;
@@ -728,11 +747,16 @@ public class Util extends CommonOps {
         assert (col.getNumCols() == 1);
         final double[] cd = col.getData();
         int numRows = col.getNumRows();
+        
         final DenseMatrix64F r = new DenseMatrix64F(numRows, numCols);
+        final double[] rd = r.getData();
+        
         for (int i = 0; i < numRows; i++) {
             final double C = cd[i];
+            int index = r.getIndex(i, 0);
+            
             for (int j = 0; j < numCols; j++) {
-                r.set(i, j, C);
+                rd[index++] = C;
             }
         }
         return r;

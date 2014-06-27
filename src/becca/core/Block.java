@@ -217,8 +217,7 @@ public class Block  {
         
 
         if (parallelCogs) {
-            System.exit(1);
-            //cogs.parallelStream().forEach(c -> c.stepUp(null, false));
+            cogs.parallelStream().forEach(c -> c.stepUp(null, false));
         }
         else {
             for (final Cog c : cogs) {
@@ -290,9 +289,8 @@ public class Block  {
         }
         
         
-        if (parallelCogs) {
-            System.exit(1);
-            //cogs.parallelStream().forEach(c -> c.stepDown(null));
+        if (parallelCogs) {            
+            cogs.parallelStream().forEach(c -> c.stepDown(null));
         }
         else {
             for (final Cog c : cogs) {                
@@ -370,8 +368,8 @@ public class Block  {
             }
         }
         if (invalidAction) {
-            System.err.println("Invalid action");
-            printArray(action);
+            //System.err.println("Invalid action");
+            //printArray(action);
             //System.out.println(this);
             //System.exit(1);            
         }

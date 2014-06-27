@@ -22,8 +22,9 @@ public class Simulation {
     private JFrame jf;
     private int time = 1;
 
-    private boolean displayRewardChart = true;
     public static boolean DISPLAY = true;
+    private boolean displayRewardChart = DISPLAY;    
+    
     long displayPeriodMS = 2500;
     
     private double reward, rewardTotal;

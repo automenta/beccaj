@@ -5,6 +5,7 @@
  */
 package becca.core;
 
+import static becca.core.Util.printArray;
 import becca.gui.AgentPanel;
 import becca.gui.MatrixPanel;
 import becca.test.World;
@@ -45,7 +46,7 @@ public class DABeccaAgent extends BeccaAgent {
 
     public int getReducedSensors(int worldSensors) {
         //return worldSensors / 8;
-        return 24;
+        return (int)Math.ceil(Math.sqrt(worldSensors));
     }
     
     @Override
@@ -53,6 +54,9 @@ public class DABeccaAgent extends BeccaAgent {
 
         
         int reducedSensors = numSensors = getReducedSensors(world.getNumSensors());
+        
+        System.out.println("World sensors: " + world.getNumSensors() + " -> Autoencoded Sensors: " + reducedSensors);
+        
         this.da = new dA(world.getNumSensors(), reducedSensors);
 
         if (reconstructedInput == null) {
@@ -88,11 +92,12 @@ public class DABeccaAgent extends BeccaAgent {
     @Override
     public int step(double reward) {
 
+        
         da.train(sensor, learning_rate, corruption_level);
 
 
-        da.getEncoded(sensor, encodedInput, true, true);
-
+        da.getEncoded(sensor, encodedInput, false, true);        
+        
             //printArray(sensor);
         //printArray(encodedInput);        
         da.reconstruct(sensor, reconstructedInput);
