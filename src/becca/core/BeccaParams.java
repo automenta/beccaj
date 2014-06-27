@@ -19,10 +19,11 @@ public class BeccaParams {
     
     //Block ---------------------------------------------------        
     static boolean BlockGoalBoundedSum = false;
-    static int blockMaxCablesPerCog = 16;
-    static int blockMaxBundlesPerCog = 8;    
+    static int blockMaxCablesPerCog = 8;
+    static int blockMaxBundlesPerCog = 4;    
     static double blockFillFractionThreshold = 0;
-    static double blockRangeDecayRate =  Math.pow(10, -3);
+    static double blockRangeDecayRate =  decayRate(stmSize*512); //original: 0.001
+    
     static double blockActivityDecayRate = 1.0; //0.99; //real, 0 < x < 1, higher decays faster
     
     /**
@@ -75,10 +76,11 @@ public class BeccaParams {
     
     
     
+   final static double DecayEpsilon = 0.0001; // value for which the result would be insignificant
    
     public static double decayRate(int cycles) {
-        double epsilon = 0.0001; // value for which the result would be insignificant
-        return 1.0 - Math.pow(epsilon, (1.0/((double)cycles)));
+        
+        return 1.0 - Math.pow(DecayEpsilon, (1.0/((double)cycles)));
     }
     
     

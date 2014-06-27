@@ -153,6 +153,7 @@ public class ZipTie {
         //bundle_contribution_map[np.nonzero(self.bundle_map)] = 1
         //TODO do not reallocate this each cycle
         DenseMatrix64F bundleContributionMap = getNonZeroMask(bundleMap);
+        //printMatrixDimensions(bundleContributionMap);
         
         /*
         # use aggressive lateral 

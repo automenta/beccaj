@@ -47,9 +47,6 @@ public class Util extends CommonOps {
     }    
  
 
-    /*static ThreadLocal<DenseMatrix64F> TvalueWeightProduct = new ThreadLocal();
-    static ThreadLocal<DenseMatrix64F> TsumOfWeights = new ThreadLocal();*/
-    
     public static DenseMatrix64F getWeightedAverage(DenseMatrix64F values, DenseMatrix64F weights, DenseMatrix64F target) {
         //""" Perform a weighted average of values, using weights """
 
@@ -62,22 +59,16 @@ public class Util extends CommonOps {
         }
 
         //weighted_sum_values = np.sum(values * weights, axis=0)                 
-        DenseMatrix64F valueWeightProduct = multMatrixMatrix(values, weights);
         
-        final DenseMatrix64F weightedSumValues = target = sumColsT(valueWeightProduct, target);
+        final DenseMatrix64F weightedSumValues = target = 
+                sumColsT( multMatrixMatrix(values, weights), target);
 
         //sum_of_weights = np.sum(weights, axis=0)   
 
-        //DenseMatrix64F sumOfWeights = sumColsT(weights, null);
-
-        //return (weighted_sum_values / (sum_of_weights + EPSILON))[:,np.newaxis]
         final double[] wsd = weightedSumValues.getData();
-
         for (int i = 0; i < wsd.length; i++) {
-            //wsd[i] /= (sowd[i] + EPSILON);
             wsd[i] /= sumColsT(weights, i) + EPSILON;
         }
-        //return weightedSumValues;
         return target;
     }
 
@@ -188,6 +179,8 @@ public class Util extends CommonOps {
         }
         return result;
     }
+    
+    
     public static DenseMatrix64F matrixVectorDivide(final DenseMatrix64F matrix, final DenseMatrix64F vector, DenseMatrix64F result) {
         //ex: (8, 32) * (1, 32) -> (8, 32)
 
@@ -546,6 +539,7 @@ public class Util extends CommonOps {
      */
     public static DenseMatrix64F getNonZeroMask(final DenseMatrix64F x) {
         final DenseMatrix64F y = new DenseMatrix64F(x.getNumCols(), x.getNumRows());
+        
         final double[] xd = x.getData();
         final double[] yd = y.getData();
         for (int i = 0; i < yd.length; i++) {
@@ -561,7 +555,7 @@ public class Util extends CommonOps {
      */
     public static DenseMatrix64F matrixBooleanize(final DenseMatrix64F x) {
         final double[] d = x.getData();
-        for (int j = 0; j < d.length; j++) {
+        for (int j = 0; j < x.elements; j++) {
             d[j] = (!isZero(d[j]) ? 1.0 : 0.0);
         }
         return x;
@@ -692,17 +686,14 @@ public class Util extends CommonOps {
             
             for (int j = 0; j < x.getNumCols(); j++) {
                 
-                final double X = xd[index];
+                final double X = xd[index++];
                 
                 if (i == 0) {
                     pd[j] = X;
                 } else {
-                    if (X > pd[j]) {
+                    if (X > pd[j])
                         pd[j] = X;
-                    }
                 }
-                
-                index++;
             }
         }
         return projection;
@@ -861,9 +852,9 @@ public class Util extends CommonOps {
         return r;
     }
 
-    public static void matrixAddNoise(DenseMatrix64F m, double scale) {
+    public static void matrixAddNoise(final DenseMatrix64F m, final double scale) {
         final double[] d = m.getData();
-        for (int i = 0; i < d.length; i++) {
+        for (int i = 0; i < m.elements; i++) {
             d[i] += random.nextDouble() * scale;
         }
     }

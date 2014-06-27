@@ -41,6 +41,10 @@ public class BeccaAgent implements Agent, Serializable {
     private double typicalSurprise;
     double blockInitializationThreshold;
     
+    double blockUpTime = 0;
+    double blockDownTime = 0;
+    double hubTime = 0;
+    
     /*
          Configure the BeccaAgent
 
@@ -141,11 +145,12 @@ public class BeccaAgent implements Agent, Serializable {
         System.arraycopy(getPercept(), 0, cableActivities.getData(), numActions, getPercept().length);
         cableActivities.getData()[numActions+getPercept().length] = reward; //reward in last element
 
+        long blockStart = System.nanoTime();
                 
         //# Propogate the new sensor inputs up through the blocks
         for (final Block b : blocks) {
             cableActivities = b.stepUp(cableActivities);
-        }
+        }        
         
         //# Create a new block if the top block has had enough bundles assigned
         Block topBlock = blocks.get(blocks.size()-1); //top block        
@@ -160,8 +165,13 @@ public class BeccaAgent implements Agent, Serializable {
             //print "Added block", self.num_blocks - 1
         }
         
+        long blockUp = System.nanoTime();
+
+        
         hub.step(blocks, reward);
 
+        long hubStep = System.nanoTime();
+        
         //# Propogate the deliberation_goal_votes down through the blocks
         double agentSurprise = 0.0;
         DenseMatrix64F cableGoals = new DenseMatrix64F(cableActivities.getNumCols() * cableActivities.getNumRows(), 1);
@@ -232,6 +242,13 @@ public class BeccaAgent implements Agent, Serializable {
         this.cumulativeReward += reward;
         this.timeSinceRewardLog += 1;
         
+        long blockDown = System.nanoTime();
+
+        blockUpTime += blockUp - blockStart;
+        hubTime += hubStep - blockUp;
+        blockDownTime += blockDown - hubStep;
+        
+                
         return 0;
 
     }
@@ -382,5 +399,19 @@ public class BeccaAgent implements Agent, Serializable {
 
     @Override public double[] getAction() {
         return action;
+    }
+
+    public void printTiming(int cycles) {
+        double bup = ((double)blockUpTime)/1.0e6/((double)cycles);
+        double bdown = ((double)blockDownTime)/1.0e6/((double)cycles);
+        double h = ((double)hubTime)/1.0e6/((double)cycles);
+                
+        System.out.println("  blockUp: " + bup + "  blockDown: " + bdown + "   hub: " + h + "  (ms)");
+        
+        for (Block b: blocks)
+            b.printTiming(cycles);
+        
+        blockUpTime = hubTime = blockDownTime = 0;
+        
     }
 }

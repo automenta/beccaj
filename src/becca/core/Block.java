@@ -61,6 +61,8 @@ public class Block  {
     private final int stepCounterOffset;
     private final DenseMatrix64F clusterTrainingActivities;
     
+    long setupTime = 0, ziptieTime = 0, cogTime = 0;
+    
     public Block(int minCables) {    
         this(minCables, 0);
     }
@@ -120,6 +122,8 @@ public class Block  {
     
     public DenseMatrix64F stepUp(DenseMatrix64F newCableActivities) {
                 
+        long start = System.nanoTime();
+                
 //        """ Find bundle_activities that result from new_cable_activities """
 //        # Condition the cable activities to fall between 0 and 1
         
@@ -160,7 +164,7 @@ public class Block  {
             caD[i] = (rcad[i]-min)/(max-min+EPSILON);        
         }
         
-        DenseMatrix64F spreadDecay = spread.copy();
+        DenseMatrix64F spreadDecay = spread; //spread.copy();
         scale(rangeDecayRate, spreadDecay);
         addEquals(minVals, spreadDecay);
         subEquals(maxVals, spreadDecay);
@@ -188,11 +192,12 @@ public class Block  {
 //        self.ziptie.step_up(self.cable_activities)
 //        
         
+        long ziptieStart = System.nanoTime();
         
         ziptie.stepUp(clusterTrainingActivities);
         
         //# Process the upward pass of each of the cogs in the block        
-
+        long cogStart = System.nanoTime();
         
         
         int cogIndex = 0;
@@ -243,9 +248,17 @@ public class Block  {
         
         stepCounter++;
         
+        long end = System.nanoTime();
+        
+        setupTime += ziptieStart - start;
+        ziptieTime += cogStart - ziptieStart;
+        cogTime += end - cogStart;
+        
         return bundleActivities;
     }
     
+    
+            
     public void goalDecay() {
         //# Goal fulfillment and decay
         /*self.hub_cable_goals -= self.cable_activities
@@ -447,5 +460,15 @@ public class Block  {
         return hubCableGoals;
     }
 
-    
+    public void printTiming(int cycles) {
+        //long setupTime = 0, ziptieTime = 0, cogTime = 0;
+        
+        double s = ((double)setupTime)/1.0e6/((double)cycles);
+        double z = ((double)ziptieTime)/1.0e6/((double)cycles);
+        double c = ((double)cogTime)/1.0e6/((double)cycles);
+                
+        System.out.println("    blockUp:  setup=" + s + "  ziptie=" + z + "   cog: " + c + "  (ms)");
+        
+        setupTime = ziptieTime = cogTime = 0;        
+    }    
 }

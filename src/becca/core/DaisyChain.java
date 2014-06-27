@@ -196,11 +196,12 @@ public class DaisyChain {
         
         //self.count -= 1 / (self.AGING_TIME_CONSTANT * self.count + tools.EPSILON)
         //self.count = np.maximum(self.count, 0)
+        final double[] cod = count.getData();
         for (int i = 0; i < count.elements; i++) {
-            double cd = count.getData()[i];
+            double cd = cod[i];
             cd -= 1 / (agingTimeconstant * cd + EPSILON);            
             if (cd < 0) cd = 0.0;
-            count.getData()[i] = cd;
+            cod[i] = cd;
         }   
         
                 
