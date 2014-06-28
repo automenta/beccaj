@@ -19,8 +19,8 @@ public class BeccaParams {
     
     //Block ---------------------------------------------------        
     static boolean BlockGoalBoundedSum = false;
-    static int blockMaxCablesPerCog = 8;
-    static int blockMaxBundlesPerCog = 4;    
+    static int blockMaxCablesPerCog = 16;
+    static int blockMaxBundlesPerCog = 8;    
     static double blockFillFractionThreshold = 0;
     static double blockRangeDecayRate =  decayRate(stmSize*512); //original: 0.001
     

@@ -537,15 +537,16 @@ public class Util extends CommonOps {
     /**
      * zeros the resulting matrix and puts 1 where the input matrix is non-zero
      */
-    public static DenseMatrix64F getNonZeroMask(final DenseMatrix64F x) {
-        final DenseMatrix64F y = new DenseMatrix64F(x.getNumCols(), x.getNumRows());
+    public static DenseMatrix64F getNonZeroMask(final DenseMatrix64F x, DenseMatrix64F y) {
+        y = ensureSize(y, x.getNumCols(), x.getNumRows());
         
         final double[] xd = x.getData();
         final double[] yd = y.getData();
         for (int i = 0; i < yd.length; i++) {
-            if (!isZero(xd[i])) {
+            if (!isZero(xd[i]))
                 yd[i] = 1;
-            }
+            else
+                yd[i] = 0;            
         }
         return y;
     }

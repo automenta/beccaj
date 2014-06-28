@@ -58,6 +58,8 @@ public class ZipTie {
     private DenseMatrix64F mapgoals;
     private DenseMatrix64F cableActivityGoals;
     private DenseMatrix64F fullBundles;
+    private DenseMatrix64F cablesPerBundle;
+    private DenseMatrix64F bundleContributionMap;
 
     public ZipTie(boolean inBlock, int maxCables, int maxBundles, int maxCablesPerBundle) {
         this(inBlock, maxCables, maxBundles, maxCablesPerBundle, BeccaParams.ziptieMeanExponent);
@@ -152,7 +154,7 @@ public class ZipTie {
         //bundle_contribution_map = np.zeros(self.bundle_map.shape)
         //bundle_contribution_map[np.nonzero(self.bundle_map)] = 1
         //TODO do not reallocate this each cycle
-        DenseMatrix64F bundleContributionMap = getNonZeroMask(bundleMap);
+        bundleContributionMap = getNonZeroMask(bundleMap, bundleContributionMap);
         //printMatrixDimensions(bundleContributionMap);
         
         /*
@@ -170,7 +172,8 @@ public class ZipTie {
         activated_bundle_map += .0001 * np.random.random_sample(
                 activated_bundle_map.shape)        
         */
-        matrixAddNoise(activatedBundleMap, ACTIVATED_BUNDLE_MAP_NOISE);
+        if (ACTIVATED_BUNDLE_MAP_NOISE > 0)
+            matrixAddNoise(activatedBundleMap, ACTIVATED_BUNDLE_MAP_NOISE);
         
         /*
         # Find the largest bundle activity that each input contributes to
@@ -192,7 +195,7 @@ public class ZipTie {
         //# Find the effective strength of each cable to each bundle after inhibition.
         //inhibited_cable_activities = (input_inhibition_map * self.cable_activities.T)
                 
-        inhibitedCableActivities = inhibitedCableActivities = matrixVector(inputInhibitionMap, cableActivities/*Transpose*/, inhibitedCableActivities);               
+        inhibitedCableActivities = matrixVector(inputInhibitionMap, cableActivities/*Transpose*/, inhibitedCableActivities);               
         /*DenseMatrix64F inhibitedCableActivitiesT = transpose(inhibitedCableActivities, null);*/
         
         /*final_bundle_activities = tools.generalized_mean(inhibited_cable_activities.T, self.bundle_map.T, self.MEAN_EXPONENT)*/        
@@ -347,8 +350,7 @@ public class ZipTie {
         self.agglomeration_energy += (coactivities * 
                                       (1. - self.agglomeration_energy) *
                                       self.AGGLOMERATION_ENERGY_RATE)  */
-        aggPlus = ensureSize(aggPlus, agglomerationEnergy.numRows, agglomerationEnergy.numCols);
-        aggPlus.set(agglomerationEnergy);
+        aggPlus = ensureCopy(aggPlus, agglomerationEnergy);
         scale(-1, aggPlus);
         add(aggPlus, 1);        
         elementMult(aggPlus, coactivities);
@@ -367,7 +369,7 @@ public class ZipTie {
         /*
         cables_per_bundle = np.sum(self.bundle_map, axis=1)[:,np.newaxis]
         */
-        DenseMatrix64F cablesPerBundle = sumRows(bundleMap, null);
+        cablesPerBundle = sumRows(bundleMap, cablesPerBundle);
         
         /*
         full_bundles[np.where(cables_per_bundle >= 
