@@ -769,6 +769,10 @@ public class Util extends CommonOps {
         return r;
     }
 
+    public static void printArray(DenseMatrix64F x) {
+        printArray(x.data);
+    }
+
     //numpy.random.normal(loc=0.0, scale=1.0, size=None)
     //Extremely fast, medium quality randomness: http://www.javamex.com/tutorials/random_numbers/java_util_random_subclassing.shtml
     public static class XORShiftRandom extends Random {

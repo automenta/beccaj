@@ -70,9 +70,9 @@ public class MatrixPanel extends JPanel {
         JLabel dlabel = new JLabel();
 
         if ((m!=null) && ((m.getNumCols() > 0) && (m.getNumRows() > 0))) {
-            int px = 6; //min pixels per cell
-            int maxPX = 12; //max pixels per cell
-            if (m.getNumCols() == 1)
+            int px = 4; //min pixels per cell
+            int maxPX = 8; //max pixels per cell
+            if (m.getNumCols() < m.getNumRows())
                 m = transpose(m, null);
             
             int w = (int)Math.max(m.getNumCols()*px, Math.log(m.getNumCols()*maxPX));
