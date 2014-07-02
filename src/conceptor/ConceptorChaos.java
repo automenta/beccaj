@@ -6,22 +6,30 @@
 
 package conceptor;
 
-import static becca.core.Util.addNoise;
+import static becca.core.Util.broadcastRows;
 import static becca.core.Util.matrixRandomGaussian;
+import static becca.core.Util.matrixRandomUniform;
 import static becca.core.Util.matrixVector;
 import becca.gui.MatrixPanel;
+import static conceptor.Util.tanh;
 import conceptor.chaos.LorenzSystem;
+import java.util.LinkedList;
+import java.util.List;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import org.ejml.data.DenseMatrix64F;
+import org.ejml.factory.DecompositionFactory;
+import org.ejml.interfaces.decomposition.SingularValueDecomposition;
 import org.ejml.ops.CommonOps;
 import static org.ejml.ops.CommonOps.addEquals;
 import static org.ejml.ops.CommonOps.identity;
+import static org.ejml.ops.CommonOps.insert;
 import static org.ejml.ops.CommonOps.invert;
 import static org.ejml.ops.CommonOps.mult;
 import static org.ejml.ops.CommonOps.scale;
+import static org.ejml.ops.CommonOps.subEquals;
 import static org.ejml.ops.CommonOps.transpose;
 
 
@@ -37,26 +45,29 @@ public class ConceptorChaos {
     double newChaosData = 1;
     
     //#%%% Setting system params
-    int Netsize = 100;
-    int time = 2000;
+    int Netsize = 20;
     
     //#% network size
-    double NetSR = 0.6;
+    double NetSR = 1.5;
+    
     //#% spectral radius
-    double NetinpScaling = 1.2;
+    double NetinpScaling = 1.5;
     //#% scaling of pattern feeding weights
-    double BiasScaling = 0.4;
+    double BiasScaling = 0.2;
     //#% size of bias
     //#%%% Weight learning
     double TychonovAlphaEqui = .0001;
     //#% regularizer for equi weight training
-    int washoutLength = 500;
+    int learnLength = 1000;
     
+    double alpha = 4;
     
-    double NoiseScale = 0.05;
+    double noiseMix = 0.05;
     
     //#% for learning W and output weights
-    double TychonovAlphaReadout = 0.01;  //a^-2 ?
+    double TychonovAlphaReadout = 0.01;
+    
+    
     private double Netconnectivity;
     private final DenseMatrix64F WinRaw;
     private final DenseMatrix64F WstarRaw;
@@ -64,9 +75,15 @@ public class ConceptorChaos {
     private DenseMatrix64F Wstar;
     private DenseMatrix64F Win;
     private DenseMatrix64F Wbias;
-
+    private boolean collectReservoir = true;
+    
     int inputSize = 2;
     private DenseMatrix64F W;
+    
+    List<DenseMatrix64F> xHistory = new LinkedList();
+    List<DenseMatrix64F> xOldHistory = new LinkedList();
+    List<DenseMatrix64F> inputHistory = new LinkedList();
+    private DenseMatrix64F Wout;
     
     //#% Initializations for random numbers
     //plt.randn('state', randstate)
@@ -129,15 +146,15 @@ public class ConceptorChaos {
         DenseMatrix64F x = new DenseMatrix64F(Netsize, 1);
         
         DynamicPlot plot1 = new DynamicPlot("in0", "in1");
-        DynamicPlot plot2 = new DynamicPlot("Wout0", "Wout1");
-        DynamicPlot plot3 = new DynamicPlot("NRMSE");
+        DynamicPlot plot2 = new DynamicPlot("out0", "out1");
+        //DynamicPlot plot3 = new DynamicPlot("NRMSE");
         p.add(plot1);
         p.add(plot2);
-        p.add(plot3);
+        //p.add(plot3);
         
-        for (int t = 0; t < time; t++) {            
-            double noiseMix = NoiseScale; //Math.min(NoiseScale + (t < 100 ? 0.2 : 0), 1.0);
-            
+        for (int t = 0; t < learnLength; t++) {            
+
+            //u = the current input pattern
             DenseMatrix64F u = DenseMatrix64F.wrap(inputSize, 1, nextInput(t));
             DenseMatrix64F uNoise = new DenseMatrix64F(inputSize, 1);
             matrixRandomGaussian(uNoise, 0.5, 0);
@@ -146,6 +163,7 @@ public class ConceptorChaos {
             scale(noiseMix, uNoise);
             addEquals(u, uNoise);
             
+            plot1.update(t, u.get(0, 0), u.get(1, 0));
             
             
             
@@ -167,7 +185,11 @@ public class ConceptorChaos {
             
            
             
-            if (t > washoutLength) {
+            if (collectReservoir) {
+                xHistory.add(x);
+                xOldHistory.add(xOld);
+                inputHistory.add(u);
+                
                 //xCollector[:,int((n-washoutLength))-1] = x
                 //xOldCollector[:,int((n-washoutLength))-1] = xOld
                 //if p == 2. or p == 3.:
@@ -178,167 +200,19 @@ public class ConceptorChaos {
                 //  pCollector[0,int((n-washoutLength))-1] = u[0]
                 
             }
-
-            //KEY:
-            //allTrainArgs ~= xCollector ~= x
-            //allTrainOuts ~= pCollector ~= input
-            
-            /*
-            In mathematics, the conjugate transpose, Hermitian transpose, Hermitian conjugate, bedaggered matrix, or adjoint matrix of an m-by-n matrix A with complex entries is the n-by-m matrix A* obtained from A by taking the transpose and then taking the complex conjugate of each entry (i.e., negating their imaginary parts but not their real parts).            
-            */                        
-            //Wout = np.dot(
-            //          np.dot(
-            //              linalg.inv( (np.dot(allTrainArgs, allTrainArgs.conj().T)+
-            //          np.dot(TychonovAlphaReadout, np.eye(Netsize)))), allTrainArgs),
-            
-            //          allTrainOuts.conj().T
-            //       ).conj().T        
-            /*
-              Wout = (
-                       inv(allTrainArgs * allTrainArgs' + TychonovAlphaReadout * eye(Netsize))
-                        * allTrainArgs * allTrainOuts'
-                     )';
-            */
-            DenseMatrix64F allTrainArgsSq = new DenseMatrix64F(Netsize, Netsize);
-            mult(x, transpose(x, null), allTrainArgsSq);
-
-            
-            DenseMatrix64F tychonovAlphaEye = identity(Netsize);
-            scale(TychonovAlphaReadout, tychonovAlphaEye);
-            
-            DenseMatrix64F r1 = allTrainArgsSq;
-            addEquals(r1, tychonovAlphaEye);            
-            invert(r1);
-            
-            DenseMatrix64F allTrainArgOut = new DenseMatrix64F(Netsize, 1);
-            mult(r1, x, allTrainArgOut);
-                        
-            DenseMatrix64F Wout = new DenseMatrix64F(Netsize, u.numRows);
-            
-            mult(allTrainArgOut, transpose(u,null), Wout);
-            
-            Wout = transpose(Wout, null);
-            
-            
-            //#%%% compute W
-            //Wtargets = atanh(allTrainArgs)-matcompat.repmat(Wbias, 1., np.dot(Np, learnLength))
-            //Wtargets = (atanh(allTrainArgs) - repmat(Wbias,1,Np*learnLength));
-            //Wtargets = (atanh(x) - Wbias)
-            DenseMatrix64F Wtargets = x.copy();
-            Util.tanh(Wtargets);
-            CommonOps.subEquals(Wtargets, Wbias);
-            
-            
-            //#% training error
-            /*
-            The normalized root-mean-square deviation or error (NRMSD or NRMSE) is the RMSD divided by the range of observed values of a variable being predicted
-            */
-            //NRMSE_readout = nrmse(np.dot(Wout, allTrainArgs), allTrainOuts)
-            //NRMSE_readout = nrmse(Wout*allTrainArgs, allTrainOuts);
-            //NRMSE_readout = nrmse(Wout*x, input);
-            //np.disp(sprintf('NRMSE readout: %g', NRMSE_readout))
-            DenseMatrix64F Woutx = matrixVector(Wout, x);
-            double mse = 0;
-            double minInput = CommonOps.elementMin(u);
-            double maxInput = CommonOps.elementMax(u);
-            for (int i = 0; i < Woutx.numRows; i++) {
-                for (int c = 0; c < Woutx.numCols; c++) {                
-                    double delta = Woutx.get(i, c) - u.get(i, 0);
-                    mse += delta*delta;
-                }
-            }
-            mse/=((double)Woutx.elements);
-            double rmse = Math.sqrt(mse);
-            double nrmse = (minInput!=maxInput) ? rmse / (maxInput-minInput) : rmse;
-            
-            //W = np.dot(np.dot(linalg.inv((np.dot(allTrainOldArgs, allTrainOldArgs.conj().T)+np.dot(TychonovAlphaEqui, np.eye(Netsize)))), allTrainOldArgs), Wtargets.conj().T).conj().T
-            //W = (inv(allTrainOldArgs * allTrainOldArgs' + TychonovAlphaEqui * eye(Netsize)) * allTrainOldArgs * Wtargets')';
-            DenseMatrix64F allTrainOldArgsSq = new DenseMatrix64F(Netsize, Netsize);
-            mult(xOld, transpose(xOld,null), allTrainOldArgsSq);
-            
-            DenseMatrix64F tychonovAlphaEquiEye = identity(Netsize);
-            scale(TychonovAlphaEqui, tychonovAlphaEquiEye);
-            
-            DenseMatrix64F r2 = allTrainOldArgsSq;
-            addEquals(r2, tychonovAlphaEquiEye);
-            
-            invert(r2);
-            
-            DenseMatrix64F r2factor = new DenseMatrix64F(Netsize, 1);
-            mult(r2, xOld, r2factor);
-            
-            W = new DenseMatrix64F(Netsize, Netsize);
-            mult(r2factor, transpose(Wtargets,null), W);
-            W = transpose(W, null);
-            
-            plot1.update(t, u.get(0, 0), u.get(1, 0));
-            plot2.update(t, Wout.get(0,0), Wout.get(1, 0));
-            plot3.update(t, nrmse);
         }
-        mp.addMatrix("W", W);
+        
+        
+        DenseMatrix64F C = calculateConceptor();
 
         
-        //    xCollectorCentered = xCollector-matcompat.repmat(np.mean(xCollector, 2.), 1., learnLength)
-        //    xCollectorsCentered.cell[0,int(p)-1] = xCollectorCentered
-        //    xCollectors.cell[0,int(p)-1] = xCollector
-        //    [Ux, Sx, Vx] = plt.svd(matdiv(np.dot(xCollector, xCollector.conj().T), learnLength))
-        //    startXs[:,int(p)-1] = x
-        //    diagSx = np.diag(Sx)
-        //    #%diagSx(diagSx < 1e-6,1) = zeros(sum(diagSx < 1e-6),1);
-        //    R = np.dot(np.dot(Ux, np.diag(diagSx)), Ux.conj().T)
-        //    patternRs.cell[int(p)-1] = R
-        //    patternCollectors.cell[0,int(p)-1] = pCollector
-        //    allTrainArgs[:,int(np.dot(p-1., learnLength)+1.)-1:np.dot(p, learnLength)] = xCollector
-        //    allTrainOldArgs[:,int(np.dot(p-1., learnLength)+1.)-1:np.dot(p, learnLength)] = xOldCollector
-        //    allTrainOuts[0,int(np.dot(p-1., learnLength)+1.)-1:np.dot(p, learnLength)] = pCollector
-        //    
+        DenseMatrix64F generated = generate(C, 0, 1000);
         
+        for (int t = 0; t < generated.numCols; t++) {
+            plot2.update(t, generated.get(0, t), generated.get(1, t));
+        }
         
-        //#%%% compute readout        
-        //Wout = np.dot(np.dot(linalg.inv((np.dot(allTrainArgs, allTrainArgs.conj().T)+
-        //          np.dot(TychonovAlphaReadout, np.eye(Netsize)))), allTrainArgs),
-        //              allTrainOuts.conj().T).conj().T        
-        //Wout = (inv(allTrainArgs * allTrainArgs' + ...
-        //    TychonovAlphaReadout * eye(Netsize)) ...
-        //    * allTrainArgs * allTrainOuts')';
-    
-        //#% training error
-        //NRMSE_readout = nrmse(np.dot(Wout, allTrainArgs), allTrainOuts)
-        //NRMSE_readout = nrmse(Wout*allTrainArgs, allTrainOuts);
-        //np.disp(sprintf('NRMSE readout: %g', NRMSE_readout))
-        
-        //#%%% compute W
-        //Wtargets = atanh(allTrainArgs)-matcompat.repmat(Wbias, 1., np.dot(Np, learnLength))
-        //Wtargets = (atanh(allTrainArgs) - repmat(Wbias,1,Np*learnLength));
-        
-        //W = np.dot(np.dot(linalg.inv((np.dot(allTrainOldArgs, allTrainOldArgs.conj().T)+np.dot(TychonovAlphaEqui, np.eye(Netsize)))), allTrainOldArgs), Wtargets.conj().T).conj().T
-        //W = (inv(allTrainOldArgs * allTrainOldArgs' + TychonovAlphaEqui * eye(Netsize)) * allTrainOldArgs * Wtargets')';
-        
-        //#% training errors per neuron
-        //NRMSE_W = nrmse(np.dot(W, allTrainOldArgs), Wtargets)
-        //NRMSE_W = nrmse(W*allTrainOldArgs, Wtargets);        
-        //np.disp(sprintf('mean NRMSE W: %g', np.mean(NRMSE_W)))
 
-
-        //#% % compute conceptors
-        //Cs = cell(1., Np)
-        //for p in np.arange(1., (Np)+1):
-        //    R = patternRs.cell[int(p)-1]
-        //    [U, S, V] = plt.svd(R)
-        //    Snew = np.dot(S, linalg.inv((S+np.eye(Netsize))))
-        //    C = np.dot(np.dot(U, Snew), U.conj().T)
-        //    Cs.cell[0,int(p)-1] = C
-        //    
-        //% % compute conceptors
-        //Cs = cell(1,Np);
-        //for p = 1:Np
-        //    R = patternRs{p};
-        //    [U S V] = svd(R);
-        //    Snew = (S * inv(S + eye(Netsize)));
-        //    C = U * Snew * U';
-        //    Cs{1, p} = C;
-        //end
-        
         
         
         //FINISHED
@@ -346,17 +220,241 @@ public class ConceptorChaos {
         JFrame f = new JFrame();
         f.getContentPane().add(new JScrollPane(p));
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        f.setSize(400, 1000);
+        f.setSize(800, 1000);
         f.setVisible(true);
     
     }
     
+    protected DenseMatrix64F getHistoryMatrix(List<DenseMatrix64F> history) {
+        int historyLength = Math.min(history.size(), learnLength);
+        DenseMatrix64F r = new DenseMatrix64F(history.get(0).numRows, historyLength);
+        
+        int n = 0;
+        
+        for (DenseMatrix64F h : history.subList(Math.max(0, history.size()-historyLength), history.size()-1)) {
+
+            CommonOps.insert(h, r, 0, n++);
+        }
+        return r;
+    }
+    
+    public DenseMatrix64F colMean(DenseMatrix64F m) {
+        DenseMatrix64F result = new DenseMatrix64F(m.numRows, 1);
+        for (int i = 0; i < m.numRows; i++) {
+            double mean = 0;
+            for (int c = 0; c < m.numCols; c++) {
+                mean += m.get(i, c);
+            }
+            mean /= ((double)m.numCols);
+            result.set(i, 0, mean);
+        }
+        return result;
+    }
+    
+    public DenseMatrix64F generate(DenseMatrix64F conceptor, int washoutTime, int generateTime) {
+        DenseMatrix64F output = new DenseMatrix64F(inputSize, generateTime);
+
+        DenseMatrix64F x = new DenseMatrix64F(Netsize, 1);       
+        matrixRandomUniform(x, 1.0, 0);
+        
+        
+        
+        int outputNum = 0;
+        
+        
+        for (int t = 0; t < washoutTime+generateTime; t++) {
+            //x = Cmix * tanh(W * x + Wbias);
+            DenseMatrix64F Wx = new DenseMatrix64F(W.numRows, x.numCols);
+            mult(W, x, Wx);
+            addEquals(Wx, Wbias);
+            tanh(Wx);
+            mult(conceptor, Wx, x);
+            
+            if (t > washoutTime) {
+                DenseMatrix64F o = new DenseMatrix64F(Wout.numRows, x.numCols);
+                mult(Wout, x, o);
+                
+                insert(o, output, 0, outputNum++);
+            }
+        }
+        
+        
+        return output;
+        
+    }
+    
+    /**
+     * calculates conceptor matrix for the current reservoir
+     * @return 
+     */
+    public DenseMatrix64F calculateConceptor() {
+        DenseMatrix64F xCollector = getHistoryMatrix(xHistory);
+        DenseMatrix64F xOldCollector = getHistoryMatrix(xOldHistory);
+        
+        //mean(A,2) is a column vector containing the mean of each row
+        {
+        /*
+            DenseMatrix64F xCollectorMean =  colMean(xCollector);        
+            xCollectorMean = broadcastRows(xCollectorMean, learnLength);
+
+            DenseMatrix64F xCollectorCentered = xCollector.copy();
+            CommonOps.subEquals(xCollectorCentered, xCollectorMean);
+        */
+        }
+        
+        DenseMatrix64F pCollector = getHistoryMatrix(inputHistory);
+        
+        DenseMatrix64F allTrainArgs = xCollector;
+        DenseMatrix64F allTrainOldArgs = xOldCollector;
+        DenseMatrix64F allTrainOuts = pCollector;
+        
+        
+        DenseMatrix64F R, R2;
+        R = new DenseMatrix64F(xCollector.numRows, xCollector.numRows);
+        mult(xCollector, transpose(xCollector,null), R);
+        scale(1.0/((double)learnLength), R);
+        
+    
+        
+        //[Ux, Sx, Vs] = svd(R)
+        //[U,S,V] = svd(X) produces a diagonal matrix S of the same dimension as X, with nonnegative diagonal elements in decreasing order, and unitary matrices U and V so that X = U*S*V'.
+
+
+
+        /*
+        In mathematics, the conjugate transpose, Hermitian transpose, Hermitian conjugate, bedaggered matrix, or adjoint matrix of an m-by-n matrix A with complex entries is the n-by-m matrix A* obtained from A by taking the transpose and then taking the complex conjugate of each entry (i.e., negating their imaginary parts but not their real parts).            
+        */                        
+        //Wout = np.dot(
+        //          np.dot(
+        //              linalg.inv( (np.dot(allTrainArgs, allTrainArgs.conj().T)+
+        //          np.dot(TychonovAlphaReadout, np.eye(Netsize)))), allTrainArgs),
+
+        //          allTrainOuts.conj().T
+        //       ).conj().T        
+        /*
+          Wout = (
+                   inv(allTrainArgs * allTrainArgs' + TychonovAlphaReadout * eye(Netsize))
+                    * allTrainArgs * allTrainOuts'
+                 )';
+        */
+        DenseMatrix64F allTrainArgsSq = new DenseMatrix64F(Netsize, Netsize);
+        mult(allTrainArgs, transpose(allTrainArgs, null), allTrainArgsSq);
+
+
+        DenseMatrix64F tychonovAlphaEye = identity(Netsize);
+        scale(TychonovAlphaReadout, tychonovAlphaEye);
+
+        DenseMatrix64F r1 = allTrainArgsSq;
+        addEquals(r1, tychonovAlphaEye);            
+        invert(r1);
+
+        DenseMatrix64F allTrainArgOut = new DenseMatrix64F(r1.numRows, allTrainArgs.numCols);
+        mult(r1, allTrainArgs, allTrainArgOut);
+
+        Wout = new DenseMatrix64F(Netsize, allTrainOuts.numRows);
+
+        mult(allTrainArgOut, transpose(allTrainOuts,null), Wout);
+
+        Wout = transpose(Wout, null);
+            
+            
+        //#%%% compute W
+        //Wtargets = atanh(allTrainArgs)-matcompat.repmat(Wbias, 1., np.dot(Np, learnLength))
+        //Wtargets = (atanh(allTrainArgs) - repmat(Wbias,1,Np*learnLength));
+        //Wtargets = (atanh(x) - Wbias)
+        DenseMatrix64F Wtargets = allTrainArgs.copy();
+        Util.atanh(Wtargets);
+        subEquals(Wtargets, broadcastRows(Wbias,Wtargets.numCols));
+
+
+        //#% training error
+        /*
+        The normalized root-mean-square deviation or error (NRMSD or NRMSE) is the RMSD divided by the range of observed values of a variable being predicted
+        */
+        //NRMSE_readout = nrmse(np.dot(Wout, allTrainArgs), allTrainOuts)
+        //NRMSE_readout = nrmse(Wout*allTrainArgs, allTrainOuts);
+        //NRMSE_readout = nrmse(Wout*x, input);
+        //np.disp(sprintf('NRMSE readout: %g', NRMSE_readout))
+        DenseMatrix64F Woutx = matrixVector(Wout, allTrainArgs);
+        double mse = 0;
+        double minInput = CommonOps.elementMin(allTrainOuts);
+        double maxInput = CommonOps.elementMax(allTrainOuts);
+        for (int i = 0; i < Woutx.numRows; i++) {
+            for (int c = 0; c < Woutx.numCols; c++) {                
+                double delta = Woutx.get(i, c) - allTrainOuts.get(i, 0);
+                mse += delta*delta;
+            }
+        }
+        mse/=((double)Woutx.elements);
+        double rmse = Math.sqrt(mse);
+        double nrmse = (minInput!=maxInput) ? rmse / (maxInput-minInput) : rmse;
+
+        //W = np.dot(np.dot(linalg.inv((np.dot(allTrainOldArgs, allTrainOldArgs.conj().T)+np.dot(TychonovAlphaEqui, np.eye(Netsize)))), allTrainOldArgs), Wtargets.conj().T).conj().T
+        //W = (inv(allTrainOldArgs * allTrainOldArgs' + TychonovAlphaEqui * eye(Netsize)) * allTrainOldArgs * Wtargets')';
+        DenseMatrix64F allTrainOldArgsSq = new DenseMatrix64F(Netsize, Netsize);
+        mult(allTrainOldArgs, transpose(allTrainOldArgs,null), allTrainOldArgsSq);
+
+        DenseMatrix64F tychonovAlphaEquiEye = identity(Netsize);
+        scale(TychonovAlphaEqui, tychonovAlphaEquiEye);
+
+        DenseMatrix64F r2 = allTrainOldArgsSq;
+        addEquals(r2, tychonovAlphaEquiEye);
+
+        invert(r2);
+
+        DenseMatrix64F r2factor = new DenseMatrix64F(r2.numRows, allTrainOldArgs.numCols);
+        mult(r2, allTrainOldArgs, r2factor);
+
+        W = new DenseMatrix64F(Netsize, Netsize);
+        mult(r2factor, transpose(Wtargets,null), W);
+        W = transpose(W, null);
+
+     
+            
+        //% % compute projectors
+        SingularValueDecomposition<DenseMatrix64F> svd = DecompositionFactory.svd(R.numRows, R.numCols, true, true, false);
+        svd.decompose(R);
+        //used later when calculating Conceptors
+        
+        
+
+        
+        
+        DenseMatrix64F U = svd.getU(null, false);
+        DenseMatrix64F S = svd.getW(null);
+        DenseMatrix64F V = svd.getV(null, false);
+        //Snew = (S * inv(S + alpha^(-2) * eye(Netsize)));
+        //C = U * Snew * U';
+        
+        DenseMatrix64F Sfactor = S.copy();
+        DenseMatrix64F Seye = CommonOps.identity(Netsize);
+        //scale(Math.pow(alpha, -2), Seye);         //fig3 does not scale Seye
+        addEquals(Sfactor, Seye);
+        invert(Sfactor);
+        
+        DenseMatrix64F Snew = new DenseMatrix64F(S.numRows, Sfactor.numCols);
+        mult(S, Sfactor, Snew);
+        
+        DenseMatrix64F Cfactor = new DenseMatrix64F(U.numRows, Snew.numCols);
+        mult(U, Snew, Cfactor);
+        
+        DenseMatrix64F C = new DenseMatrix64F(Cfactor.numRows, U.numRows);
+        mult(Cfactor, transpose(U,null), C);
+        
+        return C;        
+    }
+    
+    
     public static double sqr(double x) { return x*x; }
     
     public double[] nextInput(double t) {
-             return new double[] { 
+             /*return new double[] { 
                  0.5 + Math.sin(t/5.0)*0.5, 
-                 0.5 + Math.cos(sqr(t/2.0)/100.0)*0.5 };       
+                 0.5 + Math.cos(sqr(t/2.0)/100.0)*0.5 };       */
+             return new double[] { 
+                 0.5 + Math.sin(t/15.0)*0.5, 
+                 0.5}; //0.5 + Math.cos(t/2.5)*0.5 };       
+
     }
 
     public void initChaos() {

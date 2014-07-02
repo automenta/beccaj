@@ -7,6 +7,7 @@
 package conceptor;
 
 import java.util.Random;
+import org.apache.commons.math3.analysis.function.Atanh;
 import org.ejml.data.Complex64F;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.factory.DecompositionFactory;
@@ -123,7 +124,16 @@ public class Util extends becca.core.Util {
         }
             
     }
-
+    
+    static final Atanh atanh = new Atanh();
+    
+    static void atanh(DenseMatrix64F x) {
+        double[] d = x.data;
+        for (int i = 0; i < x.elements; i++) {            
+            d[i] = atanh.value(d[i]);
+        }
+            
+    }
 
 
 }

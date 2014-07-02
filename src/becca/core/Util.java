@@ -734,7 +734,7 @@ public class Util extends CommonOps {
         return DenseMatrix64F.wrap(ad.length, 1, d);
     }
 
-    static DenseMatrix64F broadcastRows(final DenseMatrix64F col, final int numCols) {
+    public static DenseMatrix64F broadcastRows(final DenseMatrix64F col, final int numCols) {
         //TODO see if can be created by arraycopy repeatedly, depends on row ordering        
         assert (col.getNumCols() == 1);
         final double[] cd = col.getData();
@@ -754,7 +754,7 @@ public class Util extends CommonOps {
         return r;
     }
 
-    static DenseMatrix64F broadcastCols(final DenseMatrix64F row, final int numRows) {
+    public static DenseMatrix64F broadcastCols(final DenseMatrix64F row, final int numRows) {
         //TODO see if can be created by arraycopy repeatedly, depends on row ordering        
         int numCols = row.getNumCols();
         final double[] rd = row.getData();
@@ -787,12 +787,7 @@ public class Util extends CommonOps {
             if (BeccaParams.NoiseFactorySize > 0) {
                 noiseFactory = new double[BeccaParams.NoiseFactorySize];
                 for (int i = 0; i < BeccaParams.NoiseFactorySize; i++) {
-                    if (BeccaParams.RandomGaussian) {
-                        noiseFactory[i] = super.nextGaussian();
-                    }
-                    else {
-                        noiseFactory[i] = super.nextDouble();
-                    }
+                    noiseFactory[i] = super.nextDouble();
                 }
             }
             initialized = true;
@@ -820,6 +815,7 @@ public class Util extends CommonOps {
             }            
         }
         
+        /*
         @Override
         public double nextGaussian() {
             if ((BeccaParams.NoiseFactorySize == 0) || (!initialized)) {
@@ -828,7 +824,8 @@ public class Util extends CommonOps {
             else {
                 return noiseFactory[(noisePos++)%(BeccaParams.NoiseFactorySize-1)];
             }            
-        }        
+        } 
+        */
         
     }
 
@@ -871,7 +868,7 @@ public class Util extends CommonOps {
     }
 
     public static void matrixRandomUniform(DenseMatrix64F r, double scale, double min) {
-        final double[] d = r.getData();
+        final double[] d = r.getData();        
         for (int i = 0; i < r.elements; i++)
             d[i] = random.nextDouble() * scale + min;
     }    
