@@ -10,15 +10,21 @@ import static becca.core.Util.broadcastRows;
 import static becca.core.Util.matrixRandomGaussian;
 import static becca.core.Util.matrixRandomUniform;
 import static becca.core.Util.matrixVector;
+import becca.core.dA;
 import becca.gui.MatrixPanel;
 import static conceptor.Util.tanh;
 import conceptor.chaos.LorenzSystem;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import java.util.LinkedList;
 import java.util.List;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.factory.DecompositionFactory;
 import org.ejml.interfaces.decomposition.SingularValueDecomposition;
@@ -31,36 +37,41 @@ import static org.ejml.ops.CommonOps.mult;
 import static org.ejml.ops.CommonOps.scale;
 import static org.ejml.ops.CommonOps.subEquals;
 import static org.ejml.ops.CommonOps.transpose;
+import static org.ejml.ops.CommonOps.transpose;
 
 
 /**
  * Translated from: fig3fig18fig19A_DemoApertureChaos_Main.py
  */
 public class ConceptorChaos {
+    private static JFrame f;
+    private static JPanel m;
+    private static JScrollPane cc;
 
     //#%%% Experiment control
     double randState = 1;
-    double newNets = 1;
     boolean newSystemScalings = true;
-    double newChaosData = 1;
     
     //#%%% Setting system params
-    int Netsize = 20;
+    int Netsize = 100;
     
     //#% network size
     double NetSR = 1.5;
     
     //#% spectral radius
-    double NetinpScaling = 1.5;
+    double NetinpScaling = 1.0;
     //#% scaling of pattern feeding weights
     double BiasScaling = 0.2;
     //#% size of bias
     //#%%% Weight learning
     double TychonovAlphaEqui = .0001;
     //#% regularizer for equi weight training
-    int learnLength = 1000;
     
-    double alpha = 4;
+    
+    int learnTime = 500;
+    int washTime = learnTime/4;
+    
+    double alpha;
     
     double noiseMix = 0.05;
     
@@ -69,47 +80,103 @@ public class ConceptorChaos {
     
     
     private double Netconnectivity;
-    private final DenseMatrix64F WinRaw;
-    private final DenseMatrix64F WstarRaw;
-    private final DenseMatrix64F WbiasRaw;
+    private DenseMatrix64F WinRaw;
+    private DenseMatrix64F WstarRaw;
+    private DenseMatrix64F WbiasRaw;
     private DenseMatrix64F Wstar;
     private DenseMatrix64F Win;
     private DenseMatrix64F Wbias;
     private boolean collectReservoir = true;
     
-    int inputSize = 2;
+    int inputSize = 1;
     private DenseMatrix64F W;
+    int time = 0;
     
-    List<DenseMatrix64F> xHistory = new LinkedList();
-    List<DenseMatrix64F> xOldHistory = new LinkedList();
-    List<DenseMatrix64F> inputHistory = new LinkedList();
+    List<DenseMatrix64F> axHistory, axOldHistory, ainputHistory;
+    
+    
     private DenseMatrix64F Wout;
+    private final DynamicPlot plot1;
+    private final DynamicPlot plot2;
+    public final JPanel p;
+
+    public interface Generator {        
+        public double[] next(double t);
+    }    
     
-    //#% Initializations for random numbers
-    //plt.randn('state', randstate)
-    //np.random.rand('twister', randstate)
+   
     
-    public ConceptorChaos() {
+    public ConceptorChaos(double alpha) {
         //#%%%% Demo of aperture sweep
         
-        JPanel p = new JPanel();
+        
+        reset();
+
+        this.alpha = alpha;
+        
+        p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.PAGE_AXIS));
         
+        MatrixPanel mp = new MatrixPanel();
+        mp.setLayout(new BoxLayout(mp, BoxLayout.PAGE_AXIS));
+        mp.addMatrix("Wstar", Wstar);
+        mp.addMatrix("Win", Win);
+        mp.addMatrix("Wbias", Wbias);        
+        p.add(mp);
+               
         
+        plot1 = new DynamicPlot("in0", "in1");
+        plot2 = new DynamicPlot("out0", "out1");
+        p.add(plot1);
+        p.add(plot2);        
+        
+        
+        //1. Train Patterns into Conceptors
+        DenseMatrix64F R1 = learn(new SineGenerator(inputSize, 0.05), washTime, learnTime);
+        DenseMatrix64F R2 = learn(new SquareGenerator(inputSize, 0.05), washTime, learnTime);
+        
+        DenseMatrix64F W = compile();
+        
+        DenseMatrix64F C1 = conceptor(R1);
+        DenseMatrix64F C2 = conceptor(R2);
+                
+        //3. Regenerate signals
+        generate(C1, washTime, learnTime);
+        generate(C2, washTime, learnTime);
+        generate(C1, washTime, learnTime);
+        
+
+        
+
+        
+        
+        //FINISHED
+        p.validate();
+        
+    
+    }
+    
+    public void reset() {
         //#% Create raw weights
         if (Netsize <= 20) 
             Netconnectivity = 1.0;
         else
             Netconnectivity = 10.0/((double)Netsize);
 
-        WinRaw = new DenseMatrix64F(Netsize, 2);
+        
+        //randn()
+        WinRaw = new DenseMatrix64F(Netsize, inputSize);
         becca.core.Util.matrixRandomGaussian(WinRaw, 1.0, 0);
         
         WstarRaw = Util.newInternalWeights(Netsize, Netconnectivity);
 
         WbiasRaw = new DenseMatrix64F(Netsize, 1);
         becca.core.Util.matrixRandomGaussian(WbiasRaw, 1.0, 0);
-         
+
+        axHistory = new LinkedList();
+        axOldHistory = new LinkedList();
+        ainputHistory = new LinkedList();
+        
 
         //#% Scale raw weights and initialize weights
         if (newSystemScalings) {
@@ -118,52 +185,39 @@ public class ConceptorChaos {
             Wbias = WbiasRaw.copy(); scale(BiasScaling, Wbias);
         }
         
-        MatrixPanel mp = new MatrixPanel();
-        mp.setLayout(new BoxLayout(mp, BoxLayout.PAGE_AXIS));
-        mp.addMatrix("Wstar", Wstar);
-        mp.addMatrix("Win", Win);
-        mp.addMatrix("Wbias", Wbias);
         
-        p.add(mp);
-        
-        
-        //#% % learn equi weights
-        //#% harvest data from network externally driven by patterns
-        //allTrainArgs = np.zeros(Netsize, np.dot(Np, learnLength))
-        //allTrainOldArgs = np.zeros(Netsize, np.dot(Np, learnLength))
-        //allTrainOuts = np.zeros(1., np.dot(Np, learnLength))
+    }
+    public DenseMatrix64F learn(Generator generator, int washTime, int learnTime) {
+        List<DenseMatrix64F> xHistory, xOldHistory, inputHistory;
+        xHistory = new LinkedList();
+        xOldHistory = new LinkedList();
+        inputHistory = new LinkedList();
 
-        
-        //patternCollectors = cell(1., Np)
-        //xCollectorsCentered = cell(1., Np)
-        //xCollectors = cell(1., Np)
-        //patternRs = cell(1., Np)
-        //startXs = np.zeros(Netsize, Np)
-        //#% collect data from driving native reservoir with different drivers
-        //for p in np.arange(1., (Np)+1):
-        //    patt = patts.cell[int(p)-1]
-        //    #% current pattern generator
         DenseMatrix64F x = new DenseMatrix64F(Netsize, 1);
         
-        DynamicPlot plot1 = new DynamicPlot("in0", "in1");
-        DynamicPlot plot2 = new DynamicPlot("out0", "out1");
-        //DynamicPlot plot3 = new DynamicPlot("NRMSE");
-        p.add(plot1);
-        p.add(plot2);
-        //p.add(plot3);
-        
-        for (int t = 0; t < learnLength; t++) {            
+        for (int t = 0; t < washTime + learnTime; t++) {            
 
             //u = the current input pattern
-            DenseMatrix64F u = DenseMatrix64F.wrap(inputSize, 1, nextInput(t));
-            DenseMatrix64F uNoise = new DenseMatrix64F(inputSize, 1);
-            matrixRandomGaussian(uNoise, 0.5, 0);
+            DenseMatrix64F u = DenseMatrix64F.wrap(inputSize, 1, generator.next(time));
             
-            scale(1.0 - noiseMix, u);
-            scale(noiseMix, uNoise);
-            addEquals(u, uNoise);
+            if (noiseMix > 0) {
+                DenseMatrix64F uNoise = new DenseMatrix64F(inputSize, 1);
+                matrixRandomGaussian(uNoise, 0.5, 0);
+
+                scale(1.0 - noiseMix, u);
+                scale(noiseMix, uNoise);
+                addEquals(u, uNoise);
+            }
             
-            plot1.update(t, u.get(0, 0), u.get(1, 0));
+            if  (inputSize == 2) {
+                plot1.update(time, u.get(0, 0), u.get(1, 0));
+                plot2.update(time, 0,0);
+            }
+            else if (inputSize == 1) {                
+                plot1.update(time, u.get(0, 0));
+                plot2.update(time, 0);
+            }
+            time++;
             
             
             
@@ -185,10 +239,15 @@ public class ConceptorChaos {
             
            
             
-            if (collectReservoir) {
+            if (t > washTime) {
                 xHistory.add(x);
+                axHistory.add(x);
+                
                 xOldHistory.add(xOld);
+                axOldHistory.add(xOld);
+                
                 inputHistory.add(u);
+                ainputHistory.add(u);
                 
                 //xCollector[:,int((n-washoutLength))-1] = x
                 //xOldCollector[:,int((n-washoutLength))-1] = xOld
@@ -202,56 +261,48 @@ public class ConceptorChaos {
             }
         }
         
+        DenseMatrix64F xCollector = getHistoryMatrix(xHistory);
+        //DenseMatrix64F xOldCollector = getHistoryMatrix(xOldHistory);
+        //DenseMatrix64F pCollector = getHistoryMatrix(inputHistory);
         
-        DenseMatrix64F C = calculateConceptor();
+        //mean(A,2) is a column vector containing the mean of each row
+        {
+        /*
+            DenseMatrix64F xCollectorMean =  colMean(xCollector);        
+            xCollectorMean = broadcastRows(xCollectorMean, learnTime);
 
-        
-        DenseMatrix64F generated = generate(C, 0, 1000);
-        
-        for (int t = 0; t < generated.numCols; t++) {
-            plot2.update(t, generated.get(0, t), generated.get(1, t));
+            DenseMatrix64F xCollectorCentered = xCollector.copy();
+            CommonOps.subEquals(xCollectorCentered, xCollectorMean);
+        */
         }
         
-
         
         
-        //FINISHED
         
-        JFrame f = new JFrame();
-        f.getContentPane().add(new JScrollPane(p));
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        f.setSize(800, 1000);
-        f.setVisible(true);
-    
+        DenseMatrix64F R;
+        R = new DenseMatrix64F(xCollector.numRows, xCollector.numRows);
+        mult(xCollector, transpose(xCollector,null), R);
+        scale(1.0/((double)learnTime), R);
+        
+        return R;
     }
     
+
     protected DenseMatrix64F getHistoryMatrix(List<DenseMatrix64F> history) {
-        int historyLength = Math.min(history.size(), learnLength);
+        int historyLength = history.size(); //Math.min(history.size(), learnTime);
         DenseMatrix64F r = new DenseMatrix64F(history.get(0).numRows, historyLength);
         
         int n = 0;
         
         for (DenseMatrix64F h : history.subList(Math.max(0, history.size()-historyLength), history.size()-1)) {
-
             CommonOps.insert(h, r, 0, n++);
-        }
+        }        
         return r;
     }
     
-    public DenseMatrix64F colMean(DenseMatrix64F m) {
-        DenseMatrix64F result = new DenseMatrix64F(m.numRows, 1);
-        for (int i = 0; i < m.numRows; i++) {
-            double mean = 0;
-            for (int c = 0; c < m.numCols; c++) {
-                mean += m.get(i, c);
-            }
-            mean /= ((double)m.numCols);
-            result.set(i, 0, mean);
-        }
-        return result;
-    }
     
     public DenseMatrix64F generate(DenseMatrix64F conceptor, int washoutTime, int generateTime) {
+        
         DenseMatrix64F output = new DenseMatrix64F(inputSize, generateTime);
 
         DenseMatrix64F x = new DenseMatrix64F(Netsize, 1);       
@@ -275,6 +326,17 @@ public class ConceptorChaos {
                 mult(Wout, x, o);
                 
                 insert(o, output, 0, outputNum++);
+                
+                if  (inputSize == 2) {                
+                    plot1.update(time, 0,0);
+                    plot2.update(time, o.get(0,0), o.get(1,0));
+                }
+                else if (inputSize == 1) {
+                    plot1.update(time, 0);
+                    plot2.update(time, o.get(0,0));
+                }
+                time++;
+                
             }
         }
         
@@ -284,36 +346,13 @@ public class ConceptorChaos {
     }
     
     /**
-     * calculates conceptor matrix for the current reservoir
-     * @return 
+     * computes readout (Wout & W)
+     * @return W
      */
-    public DenseMatrix64F calculateConceptor() {
-        DenseMatrix64F xCollector = getHistoryMatrix(xHistory);
-        DenseMatrix64F xOldCollector = getHistoryMatrix(xOldHistory);
-        
-        //mean(A,2) is a column vector containing the mean of each row
-        {
-        /*
-            DenseMatrix64F xCollectorMean =  colMean(xCollector);        
-            xCollectorMean = broadcastRows(xCollectorMean, learnLength);
-
-            DenseMatrix64F xCollectorCentered = xCollector.copy();
-            CommonOps.subEquals(xCollectorCentered, xCollectorMean);
-        */
-        }
-        
-        DenseMatrix64F pCollector = getHistoryMatrix(inputHistory);
-        
-        DenseMatrix64F allTrainArgs = xCollector;
-        DenseMatrix64F allTrainOldArgs = xOldCollector;
-        DenseMatrix64F allTrainOuts = pCollector;
-        
-        
-        DenseMatrix64F R, R2;
-        R = new DenseMatrix64F(xCollector.numRows, xCollector.numRows);
-        mult(xCollector, transpose(xCollector,null), R);
-        scale(1.0/((double)learnLength), R);
-        
+    public DenseMatrix64F compile() {
+        DenseMatrix64F allTrainArgs = getHistoryMatrix(axHistory);
+        DenseMatrix64F allTrainOldArgs = getHistoryMatrix(axOldHistory);
+        DenseMatrix64F allTrainOuts =  getHistoryMatrix(ainputHistory);
     
         
         //[Ux, Sx, Vs] = svd(R)
@@ -359,8 +398,8 @@ public class ConceptorChaos {
             
             
         //#%%% compute W
-        //Wtargets = atanh(allTrainArgs)-matcompat.repmat(Wbias, 1., np.dot(Np, learnLength))
-        //Wtargets = (atanh(allTrainArgs) - repmat(Wbias,1,Np*learnLength));
+        //Wtargets = atanh(allTrainArgs)-matcompat.repmat(Wbias, 1., np.dot(Np, learnTime))
+        //Wtargets = (atanh(allTrainArgs) - repmat(Wbias,1,Np*learnTime));
         //Wtargets = (atanh(x) - Wbias)
         DenseMatrix64F Wtargets = allTrainArgs.copy();
         Util.atanh(Wtargets);
@@ -409,15 +448,21 @@ public class ConceptorChaos {
         mult(r2factor, transpose(Wtargets,null), W);
         W = transpose(W, null);
 
+        return W;
+    
+    }
+    
+    /**
+     * calculates conceptor matrix for the current reservoir
+     * @return 
+     */
+    public DenseMatrix64F conceptor(DenseMatrix64F R) {
+
      
             
         //% % compute projectors
         SingularValueDecomposition<DenseMatrix64F> svd = DecompositionFactory.svd(R.numRows, R.numCols, true, true, false);
         svd.decompose(R);
-        //used later when calculating Conceptors
-        
-        
-
         
         
         DenseMatrix64F U = svd.getU(null, false);
@@ -428,7 +473,7 @@ public class ConceptorChaos {
         
         DenseMatrix64F Sfactor = S.copy();
         DenseMatrix64F Seye = CommonOps.identity(Netsize);
-        //scale(Math.pow(alpha, -2), Seye);         //fig3 does not scale Seye
+        scale(Math.pow(alpha, -2), Seye);         //fig3 does not scale Seye
         addEquals(Sfactor, Seye);
         invert(Sfactor);
         
@@ -447,16 +492,51 @@ public class ConceptorChaos {
     
     public static double sqr(double x) { return x*x; }
     
-    public double[] nextInput(double t) {
-             /*return new double[] { 
-                 0.5 + Math.sin(t/5.0)*0.5, 
-                 0.5 + Math.cos(sqr(t/2.0)/100.0)*0.5 };       */
-             return new double[] { 
-                 0.5 + Math.sin(t/15.0)*0.5, 
-                 0.5}; //0.5 + Math.cos(t/2.5)*0.5 };       
+    
+    public static class SineGenerator implements Generator {
+        protected final double freq;
+        protected final int size;
 
+        public SineGenerator(int size, double freq) {
+            this.freq = freq;
+            this.size = size;
+        }
+
+        
+        @Override
+        public double[] next(double t) {
+            double d[] = new double[size];
+            for (int i = 0; i < size; i++) {
+                d[i] = 0.5 + Math.sin(t * freq / ((double)3*i+1.0) ) * 0.5;
+            }
+            return d;
+        }
+        
     }
+    public static class SquareGenerator extends SineGenerator {
 
+        public SquareGenerator(int size, double freq) {
+            super(size, freq);
+        }
+        
+        
+        @Override
+        public double[] next(double t) {
+            double d[] = new double[size];
+            double nm = 0;
+            double o = 0.9;
+            for (int i = 0; i < size; i++) {
+                double m = dA.sigmoid( Math.tan(t * freq / ((double)3*i+1.0) ) );
+                /*if (m < 0) m = -1;
+                if (m > 0) m = 1;                
+                nm = o * nm + (1.0 - o) * m;*/
+                d[i] = m;
+            }
+            return d;
+        }
+    }
+    
+    
     public void initChaos() {
         {
             int L = 1000;
@@ -492,7 +572,7 @@ delta = 1 / incrementsperUnit; % length of discrete approximation update interva
             //#% Set pattern handles
             //if newChaosData:
             //    patts = cell(1., 4.)
-            //    L = washoutLength+learnLength
+            //    L = washoutLength+learnTime
             //    LorenzSeq = generateLorenzSequence2D(200., 15., L, 5000.)
             //    patts.cell[1] = lambda n: 2.*LorenzSeq[:,int(n)-1]-1.
             //    RoesslerSeq = generateRoesslerSequence2D(200., 150., L, 5000.)
@@ -784,8 +864,44 @@ delta = 1 / incrementsperUnit; % length of discrete approximation update interva
 //        
 //    
     
+    public static void updateDisplay(double alpha) {
+        //f.getContentPane().add(new JScrollPane(p));
+        if (cc!=null)
+            m.remove(cc);
+        
+        ConceptorChaos c = new ConceptorChaos(alpha);
+        cc = new JScrollPane(c.p);
+                
+        m.add(cc, BorderLayout.CENTER);
+        m.validate();
+    }
+    
     public static void main(String[] args) {
-        new ConceptorChaos();
+        f = new JFrame();
+        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        m = new JPanel(new BorderLayout());
+        
+        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        final JSlider alphaSlider = new JSlider(0, 100, 1);
+        alphaSlider.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                updateDisplay(alphaSlider.getValue());
+            }
+            
+        });
+        controls.add(alphaSlider);
+        
+        m.add(controls, BorderLayout.NORTH);
+        
+        f.getContentPane().add(m);
+        
+        updateDisplay(1.0);
+        f.setSize(800, 1000);
+        f.setVisible(true);
+
     }
    
     

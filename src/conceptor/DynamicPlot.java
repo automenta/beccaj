@@ -21,6 +21,7 @@ import javax.swing.JPanel;
 public class DynamicPlot extends Chart2D {
     private Trace2DLtd[] trace;
 
+    int history = 10000;
     
     public DynamicPlot(String... plotNames) {
         super();
@@ -33,7 +34,7 @@ public class DynamicPlot extends Chart2D {
         
         trace = new Trace2DLtd[plots];
         for (int i = 0; i < plots; i++) {
-            trace[i] = new Trace2DLtd(1000);
+            trace[i] = new Trace2DLtd(history);
             trace[i].setColor(Color.getHSBColor(((float)i)/((float)plots), 0.8f, 0.8f));
             trace[i].setName(plotNames[i]);
             addTrace(trace[i]);

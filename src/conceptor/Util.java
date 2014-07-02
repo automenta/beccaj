@@ -135,5 +135,18 @@ public class Util extends becca.core.Util {
             
     }
 
+    public DenseMatrix64F colMean(DenseMatrix64F m) {
+        DenseMatrix64F result = new DenseMatrix64F(m.numRows, 1);
+        for (int i = 0; i < m.numRows; i++) {
+            double mean = 0;
+            for (int c = 0; c < m.numCols; c++) {
+                mean += m.get(i, c);
+            }
+            mean /= ((double) m.numCols);
+            result.set(i, 0, mean);
+        }
+        return result;
+    }
+
 
 }
