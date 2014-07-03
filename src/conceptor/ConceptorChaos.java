@@ -12,12 +12,14 @@ import static becca.core.Util.matrixRandomUniform;
 import static becca.core.Util.matrixVector;
 import becca.core.dA;
 import becca.gui.MatrixPanel;
+import static conceptor.Util.PHI;
 import static conceptor.Util.tanh;
 import conceptor.chaos.LorenzSystem;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -36,7 +38,6 @@ import static org.ejml.ops.CommonOps.invert;
 import static org.ejml.ops.CommonOps.mult;
 import static org.ejml.ops.CommonOps.scale;
 import static org.ejml.ops.CommonOps.subEquals;
-import static org.ejml.ops.CommonOps.transpose;
 import static org.ejml.ops.CommonOps.transpose;
 
 
@@ -99,6 +100,9 @@ public class ConceptorChaos {
     private final DynamicPlot plot1;
     private final DynamicPlot plot2;
     public final JPanel p;
+    private DenseMatrix64F Call;
+    private DenseMatrix64F D;
+    private DenseMatrix64F x;
 
     public interface Generator {        
         public double[] next(double t);
@@ -109,6 +113,7 @@ public class ConceptorChaos {
     public ConceptorChaos(double alpha) {
         //#%%%% Demo of aperture sweep
         
+        Util.random = new Random(1024);
         
         reset();
 
@@ -132,18 +137,23 @@ public class ConceptorChaos {
         
         
         //1. Train Patterns into Conceptors
-        DenseMatrix64F R1 = learn(new SineGenerator(inputSize, 0.05), washTime, learnTime);
-        DenseMatrix64F R2 = learn(new SquareGenerator(inputSize, 0.05), washTime, learnTime);
+        DenseMatrix64F C1 = learn(new SineGenerator(inputSize, 0.05), washTime, learnTime);
+        DenseMatrix64F C2 = learn(new TanSigmoidGenerator(inputSize, 0.05), washTime, learnTime);
+        DenseMatrix64F C3 = learn(new SineGenerator(inputSize, -0.01), washTime, learnTime);
+        DenseMatrix64F C4 = learn(new SineGenerator(inputSize, 0.005), washTime, learnTime);
         
         DenseMatrix64F W = compile();
         
-        DenseMatrix64F C1 = conceptor(R1);
+        /*DenseMatrix64F C1 = conceptor(R1);
         DenseMatrix64F C2 = conceptor(R2);
+        DenseMatrix64F C3 = conceptor(R3);
+        DenseMatrix64F C4 = conceptor(R4);*/
                 
         //3. Regenerate signals
         generate(C1, washTime, learnTime);
         generate(C2, washTime, learnTime);
-        generate(C1, washTime, learnTime);
+        generate(C3, washTime, learnTime);
+        generate(C4, washTime, learnTime);
         
 
         
@@ -177,6 +187,7 @@ public class ConceptorChaos {
         axOldHistory = new LinkedList();
         ainputHistory = new LinkedList();
         
+        x = new DenseMatrix64F(Netsize, 1);
 
         //#% Scale raw weights and initialize weights
         if (newSystemScalings) {
@@ -185,15 +196,19 @@ public class ConceptorChaos {
             Wbias = WbiasRaw.copy(); scale(BiasScaling, Wbias);
         }
         
+        Call = new DenseMatrix64F(Netsize, Netsize);
+        D = new DenseMatrix64F(Netsize, Netsize);
         
     }
+    
+    //incremental learning: see fig5_MemoryManagement.m    
     public DenseMatrix64F learn(Generator generator, int washTime, int learnTime) {
         List<DenseMatrix64F> xHistory, xOldHistory, inputHistory;
         xHistory = new LinkedList();
         xOldHistory = new LinkedList();
         inputHistory = new LinkedList();
 
-        DenseMatrix64F x = new DenseMatrix64F(Netsize, 1);
+        
         
         for (int t = 0; t < washTime + learnTime; t++) {            
 
@@ -263,7 +278,7 @@ public class ConceptorChaos {
         
         DenseMatrix64F xCollector = getHistoryMatrix(xHistory);
         //DenseMatrix64F xOldCollector = getHistoryMatrix(xOldHistory);
-        //DenseMatrix64F pCollector = getHistoryMatrix(inputHistory);
+        DenseMatrix64F pCollector = getHistoryMatrix(inputHistory);
         
         //mean(A,2) is a column vector containing the mean of each row
         {
@@ -276,15 +291,55 @@ public class ConceptorChaos {
         */
         }
         
-        
-        
-        
-        DenseMatrix64F R;
-        R = new DenseMatrix64F(xCollector.numRows, xCollector.numRows);
+        /*
+        Cnative = R * inv(R + I);
+        nativeCs{1,p} = Cnative;
+        */                                
+        DenseMatrix64F R = new DenseMatrix64F(xCollector.numRows, xCollector.numRows);
         mult(xCollector, transpose(xCollector,null), R);
         scale(1.0/((double)learnTime), R);
+                        
+        DenseMatrix64F invRI = R.copy();
+        addEquals(invRI, identity(R.numRows));
+        invert(invRI);        
         
-        return R;
+        DenseMatrix64F Cnative = new DenseMatrix64F(xCollector.numRows, xCollector.numRows);
+        mult(R, invRI, Cnative);
+        
+        /*
+        startxs(:,p) = x;
+        */
+        //CONTINUE HERE
+        /*
+        //% compute D increment
+        Dtargs = Win*pCollector - D * xOldCollector;
+        F = NOT(Call);
+        Dargs = F * xOldCollector ;
+        Dinc = (pinv(Dargs * Dargs' / learnLength + ...
+            aperture^(-2) * I) * Dargs * Dtargs' / learnLength)' ;
+        
+        % compute Wout increment
+        Wouttargs = pCollector - Wout * xCollector;
+        Woutargs = F * xCollector;
+        Woutinc = (pinv(Woutargs * Woutargs' / learnLength + ...
+            TychonovAlphaReadout * I) *...
+            Woutargs * Wouttargs' / learnLength)' ;
+        
+        //% update D, Wout and Call
+        //D = D  + Dinc ;
+        //Wout = Wout + Woutinc;
+        
+        /*
+        Cap = PHI(Cnative, aperture);
+        Call = OR(Call, Cap);
+        Calls{1,p} = Call;
+        [Ux Sx Vx] = svd(Call);
+        sizesCall(1,p) = mean(diag(Sx));
+        [Ux Sx Vx] = svd(Cap);
+        sizesCap(1,p) = mean(diag(Sx));
+        */
+        
+        return Cnative;
     }
     
 
@@ -305,21 +360,27 @@ public class ConceptorChaos {
         
         DenseMatrix64F output = new DenseMatrix64F(inputSize, generateTime);
 
-        DenseMatrix64F x = new DenseMatrix64F(Netsize, 1);       
-        matrixRandomUniform(x, 1.0, 0);
+        matrixRandomUniform(x, 1.0, 0.0);
         
-        
+        DenseMatrix64F C = PHI(conceptor, alpha);
         
         int outputNum = 0;
         
         
         for (int t = 0; t < washoutTime+generateTime; t++) {
-            //x = Cmix * tanh(W * x + Wbias);
+            //fig3: x = C * tanh(W * x + Wbias);
+            //fig5: x = C * tanh(W * x + D * x + Wbias);
+            
             DenseMatrix64F Wx = new DenseMatrix64F(W.numRows, x.numCols);
             mult(W, x, Wx);
             addEquals(Wx, Wbias);
+            
+            DenseMatrix64F Dx = new DenseMatrix64F(W.numRows, x.numCols);
+            mult(D, x, Dx);
+            addEquals(Wx, Dx);
+
             tanh(Wx);
-            mult(conceptor, Wx, x);
+            mult(C, Wx, x);
             
             if (t > washoutTime) {
                 DenseMatrix64F o = new DenseMatrix64F(Wout.numRows, x.numCols);
@@ -513,9 +574,9 @@ public class ConceptorChaos {
         }
         
     }
-    public static class SquareGenerator extends SineGenerator {
+    public static class TanSigmoidGenerator extends SineGenerator {
 
-        public SquareGenerator(int size, double freq) {
+        public TanSigmoidGenerator(int size, double freq) {
             super(size, freq);
         }
         
@@ -888,7 +949,7 @@ delta = 1 / incrementsperUnit; % length of discrete approximation update interva
 
             @Override
             public void stateChanged(ChangeEvent e) {
-                updateDisplay(alphaSlider.getValue());
+                updateDisplay(alphaSlider.getValue()*20.0);
             }
             
         });

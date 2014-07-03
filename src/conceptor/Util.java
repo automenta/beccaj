@@ -6,7 +6,6 @@
 
 package conceptor;
 
-import java.util.Random;
 import org.apache.commons.math3.analysis.function.Atanh;
 import org.ejml.data.Complex64F;
 import org.ejml.data.DenseMatrix64F;
@@ -81,7 +80,6 @@ public class Util extends becca.core.Util {
         return d;
     }
     
-    final static Random random = new Random();
     
     public static DenseMatrix64F matrixSprandN(DenseMatrix64F d, double sparsity) {
         fill(d, 0);
@@ -89,8 +87,8 @@ public class Util extends becca.core.Util {
         int nc = d.getNumCols();
         int entries = (int)Math.round(nr * nc * sparsity);
         for (int i = 0; i < entries; i++) {
-            int rr = (int)(Math.random()*nr);
-            int rc = (int)(Math.random()*nc);
+            int rr = (int)(random.nextDouble()*nr);
+            int rc = (int)(random.nextDouble()*nc);
             d.set(rr, rc, random.nextGaussian());
         }
         return d;
@@ -148,5 +146,41 @@ public class Util extends becca.core.Util {
         return result;
     }
 
+    public static DenseMatrix64F PHI(DenseMatrix64F C, double gamma) {
+        //        % aperture adaptation of conceptor C by factor gamma, 
+        //        % where 0 <= gamma <= Inf
 
+        if (gamma == 0) {
+        //    [U S V] = svd(C);
+        //    Sdiag = diag(S);
+        //    Sdiag(Sdiag < 1) = zeros(sum(Sdiag < 1),1);
+        //    Cnew = U * diag(Sdiag) * U';                
+            return null;
+        }
+        else if (gamma == Double.POSITIVE_INFINITY) {
+        //    [U S V] = svd(C);
+        //    Sdiag = diag(S);
+        //    Sdiag(Sdiag > 0) = ones(sum(Sdiag > 0),1);
+        //    Cnew = U * diag(Sdiag) * U';             
+            return null;
+        }
+        else {
+        //    Cnew = C * inv(C + gamma^(-2) * (eye(dim) - C));
+            DenseMatrix64F efactor = CommonOps.identity(C.numRows);
+            subEquals(efactor, C);
+            scale(Math.pow(gamma, -2), efactor);
+            addEquals(efactor, C);
+            invert(efactor);
+            
+            DenseMatrix64F Cnew = new DenseMatrix64F(C.numRows, C.numCols);
+            mult(C, efactor, Cnew);
+            return Cnew;            
+        }
+
+
+        
+    }
+    
+
+        
 }

@@ -829,7 +829,7 @@ public class Util extends CommonOps {
         
     }
 
-    private static final Random random = new XORShiftRandom();
+    public static Random random = new XORShiftRandom();
 
 
     public static double r(final double scale, final double min) {
@@ -886,7 +886,7 @@ public class Util extends CommonOps {
     public static void addNoise(DenseMatrix64F m, double NOISE_FACTOR) {
         double[] d = m.getData();
         for (int i = 0; i < d.length; i++) {
-            d[i] += Math.random() * NOISE_FACTOR;
+            d[i] += random.nextDouble()* NOISE_FACTOR;
         }
     }
 
