@@ -25,7 +25,7 @@ public class Simulation {
     public static boolean DISPLAY = true;
     private boolean displayRewardChart = DISPLAY;    
     
-    long displayPeriodMS = 2500;
+    long displayPeriodMS = 1000;
     
     private double reward, rewardTotal;
     
@@ -64,11 +64,13 @@ public class Simulation {
     }
     
     public Simulation(Class<? extends Agent> agentClass, World world, long cycleDelayMS) throws Exception {
-        
-        this.cycleDelayMS = cycleDelayMS;
+        this(agentClass.newInstance(), world, cycleDelayMS);
+    }
     
+    public Simulation(Agent agent, World world, long cycleDelayMS) throws Exception {
+        this.agent = agent;
+        this.cycleDelayMS = cycleDelayMS;
         
-        this.agent = agentClass.newInstance();
         agent.init(world);
 
         init(agent);

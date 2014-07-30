@@ -22,13 +22,21 @@ import java.util.LinkedList;
 
 public class Hub {
 
+    public enum HubActionSelection {
+        /** selects only the winning action, if exists */
+        WinnerTakeAll,
+        
+        /** selects all actions that are above the mean of the highest and lowest goal vote */
+        MeanThreshold
+    }
+    
     private int numCables;
     private final double INITIAL_REWARD;
     private final double UPDATE_RATE;
     private final double REWARD_DECAY_RATE;
     private final double FORGETTING_RATE;
     private final int TRACE_LENGTH;
-    private final double EXPLORATION;
+    private double EXPLORATION;
     private double rewardMin;
     private double rewardMax;
 
@@ -298,12 +306,27 @@ public class Hub {
 
         //potential_winners = np.where(goal_votes == np.max(goal_votes))[0] 
         double maxGoalVote = elementMax(goalVotes);
+        double minGoalVote = elementMin(goalVotes);
+        
+        final double avgGoalVote = (maxGoalVote+minGoalVote)/2.0;
+        final double upperGoalVote = (maxGoalVote*0.5)+(minGoalVote*0.5);
+        
         potentialWinners.clear();
         potentialWinners.ensureCapacity(goalVotes.getNumElements());
         double[] gvd = goalVotes.getData();
         for (int i = 0; i < goalVotes.getNumElements(); i++) {
-            if (gvd[i] == maxGoalVote) {
-                potentialWinners.add(i);
+            switch (BeccaParams.ActionSelection) {
+                case WinnerTakeAll:                
+                    if (gvd[i] == maxGoalVote) {
+                        potentialWinners.add(i);
+                    }
+                    break;
+                case MeanThreshold:
+                    //if (gvd[i] > avgGoalVote) {
+                    if (gvd[i] > upperGoalVote) {
+                        potentialWinners.add(i);
+                    }
+                    break;                                    
             }
         }
 
@@ -336,59 +359,57 @@ public class Hub {
          winner = potential_winners[np.random.randint(
          potential_winners.size)]        
          */
-        final int winner;
-        if (potentialWinners.isEmpty()) {
-            //winner = 0;
+        
+        if (potentialWinners.isEmpty())
             return;
-        } else {
-            int pwi = (int) (Math.random() * potentialWinners.size());
-            winner = potentialWinners.get(pwi);
-        }
-
-        //# Figure out which block the goal cable belongs to 
-        //goal_cable = np.remainder(winner, this.cable_activities.size)
-        //cable_index = goal_cable
-        int goalCable = winner % cableActivities.getNumElements();
-        cableIndex = goalCable;
-
-        if (blocks != null) {
-            for (Block b : blocks) {
-                DenseMatrix64F h = b.getHubCableGoals();
-                activatedHubCableGoal = h;
-                int block_size = h.getNumElements();
-                if (cableIndex >= block_size) {
-                    cableIndex -= block_size;
-                    continue;
-                } else {
-                    activateGoal(h, cableIndex, goalCable);
-                    return;
-                }
-            }
-        } else {
-            if (activatedHubCableGoal == null)
-                activatedHubCableGoal = new DenseMatrix64F(numCables, 1);
-            activateGoal(activatedHubCableGoal, cableIndex, goalCable);            
-        }
-
-        //System.err.println("No goal chosen");
-    }
-
-    public DenseMatrix64F getOutput() {
-        return activatedHubCableGoal;
-    }
-    
-    protected void activateGoal(DenseMatrix64F h, int cableIndex, int goalCable) {
-                    //# Activate the goal
-        //block.hub_cable_goals[cable_index] = 1.
-        assert (h.getNumCols() == 1);
-        h.set(cableIndex, 0, 1.0);
 
         //new_post  = np.zeros(self.post[0].shape)
         DenseMatrix64F newPost = new DenseMatrix64F(post.peekFirst().getNumRows(), post.peekFirst().getNumCols());
         assert (newPost.getNumCols() == 1);
-        newPost.set(goalCable, 0, 1);
+        
+        int maxWinners = 10;
+        
+        Integer winner;
+        //System.out.print(potentialWinners.size() + ": ");
+        while ((potentialWinners.size() > 0) && (maxWinners > 0)) {
+            int pwi = (int) (Math.random() * potentialWinners.size());
+            winner = potentialWinners.get(pwi);
+            potentialWinners.remove(pwi);
+            maxWinners--;
 
-                    //# Remove deliberate goals and actions from pre
+            
+            //# Figure out which block the goal cable belongs to 
+            //goal_cable = np.remainder(winner, this.cable_activities.size)
+            //cable_index = goal_cable
+            int goalCable = winner % cableActivities.getNumElements();
+            cableIndex = goalCable;
+
+            //System.out.print(gvd[winner] + " ");
+            
+            if (blocks != null) {
+                for (Block b : blocks) {
+                    DenseMatrix64F h = b.getHubCableGoals();
+                    activatedHubCableGoal = h;
+                    int block_size = h.getNumElements();
+                    if (cableIndex >= block_size) {
+                        cableIndex -= block_size;
+                        continue;
+                    } else {
+                        activateGoal(newPost, h, cableIndex, goalCable);
+                        //break;
+                    }
+                }
+            } else {
+                if (activatedHubCableGoal == null)
+                    activatedHubCableGoal = new DenseMatrix64F(numCables, 1);
+                activateGoal(newPost, activatedHubCableGoal, cableIndex, goalCable);            
+            }
+            
+        }
+        //System.out.println();
+
+
+        //# Remove deliberate goals and actions from pre
         //new_pre = np.maximum(self.cable_activities.copy() - self.post[-1].copy(), 0.)
         DenseMatrix64F newPre = cableActivities.copy();
         DenseMatrix64F newPreDiff = post.peekLast().copy();
@@ -409,6 +430,19 @@ public class Hub {
 
         //System.err.println("Goal");
         //self._display()
+    }
+
+    public DenseMatrix64F getOutput() {
+        return activatedHubCableGoal;
+    }
+    
+    protected void activateGoal(DenseMatrix64F newPost, DenseMatrix64F h, int cableIndex, int goalCable) {
+                    //# Activate the goal
+        //block.hub_cable_goals[cable_index] = 1.
+        assert (h.getNumCols() == 1);
+        h.set(cableIndex, 0, 1.0);
+
+        newPost.set(goalCable, 0, 1);
     }
 
     public DenseMatrix64F getCount() {
@@ -496,4 +530,8 @@ public class Hub {
         return post;
     }
 
+    public void setEXPLORATION(double EXPLORATION) {
+        this.EXPLORATION = EXPLORATION;
+    }
+    
 }

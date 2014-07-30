@@ -5,7 +5,6 @@
  */
 package becca.core;
 
-import static becca.core.Util.printArray;
 import becca.gui.AgentPanel;
 import becca.gui.MatrixPanel;
 import becca.test.World;
@@ -15,10 +14,8 @@ import org.ejml.data.DenseMatrix64F;
 
 /**
  * BECCA with Denoising Autoencoder Layer
- *
- * @author me
  */
-public class DABeccaAgent extends BeccaAgent {
+abstract public class DABeccaAgent extends BeccaAgent {
 
     public dA da;
 
@@ -26,16 +23,13 @@ public class DABeccaAgent extends BeccaAgent {
     boolean display = false;
     int updatePeriodCycles = 256;
 
-    double learning_rate = 0.1;
+    double continuousLearningRate = 0.01;
     double corruption_level = 0;
 
     private MatrixPanel daMatrixPanel;
     private JFrame window;
     private DenseMatrix64F dam;
 
-    double[] reconstructedInput;
-
-    int time = 0;
     private double[] encodedInput;
 
     public DABeccaAgent() {
@@ -44,11 +38,13 @@ public class DABeccaAgent extends BeccaAgent {
 
     }
 
-    public int getReducedSensors(int worldSensors) {
-        //return worldSensors / 8;
-        return (int)Math.ceil(Math.sqrt(worldSensors));
-    }
     
+    
+    abstract public int getReducedSensors(int worldSensors);        
+        //return worldSensors / 8;
+        //return (int)Math.ceil(Math.sqrt(worldSensors));
+    
+        
     @Override
     public void init(World world) {
 
@@ -89,16 +85,22 @@ public class DABeccaAgent extends BeccaAgent {
     }
 
     
-    @Override
-    public int step(double reward) {
-
+    public void pretrain(double[][] sensor, int iterations, int iterationsEach, double learningRate, double noise) { 
+        for ( ; iterations > 0; iterations--) {
+            double error = 0;
+            for (int i = 0; i < sensor.length; i++)
+                error += pretrain(sensor[i], iterationsEach, learningRate, noise);
+            System.out.println("avg pretrain error: " + error/(sensor.length));
+        }
+    }
         
-        da.train(sensor, learning_rate, corruption_level);
+    double[] reconstructedInput;
+    
+    public double pretrain(double[] sensor, int iterations, double learningRate, double noise) {
+        for ( ; iterations > 0; iterations--)
+            da.train(sensor, learningRate, noise);
 
-
-        da.getEncoded(sensor, encodedInput, false, true);        
-        
-            //printArray(sensor);
+        //printArray(sensor);
         //printArray(encodedInput);        
         da.reconstruct(sensor, reconstructedInput);
         //printArray(reconstructedInput);
@@ -108,15 +110,28 @@ public class DABeccaAgent extends BeccaAgent {
             diff += Math.abs(reconstructedInput[i] - sensor[i]);
         }
 
-            //System.out.println("avg delta: " + (diff / ((double)reconstructedInput.length) ));
+        return (diff / ((double)reconstructedInput.length) );    
+    }
+    
+    @Override
+    public int step(double reward) {
+        
+        if (continuousLearningRate > 0)
+            da.train(sensor, continuousLearningRate, corruption_level);
+
+
+        da.getEncoded(sensor, encodedInput, false, true);        
+        
+
         if (display) {
             if (time % updatePeriodCycles == 0) {
                 updateDADisplay(encodedInput);
             }
-            time++;
         }
 
         return super.step(reward);
     }
+        
+    public int time() { return time; }
 
 }

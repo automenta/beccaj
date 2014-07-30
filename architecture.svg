@@ -470,9 +470,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.49497475"
-     inkscape:cx="359.63592"
-     inkscape:cy="491.42014"
+     inkscape:zoom="0.9899495"
+     inkscape:cx="367.49546"
+     inkscape:cy="481.56681"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -480,7 +480,7 @@
      guidetolerance="10000"
      inkscape:snap-global="false"
      inkscape:window-width="1280"
-     inkscape:window-height="972"
+     inkscape:window-height="970"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -503,7 +503,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -556,7 +556,7 @@
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
     <rect
-       style="opacity:0.69874477;fill:#b3bfdf;fill-opacity:1;stroke:#000000;stroke-width:2.75379133;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       style="opacity:0.69874477000000002;fill:#b3bfdf;fill-opacity:1;stroke:#000000;stroke-width:1.654;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
        id="rect5084"
        width="222.99721"
        height="55.908699"
@@ -742,7 +742,7 @@
        x="119.83012"
        y="413.9379" />
     <rect
-       style="opacity:0.10878661;fill:#90da44;fill-opacity:1;stroke:#000000;stroke-width:1.17469453999999995;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       style="opacity:0.15481172;fill:#90da44;fill-opacity:1;stroke:#000000;stroke-width:1.17469453999999995;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
        id="rect2989-9-1"
        width="253.71696"
        height="46.90543"
@@ -878,7 +878,7 @@
          y="594.36487"
          id="tspan6753-9">cableActivitiesSubset[?]</tspan></text>
     <rect
-       style="opacity:0.69874477;fill:#46ffb7;fill-opacity:1;stroke:#000000;stroke-width:0.62714589;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       style="opacity:0.69874477000000002;fill:#ffd400;fill-opacity:1;stroke:#000000;stroke-width:0.62714588999999998;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
        id="rect5084-9-2"
        width="81.130409"
        height="32.852291"
@@ -1023,7 +1023,7 @@
        y="615.18475" />
     <text
        xml:space="preserve"
-       style="font-size:4.89685631px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;opacity:0.44351466;fill:#000000;fill-opacity:1;stroke:none;font-family:Arial;-inkscape-font-specification:Arial Bold"
+       style="font-size:4.89685631000000043px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;opacity:0.67782427;fill:#000000;fill-opacity:1;stroke:none;font-family:Arial;-inkscape-font-specification:Arial Bold"
        x="177.48477"
        y="563.71552"
        id="text8489-9"

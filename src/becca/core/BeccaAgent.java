@@ -127,8 +127,11 @@ public class BeccaAgent implements Agent, Serializable {
         this.reward = 0;
     }
 
+    public void update(double lastReward, int time) { }
     
     public int step(double reward) {
+        update(reward, time);
+        
         //""" Step through one time interval of the agent's operation """
         //reads current 'sensor' value and sets action in 'action'
         
@@ -414,4 +417,10 @@ public class BeccaAgent implements Agent, Serializable {
         blockUpTime = hubTime = blockDownTime = 0;
         
     }
+
+    public Hub getHub() {
+        return hub;
+    }
+    
+    
 }
